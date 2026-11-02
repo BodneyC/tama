@@ -100,6 +100,7 @@ exclude_also = ["if TYPE_CHECKING:", "if __name__ == .__main__.:", "@overload", 
 # ---------------------------------------------------------------- import-linter
 [tool.importlinter]
 root_package = "tama"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layered architecture"
