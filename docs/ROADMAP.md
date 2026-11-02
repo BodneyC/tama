@@ -6,14 +6,15 @@ domain milestone is green — the domain is the foundation.
 
 ## M0 — Project skeleton
 
-- [ ] `uv sync` works; `uv.lock` committed
-- [ ] `src/tama/` package with `__init__.py` (`__version__` from package metadata), `__main__.py`, `py.typed`
-- [ ] `cli.py` Typer app with `--version`; `tama` script entry point
-- [ ] `errors.py` with `TamaError` base
-- [ ] `infra/clock.py`: `Clock` protocol, `SystemClock`, `FakeClock`, `ScaledClock` + tests
-- [ ] `tests/conftest.py` with save-dir isolation fixture; `tests/factories.py` stub
-- [ ] Ruff, mypy, pytest, import-linter all run green on the skeleton
-- [ ] pre-commit hooks installed and passing; CI workflow green
+- [x] `uv sync` works; `uv.lock` committed
+- [x] `src/tama/` package with `__init__.py` (`__version__` from package metadata), `__main__.py`, `py.typed`
+- [x] `cli.py` Typer app with `--version`; `tama` script entry point
+- [x] `errors.py` with `TamaError` base
+- [x] `infra/clock.py`: `Clock` protocol, `SystemClock`, `FakeClock`, `ScaledClock` + tests
+- [x] `tests/conftest.py` with save-dir isolation fixture; `tests/factories.py` stub
+- [x] Ruff, mypy, pytest, import-linter all run green on the skeleton
+- [x] pre-commit hooks installed and passing
+- [ ] CI workflow green — *blocked: repo has no remote yet; verify on first push*
 
 **Accept:** `uv run tama --version` prints the version; `/check` passes.
 
