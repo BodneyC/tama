@@ -14,7 +14,7 @@ domain milestone is green — the domain is the foundation.
 - [x] `tests/conftest.py` with save-dir isolation fixture; `tests/factories.py` stub
 - [x] Ruff, mypy, pytest, import-linter all run green on the skeleton
 - [x] pre-commit hooks installed and passing
-- [ ] CI workflow green — *blocked: repo has no remote yet; verify on first push*
+- [x] CI workflow green (Linux/macOS/Windows × 3.12/3.13 verified; macOS since disabled in CI)
 
 **Accept:** `uv run tama --version` prints the version; `/check` passes.
 
@@ -90,6 +90,7 @@ events match expectations; file on disk is valid.
 - [ ] README with screenshot/GIF (e.g. via `vhs` or `asciinema`), install instructions
       (`uv tool install`, `pipx install`)
 - [ ] CHANGELOG.md (Keep a Changelog), version 1.0.0
-- [ ] CI matrix: Linux/macOS/Windows × Python 3.12/3.13
+- [ ] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out
+      macOS matrix entry in `.github/workflows/ci.yml`)
 - [ ] Build wheel (`uv build`) and smoke-test the installed `tama` entry point in CI
 - [ ] Final review against SPEC; open issues for anything deferred
