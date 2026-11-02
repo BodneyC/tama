@@ -5,7 +5,7 @@ starting any task, then read the docs it links to that are relevant to the task.
 
 ## Project
 
-**tama-go-chi** — a terminal (TUI) virtual pet in the spirit of the original Tamagotchi.
+**tama** — a terminal (TUI) virtual pet in the spirit of the original Tamagotchi.
 The pet hatches, grows through life stages, gets hungry/unhappy/dirty/sick over time
 (including while the app is closed), and is cared for through keyboard actions. It is
 animated with ASCII/Unicode sprites and its state is persisted between sessions.

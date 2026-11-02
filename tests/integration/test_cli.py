@@ -14,7 +14,7 @@ def test_version_flag_prints_version_and_exits_successfully() -> None:
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.stdout.strip() == f"tama-go-chi {tama.__version__}"
+    assert result.stdout.strip() == f"tama {tama.__version__}"
 
 
 def test_version_matches_package_metadata() -> None:

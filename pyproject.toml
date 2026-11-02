@@ -1,5 +1,5 @@
 [project]
-name = "tama-go-chi"
+name = "tama"
 version = "0.1.0"
 description = "A terminal virtual pet with animations and persistent state."
 readme = "README.md"

@@ -11,7 +11,7 @@ app = typer.Typer(add_completion=False, no_args_is_help=False)
 
 def _version_callback(value: bool) -> None:  # noqa: FBT001 - signature dictated by Typer
     if value:
-        typer.echo(f"tama-go-chi {__version__}")
+        typer.echo(f"tama {__version__}")
         raise typer.Exit
 
 
@@ -30,7 +30,7 @@ def root(
 ) -> None:
     """Look after your terminal pet."""
     del version  # handled eagerly by its callback
-    typer.echo("The tama-go-chi TUI is not implemented yet.")
+    typer.echo("The tama TUI is not implemented yet.")
     raise typer.Exit(code=1)
 
 

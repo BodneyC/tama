@@ -105,7 +105,7 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 ### 5.1 Layout (min 60×20; must degrade gracefully and show a "terminal too small" notice below that)
 
 ```
-┌ tama-go-chi ─────────────────────────────── 🍖 😊 ⚡ 🧼 ┐
+┌ tama ─────────────────────────────── 🍖 😊 ⚡ 🧼 ┐
 │ Mochi · CHILD · 2d 4h                         ⚠ (blink) │
 │                                                         │
 │                      (pet sprite,                       │
@@ -140,7 +140,7 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 
 ## 6. Persistence
 
-- Location: `platformdirs.user_data_path("tama-go-chi") / "save.json"`; overridable with
+- Location: `platformdirs.user_data_path("tama") / "save.json"`; overridable with
   `--save-path PATH` or `TAMA_SAVE_PATH` env var.
 - Format: JSON, human-readable, Pydantic model with `schema_version: int`.
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
@@ -153,7 +153,7 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 
 ## 7. Config
 
-`platformdirs.user_config_path("tama-go-chi") / "config.toml"` (read with `tomllib`), all optional:
+`platformdirs.user_config_path("tama") / "config.toml"` (read with `tomllib`), all optional:
 `bell`, `reduced_motion`, `night_start`, `night_end`, `offline_cap_hours`, `theme`.
 CLI flags override config, which overrides defaults.
 

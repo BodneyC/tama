@@ -1,4 +1,4 @@
-# tama-go-chi
+# tama
 
 A terminal virtual pet. Hatch it, feed it, play with it, clean up after it — and come back
 later to find it has been living while you were away.
