@@ -20,16 +20,17 @@ domain milestone is green — the domain is the foundation.
 
 ## M1 — Domain core
 
-- [ ] `Stats`, `clamp`, `Balance` with defaults from SPEC §2.1
-- [ ] `Pet`, `LifeStage`, `Variant`; `new_egg(name, now, rng)`
-- [ ] `events.py` event types
-- [ ] `simulation.advance` — decay (awake/asleep), poop generation, sickness rolls, health
+- [x] `Stats`, `clamp`, `Balance` with defaults from SPEC §2.1
+- [x] `Pet`, `LifeStage`, `Variant`; `new_egg(name, now, rng)`
+- [x] `events.py` event types
+- [x] `simulation.advance` — decay (awake/asleep), poop generation, sickness rolls, health
       damage, care mistakes, sleep/wake, aging, stage transitions, death
-- [ ] `actions.apply` for every action in SPEC §3, including refusal reasons
-- [ ] `minigame.py` Left/Right state machine
-- [ ] `animation.select_animation`
-- [ ] Hypothesis properties: bounds, tick-splitting equivalence, dead-is-terminal, age monotonic
-- [ ] 100% branch coverage on `tama.domain`
+- [x] `actions.apply` for every action in SPEC §3, including refusal reasons
+- [x] `minigame.py` Left/Right state machine
+- [x] `animation.select_animation`
+- [x] Hypothesis properties: bounds, tick-splitting equivalence, dead-is-terminal, age monotonic
+- [x] 100% branch coverage on `tama.domain`
+- [x] `attention.attention_reasons` (SPEC §4)
 
 **Accept:** A test simulates a full lifespan egg→dead with a fixed seed and asserts the
 expected sequence of stage events.

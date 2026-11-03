@@ -40,13 +40,16 @@ src/tama/
 ├── cli.py                 # Typer app; builds dependencies, launches TamaApp
 ├── errors.py              # TamaError hierarchy
 ├── domain/
-│   ├── stats.py           # Stats value object, clamp helper
-│   ├── pet.py             # Pet (frozen dataclass), LifeStage, Variant
+│   ├── stats.py           # Stat enum, Stats value object, clamp helper
+│   ├── stage.py           # LifeStage, Variant, DeathCause enums
+│   ├── pet.py             # Pet (frozen dataclass) incl. Drift/Timers; new_egg()
 │   ├── balance.py         # Balance: all tunable rates/thresholds
-│   ├── simulation.py      # advance(pet, elapsed, ctx) -> (pet, list[Event])
-│   ├── actions.py         # Action enum; apply(pet, action, ctx) -> ActionResult
-│   ├── events.py          # Event types (Pooped, GotSick, Evolved, Died, ...)
-│   ├── lifecycle.py       # stage transitions, adult variant selection
+│   ├── context.py         # Context: injected RNG, Balance and local time zone
+│   ├── events.py          # Event types, Action/RefusalReason enums, Outcome(pet, events)
+│   ├── simulation.py      # advance(pet, elapsed, ctx) -> Outcome
+│   ├── lifecycle.py       # stage transitions, adult variant selection, death
+│   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
+│   ├── attention.py       # attention_reasons(pet, balance) (SPEC §4)
 │   ├── minigame.py        # Left/Right game state machine
 │   └── animation.py       # select_animation(pet, last_event) -> AnimationKey (pure)
 ├── services/
@@ -78,17 +81,25 @@ Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests
 ### Deterministic simulation
 
 `advance(pet, elapsed, ctx)` is the single entry point for the passage of time. `ctx` carries
-`Balance`, a `random.Random`, and the wall-clock "now" (only used for day/night). Internally it
-steps in fixed sub-steps (e.g. 1 simulated second for live play, coarser bounded steps for
-large catch-up) so live and offline paths share one code path. Accumulated fractional decay is
-kept in the pet's state (`decay_remainders`) so many small ticks equal one big tick.
+`Balance`, a `random.Random`, and the player's time zone (only used for day/night). See
+[ADR 0002](adr/0002-fixed-step-exact-simulation.md):
 
-Property tests (hypothesis) assert: stats always in range; `advance(a+b) ≈ advance(a) then
-advance(b)`; dead pets never change; age is monotonic.
+- Time is simulated in fixed steps of `Balance.step` (1 minute), for live play and offline
+  catch-up alike. Elapsed time shorter than a step is kept on the pet as `carry`.
+- Stat drift is accumulated as exact `Fraction`s on the pet (`Pet.drift`, `poop_progress`), so
+  nothing is lost to rounding.
+- Random rolls happen only on whole hours of the pet's age, and always draw the same number
+  of values, so how time is sliced never changes the RNG sequence.
+
+Together these make `advance(a + b)` **exactly** equal to `advance(a)` then `advance(b)`, the
+same events, the same pet, and the same RNG state. Property tests (hypothesis) assert this, plus
+stats always in range, dead pets never change, and age is monotonic. A 72-hour catch-up is
+~4,300 steps (well under a second).
 
 ### Events, not callbacks
 
-Domain functions return `(new_state, events)`. The UI reacts to events (play animation, toast,
+Domain functions return an `Outcome(pet, events)`; a refused action is an `Outcome` with a
+single `Refused` event. The UI reacts to events (play animation, toast,
 bell); the away-summary is just the events from the catch-up `advance`, aggregated. The domain
 knows nothing about how events are presented.
 
