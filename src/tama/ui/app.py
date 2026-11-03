@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import signal
+from functools import partial
 from typing import ClassVar, override
 
 from textual.app import App
@@ -14,6 +15,7 @@ from tama.infra.clock import Clock
 from tama.persistence.repository import SaveRepository
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.colours import Mode
+from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NewPet, NewPetScreen
 from tama.ui.theme import css_variables, ui_palette
@@ -152,7 +154,7 @@ class TamaApp(App[None]):
             loaded = GameSession.load(repo=self._repo, clock=self._clock, settings=self._settings)
         except SaveError as exc:
             logger.exception("Could not load the save")
-            self.exit(return_code=EXIT_ERROR, message=f"tama: could not load your pet: {exc}")
+            self.push_screen(ErrorScreen(exc), partial(self._recover, exc))
             return
         self._start(loaded.session)
         if loaded.recovered_from_backup:
@@ -163,6 +165,17 @@ class TamaApp(App[None]):
                 title="While you were away",
                 timeout=15,
             )
+
+    def _recover(self, error: SaveError, start_new: bool | None) -> None:  # noqa: FBT001 - screen result
+        if not start_new:
+            self.exit(return_code=EXIT_ERROR, message=f"tama: could not load your pet: {error}")
+            return
+        try:
+            GameSession.discard_save(repo=self._repo, clock=self._clock)
+        except SaveWriteError as exc:
+            self.exit(return_code=EXIT_ERROR, message=f"tama: {exc}")
+            return
+        self.push_screen(NewPetScreen(self.view, self.species), self._hatch)
 
     def _hatch(self, chosen: NewPet | None) -> None:
         if chosen is None:

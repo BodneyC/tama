@@ -91,7 +91,7 @@ ModalScreen {
   margin-bottom: 1;
 }
 
-NewPetScreen {
+NewPetScreen, ErrorScreen {
   align: center middle;
 }
 

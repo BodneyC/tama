@@ -14,12 +14,18 @@ from tama.domain.animation import AnimationKey
 from tama.domain.pet import DEFAULT_SPECIES
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
-from tama.errors import CorruptSaveError
+from tama.errors import (
+    CorruptSaveError,
+    SaveError,
+    SaveWriteError,
+    UnsupportedSaveVersionError,
+)
 from tama.infra.clock import FakeClock
 from tama.persistence.repository import LoadResult
 from tama.ui.app import EXIT_ERROR
 from tama.ui.colours import Look, Mode
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
+from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
 from tama.ui.sprites import load_sprite, overlay_content
@@ -201,16 +207,69 @@ async def test_backup_recovery_is_mentioned() -> None:
         assert "recovered from the backup" in notes
 
 
-async def test_unloadable_save_exits_with_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def unloadable(monkeypatch: pytest.MonkeyPatch, error: SaveError) -> InMemorySaveRepository:
     repo = repo_with()
 
     def broken() -> LoadResult:
-        raise CorruptSaveError("bad json")
+        raise error
 
     monkeypatch.setattr(repo, "load", broken)
+    return repo
+
+
+async def test_unloadable_save_offers_a_new_pet(monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = unloadable(monkeypatch, CorruptSaveError("bad json"))
     app = make_app(repo)
-    async with app.run_test():
-        pass
+    async with app.run_test() as pilot:
+        assert isinstance(app.screen, ErrorScreen)
+        assert "bad json" in text(app, "#error-body")
+
+        await pilot.press("n")
+        await pilot.pause()
+
+        assert repo.quarantined_at == FIXED_NOW
+        assert isinstance(app.screen, NewPetScreen)
+        await pilot.press(*"Mochi", "enter")
+        await pilot.pause()
+        assert isinstance(app.screen, MainScreen)
+        assert repo.game is not None
+
+
+async def test_quitting_from_the_error_screen(monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = unloadable(monkeypatch, CorruptSaveError("bad json"))
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        await pilot.press("q")
+
+    assert app.return_code == EXIT_ERROR
+    assert repo.quarantined_at is None
+
+
+async def test_a_newer_save_is_never_replaced(monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = unloadable(monkeypatch, UnsupportedSaveVersionError("schema 9"))
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        assert "upgrade tama" in text(app, "#error-body")
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, ErrorScreen)
+        assert repo.quarantined_at is None
+
+        await pilot.press("q")
+
+    assert app.return_code == EXIT_ERROR
+
+
+async def test_failing_to_move_a_bad_save_exits(monkeypatch: pytest.MonkeyPatch) -> None:
+    repo = unloadable(monkeypatch, CorruptSaveError("bad json"))
+
+    def stuck(now: object) -> list[object]:
+        raise SaveWriteError("read-only")
+
+    monkeypatch.setattr(repo, "quarantine", stuck)
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        await pilot.press("n")
 
     assert app.return_code == EXIT_ERROR
 

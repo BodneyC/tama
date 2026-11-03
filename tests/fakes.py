@@ -16,6 +16,7 @@ class InMemorySaveRepository:
         self.from_backup = from_backup
         self.save_count = 0
         self.fail_saves = False
+        self.quarantined_at: datetime | None = None
 
     def exists(self) -> bool:
         return self.game is not None
@@ -33,4 +34,5 @@ class InMemorySaveRepository:
 
     def quarantine(self, now: datetime) -> list[Path]:
         self.game = None
-        return []
+        self.quarantined_at = now
+        return [Path(f"save.json.corrupt-{now:%Y%m%dT%H%M%S}")]

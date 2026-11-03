@@ -6,6 +6,7 @@ The UI talks only to ``GameSession``. It never calls the domain or the repositor
 import logging
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta, tzinfo
+from pathlib import Path
 from random import Random
 from typing import Self
 
@@ -153,6 +154,20 @@ class GameSession:
             settings=settings,
         )
         return LoadedSession(session, session._catch_up(), loaded.from_backup)
+
+    @staticmethod
+    def discard_save(*, repo: SaveRepository, clock: Clock) -> list[Path]:
+        """Move an unreadable save (and its backup) aside so a new pet can start.
+
+        Returns:
+            Where the files were moved (``<name>.corrupt-<timestamp>``).
+
+        Raises:
+            SaveWriteError: If they could not be moved.
+        """
+        moved = repo.quarantine(clock.now())
+        logger.warning("Moved unreadable save files aside: %s", moved)
+        return moved
 
     @property
     def pet(self) -> Pet:

@@ -1,6 +1,7 @@
 import logging
 from dataclasses import replace
 from datetime import UTC, time, timedelta, timezone
+from pathlib import Path
 from random import Random
 from typing import Any
 
@@ -324,3 +325,13 @@ def test_create_hatches_the_chosen_species(clock: FakeClock) -> None:
     assert session.pet.species == "owl"
     assert repo.game is not None
     assert repo.game.pet.species == "owl"
+
+
+def test_discarding_an_unreadable_save_moves_it_aside(clock: FakeClock) -> None:
+    repo = InMemorySaveRepository(SaveGame(make_pet(), Random(0).getstate()))
+
+    moved = GameSession.discard_save(repo=repo, clock=clock)
+
+    assert repo.quarantined_at == clock.now()
+    assert moved == [Path("save.json.corrupt-20260101T120000")]
+    assert not repo.exists()
