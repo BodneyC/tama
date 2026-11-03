@@ -227,11 +227,11 @@ paused; the save survives the v2 → v3 upgrade.
 
 Keep up to nine pets, pick which to play, and see them all from the shell (SPEC §6.1, ADR 0007).
 
-- [ ] Persistence: `PetRoster` over `pets/` — list pet files, create `<slug>-<id>.json` for a
+- [x] Persistence: `PetRoster` over `pets/` — list pet files, create `<slug>-<id>.json` for a
       new pet, `last.json` (fallback: most recently updated), archive to `pets/archive/`;
       tests with `tmp_path` incl. unreadable files, a missing/corrupt `last.json`, and names
       that need slugging (spaces, emoji, path separators)
-- [ ] Persistence: legacy migration — an existing `save.json` (+ `.bak`) moves into `pets/` and
+- [x] Persistence: legacy migration — an existing `save.json` (+ `.bak`) moves into `pets/` and
       becomes last played; idempotent; an interrupted move never loses a file
 - [ ] Persistence: per-pet lock (`.lock` with pid; stale locks taken over; released on exit and
       on SIGTERM/SIGHUP)
