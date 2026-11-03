@@ -1,5 +1,6 @@
 """Naming a new egg (and choosing which animal it is)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import ClassVar, override
 
@@ -55,9 +56,19 @@ class NewPetScreen(Screen[NewPet]):
         Binding("down", "species(1)", "Next animal", show=False),
     ]
 
-    def __init__(self, view: ViewOptions | None = None, species: str = DEFAULT_SPECIES) -> None:
-        """Show a wobbling egg, starting on ``species``, drawn with ``view`` options."""
+    def __init__(
+        self,
+        view: ViewOptions | None = None,
+        species: str = DEFAULT_SPECIES,
+        *,
+        taken: Callable[[str], bool] | None = None,
+    ) -> None:
+        """Show a wobbling egg, starting on ``species``, drawn with ``view`` options.
+
+        ``taken`` says whether a living pet already has a name (SPEC §6.1).
+        """
         super().__init__()
+        self._taken = taken or (lambda _name: False)
         self._view = view or ViewOptions()
         self._species = species
         shipped = available_species()
@@ -101,4 +112,8 @@ class NewPetScreen(Screen[NewPet]):
         if result is not None and not result.is_valid:
             self.query_one("#name-error", Static).update(NAME_RULE)
             return
-        self.dismiss(NewPet(validate_name(event.value), self._species))
+        name = validate_name(event.value)
+        if self._taken(name):
+            self.query_one("#name-error", Static).update(f"You already have a {name}.")
+            return
+        self.dismiss(NewPet(name, self._species))

@@ -1,6 +1,6 @@
 """The main screen: the pet, its header, and every care action."""
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, ClassVar, override
 
 from textual import events
@@ -38,6 +38,8 @@ from tama.ui.widgets.pet_view import ViewOptions
 if TYPE_CHECKING:
     from textual.notifications import SeverityLevel
 
+OTHERS_EVERY_SECONDS = 60
+"""How often the other pets are re-checked for the header's ``⚠ +N``."""
 MIN_WIDTH = 60
 MIN_HEIGHT = 20
 
@@ -51,6 +53,9 @@ class MainScreen(Screen[None]):
     class PetDied(Message):
         """The pet has just died: time for the memorial."""
 
+    class SwitchPet(Message):
+        """The player wants to pick another pet (``t``)."""
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("f", "feed", "Feed"),
         Binding("p", "play", "Play"),
@@ -59,6 +64,7 @@ class MainScreen(Screen[None]):
         Binding("l", "act('lights')", "Lights"),
         Binding("d", "act('discipline')", "Discipline"),
         Binding("h", "holiday", "Holiday"),
+        Binding("t", "switch", "Pets"),
         Binding("s", "status", "Status"),
         Binding("question_mark", "help", "Help", key_display="?"),
         Binding("q", "app.quit_game", "Quit"),
@@ -71,17 +77,21 @@ class MainScreen(Screen[None]):
         tick_interval: float | None = None,
         view: ViewOptions | None = None,
         bell: bool = False,
+        others: Callable[[], int] | None = None,
     ) -> None:
         """Show ``session``'s pet, ticking it every ``tick_interval`` seconds (if given).
 
         The screen owns the timer so ticking stops as soon as the screen goes away. With
-        ``bell``, each new attention call rings the terminal bell once.
+        ``bell``, each new attention call rings the terminal bell once. With several pets,
+        ``others`` counts the other pets needing care (checked every minute), and ``t``
+        switches pets.
         """
         super().__init__()
         self.session = session
         self._tick_interval = tick_interval
         self._view = view or ViewOptions()
         self._bell = bell
+        self._others = others
         self.last_game: GameKind | None = None
         """The game chosen last time, pre-selected next time."""
         # Needs that are already there when the screen opens don't ring: the player is here.
@@ -104,6 +114,26 @@ class MainScreen(Screen[None]):
         self._draw()
         if self._tick_interval is not None:
             self.set_interval(self._tick_interval, self.tick)
+        if self._others is not None:
+            self.check_others()
+            if self._tick_interval is not None:
+                self.set_interval(OTHERS_EVERY_SECONDS, self.check_others)
+
+    def check_others(self) -> None:
+        """Show how many other pets need care (read-only; the bell never rings for them)."""
+        if self._others is not None:
+            self.query_one(PetHeader).show_others(self._others())
+
+    @override
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Offer ``t`` only when there are other pets to switch to."""
+        if action == "switch":
+            return self._others is not None
+        return True
+
+    def action_switch(self) -> None:
+        """Save and go back to the pet list."""
+        self.post_message(self.SwitchPet())
 
     def tick(self) -> None:
         """Bring the pet up to date, redraw it, and report a newly failing autosave."""

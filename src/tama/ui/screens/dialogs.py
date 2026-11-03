@@ -20,7 +20,8 @@ f  Feed (meal or snack)      l  Lights on/off
 p  Play a game               d  Discipline
 c  Clean up                  s  Status
 m  Medicine                  ?  This help
-h  Holiday (pause/resume)    q  Save and quit
+h  Holiday (pause/resume)    t  Switch pets
+                             q  Save and quit
 
 Keep your pet fed, happy and clean. Turn the lights
 off when it sleeps, give medicine when it's sick, and

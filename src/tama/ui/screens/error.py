@@ -72,3 +72,13 @@ class ErrorScreen(Screen[bool]):
     def action_quit(self) -> None:
         """Leave the save alone and exit."""
         self.dismiss(False)  # noqa: FBT003 - the screen's result, not a flag
+
+
+class PetErrorScreen(ErrorScreen):
+    """One unreadable pet among several: going back returns to the pet list (SPEC §6.1)."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("n", "start_new", "Set aside + new pet"),
+        Binding("q", "quit", "Back to pets"),
+        Binding("escape", "quit", "Back to pets", show=False),
+    ]

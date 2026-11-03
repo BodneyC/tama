@@ -21,7 +21,17 @@ PetHeader {
   width: auto;
 }
 
+#header-bottom {
+  height: 1;
+}
+
+#others {
+  width: auto;
+  color: $tama-attention;
+}
+
 #attention {
+  width: 1fr;
   height: 1;
   color: $tama-attention;
   text-style: bold;

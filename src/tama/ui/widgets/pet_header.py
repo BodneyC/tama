@@ -78,7 +78,9 @@ class PetHeader(Widget):
         with Horizontal(id="header-top"):
             yield Static(id="identity", markup=False)
             yield Static(id="stats")
-        yield Static(id="attention", markup=False)
+        with Horizontal(id="header-bottom"):
+            yield Static(id="attention", markup=False)
+            yield Static(id="others", markup=False)
 
     def on_mount(self) -> None:
         """Start blinking the attention indicator (it only shows while there is a call)."""
@@ -95,6 +97,10 @@ class PetHeader(Widget):
         indicator.set_class(pet.on_holiday, "-holiday")
         if not attention or pet.on_holiday:
             indicator.remove_class("-blink-off")
+
+    def show_others(self, count: int) -> None:
+        """``⚠ +N`` when ``count`` other pets need attention (SPEC §6.1); never blinks."""
+        self.query_one("#others", Static).update(f"⚠ +{count}" if count else "")
 
     def blink(self) -> None:
         """Flip the attention indicator between shown and hidden while the pet is calling."""
