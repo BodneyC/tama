@@ -60,6 +60,7 @@ ignore = [
     "D203", "D213",                  # conflicting docstring styles (we use D211/D212)
     "PLR2004",                       # magic values: fine in a game with a Balance object
     "TRY003",
+    "S311",                          # `random` drives gameplay, not cryptography
 ]
 
 [tool.ruff.lint.per-file-ignores]

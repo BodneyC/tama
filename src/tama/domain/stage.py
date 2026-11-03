@@ -1,0 +1,35 @@
+"""Life-stage related enumerations."""
+
+from enum import StrEnum
+
+
+class LifeStage(StrEnum):
+    """Where the pet is in its life. Declared in chronological order."""
+
+    EGG = "egg"
+    BABY = "baby"
+    CHILD = "child"
+    TEEN = "teen"
+    ADULT = "adult"
+    ELDER = "elder"
+    DEAD = "dead"
+
+    @property
+    def order(self) -> int:
+        """Position in the life cycle (EGG is 0), for "at least this stage" comparisons."""
+        return list(LifeStage).index(self)
+
+
+class Variant(StrEnum):
+    """Appearance variant. Pets are DEFAULT until adulthood, when care decides GOOD/SCRUFFY."""
+
+    DEFAULT = "default"
+    GOOD = "good"
+    SCRUFFY = "scruffy"
+
+
+class DeathCause(StrEnum):
+    """Why a pet died."""
+
+    POOR_HEALTH = "poor_health"
+    OLD_AGE = "old_age"
