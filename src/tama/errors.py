@@ -48,3 +48,7 @@ class PetLockedError(TamaError):
         """Record which process holds the pet."""
         super().__init__(message)
         self.pid = pid
+
+
+class UnknownPetError(TamaError):
+    """``--pet NAME`` matched no pet, or several."""

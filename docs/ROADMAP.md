@@ -235,7 +235,7 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
       becomes last played; idempotent; an interrupted move never loses a file
 - [ ] Persistence: per-pet lock (`.lock` with pid; stale locks taken over; released on exit and
       on SIGTERM/SIGHUP)
-- [ ] Services: `PetSummary` for every pet as of now (read-only capped catch-up, never saves);
+- [x] Services: `PetSummary` for every pet as of now (read-only capped catch-up, never saves);
       unique-name check for living pets; 9-pet limit; startup time with 9 pets measured
 - [ ] CLI: `--pet NAME` (case-insensitive, unique prefix, living before dead; ambiguous or
       unknown → usage error listing the pets); `--new` adds a pet (refused at 9);
