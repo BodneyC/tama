@@ -162,6 +162,29 @@ def test_play_is_accepted_without_changing_the_pet() -> None:
     assert out.events == ()
 
 
+@pytest.mark.parametrize("action", [Action.MEAL, Action.SNACK, Action.PLAY])
+def test_a_misbehaving_pet_refuses_food_and_play(action: Action) -> None:
+    pet = make_pet(misbehaving=True, stats=Stats(hunger=10))
+
+    out = apply(pet, action, make_ctx())
+
+    assert out.refusal is RefusalReason.MISBEHAVING
+    assert out.pet == pet
+
+
+@pytest.mark.parametrize("action", [Action.CLEAN, Action.LIGHTS, Action.DISCIPLINE])
+def test_a_misbehaving_pet_still_accepts_care_and_discipline(action: Action) -> None:
+    pet = make_pet(misbehaving=True, poop_count=1)
+
+    assert apply(pet, action, make_ctx()).refusal is None
+
+
+def test_a_misbehaving_pet_still_takes_medicine() -> None:
+    pet = make_pet(misbehaving=True, sickness_doses=1)
+
+    assert apply(pet, Action.MEDICINE, make_ctx()).refusal is None
+
+
 def test_play_refused_when_too_tired() -> None:
     pet = make_pet(stats=Stats(energy=9))
 

@@ -114,8 +114,8 @@ put a pet **on holiday**: it is frozen in time until they resume it.
 
 | Key | Action | Effect | Refused when |
 | --- | --- | --- | --- |
-| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. | Asleep, egg, dead, (meal) hunger ≥ 95 |
-| `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, energy < 10 |
+| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. | Asleep, egg, dead, misbehaving, (meal) hunger ≥ 95 |
+| `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, misbehaving, energy < 10 |
 | `c` | Clean | Removes all poop, hygiene → 100 | — |
 | `m` | Medicine | Cures one dose of sickness | Not sick |
 | `l` | Lights on/off | Toggles lights | — |
@@ -135,8 +135,12 @@ Refused actions play a short "shake head" animation and show a toast explaining 
 A dead pet refuses everything; an egg refuses feeding, play, discipline and medicine.
 
 **Misbehaviour:** each simulated hour, an awake, healthy pet of CHILD stage or older has a 15%
-chance to start misbehaving (an attention call with no real need). Disciplining it then gives
-discipline +25. Ignoring it for > 5 min costs discipline −10 and the pet gives up.
+chance to start misbehaving (an attention call with no real need). While misbehaving it throws
+a tantrum: it loops the `misbehave` animation (scowling and stamping) and refuses meals,
+snacks and play ("Turned its nose up at a meal: misbehaving", "Sulked and wouldn't play"),
+though it still accepts medicine, cleaning and the lights. Disciplining it then gives
+discipline +25. Ignoring it for > 30 min costs discipline −10 and the pet gives up. (30 min
+lets a player who checks in about every half hour catch most tantrums: `tools/balance.py`.)
 
 ### 3.1 Mini-games
 
@@ -217,8 +221,8 @@ there), and with reduced motion the icon is steady instead of blinking.
   and may theme the UI's colours (ADR 0004). One file per `(species, variant, stage,
   animation)`; animations include at least
   `idle` (2–4 frames, ~2 fps), `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
-  `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`, and the poses `look_left`/`look_right`
-  (the Left/Right game). The feed menu shows small animated meal and snack sprites.
+  `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`, `misbehave` (a tantrum loop: angry
+  brows, stamping and shouting), and the poses `look_left`/`look_right` (the Left/Right game). The feed menu shows small animated meal and snack sprites.
 - Board games: while "thinking" the pet alternates `look_left`/`look_right` (~0.6 s); a dropped
   Four in a Row piece falls row by row (~40 ms per row). With reduced motion the pet's move
   appears at once and pieces land without falling.

@@ -186,6 +186,17 @@ def test_adult_variants(snap_compare: SnapCompare, variant: Variant) -> None:
     assert snap_compare(app, terminal_size=(60, 20))
 
 
+@pytest.mark.parametrize("species", ["tama", "owl", "bear"])
+def test_misbehaving_pet(snap_compare: SnapCompare, species: str) -> None:
+    app = make_app(repo_with(misbehaving=True, stage=LifeStage.ADULT, species=species))
+    assert snap_compare(app, terminal_size=(60, 20))
+
+
+def test_misbehaving_pet_refuses_a_meal(snap_compare: SnapCompare) -> None:
+    app = make_app(repo_with(misbehaving=True, stats=Stats(hunger=40)))
+    assert snap_compare(app, press=["f", "m"])
+
+
 def test_sick_pet_with_overlays(snap_compare: SnapCompare) -> None:
     app = make_app(repo_with(sickness_doses=1, poop_count=2))
     assert snap_compare(app)

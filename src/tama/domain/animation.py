@@ -39,6 +39,7 @@ class AnimationKey(StrEnum):
     DEAD = "dead"
     LOOK_LEFT = "look_left"
     LOOK_RIGHT = "look_right"
+    MISBEHAVE = "misbehave"
 
 
 def looping_animation(pet: Pet) -> AnimationKey:
@@ -51,6 +52,8 @@ def looping_animation(pet: Pet) -> AnimationKey:
         return AnimationKey.SLEEP
     if pet.is_sick:
         return AnimationKey.SICK
+    if pet.misbehaving:
+        return AnimationKey.MISBEHAVE
     return AnimationKey.IDLE
 
 

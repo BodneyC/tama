@@ -34,6 +34,7 @@ _REFUSED_BY_EGG = frozenset(
     {Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE, Action.MEDICINE}
 )
 _REFUSED_WHEN_ASLEEP = frozenset({Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE})
+_REFUSED_WHEN_MISBEHAVING = frozenset({Action.MEAL, Action.SNACK, Action.PLAY})
 
 
 def refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReason | None:
@@ -44,6 +45,8 @@ def refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReason | None:
         return RefusalReason.EGG
     if pet.is_asleep and action in _REFUSED_WHEN_ASLEEP:
         return RefusalReason.ASLEEP
+    if pet.misbehaving and action in _REFUSED_WHEN_MISBEHAVING:
+        return RefusalReason.MISBEHAVING  # a tantrum: discipline it first
     return _specific_refusal(pet, action, balance)
 
 

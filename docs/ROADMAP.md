@@ -177,6 +177,24 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
 draw or loss with the keyboard, and see the right effect on the pet; the board games are
 readable in colour, light theme and monochrome at 60×20.
 
+## M6.5.1 — Discipline pass
+
+Asked for after M6.5: measure discipline, and make misbehaviour visible.
+
+- [x] `tools/balance.py` records tantrums caught/ignored, discipline and care mistakes at
+      adulthood; simulated players check in at irregular times (each gap 0.5-1.5× their
+      usual one). Checking exactly on the hour had hidden the problem: misbehaviour starts on
+      the hour, so the old players always caught it at once
+- [x] Ignore window 5 → 30 min: a casual player (about every 30 min) caught 24% of
+      tantrums and raised a good adult in 3/30 lives; now 86% and 20/30 (the rest miss out
+      through care mistakes). Busy players (every 2 h) still never do
+- [x] A misbehaving pet refuses meals, snacks and play with its own messages, and loops a new
+      `misbehave` animation (angry brows, stamping, shouting) for every species and stage
+- [x] Board games: the thinking pet glances left and right (SPEC §5.2; missed in M6.5)
+
+**Accept:** a misbehaving pet looks and acts like it (snapshot per species, refusal toast);
+`tools/balance.py` shows a casual player usually raises a good adult and a busy one never.
+
 ## M6.6 — Holiday (pause)
 
 Freeze a settled pet while you're away and bring it back later (SPEC §2.6, ADR 0008). Comes

@@ -39,6 +39,9 @@ AGE = timedelta(hours=2)
         ({"is_asleep": True}, AnimationKey.SLEEP),
         ({"is_asleep": True, "sickness_doses": 1}, AnimationKey.SLEEP),
         ({"sickness_doses": 1}, AnimationKey.SICK),
+        ({"misbehaving": True}, AnimationKey.MISBEHAVE),
+        ({"misbehaving": True, "sickness_doses": 1}, AnimationKey.SICK),
+        ({"misbehaving": True, "is_asleep": True}, AnimationKey.SLEEP),
     ],
 )
 def test_looping_animation_reflects_state(

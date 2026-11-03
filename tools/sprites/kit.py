@@ -138,6 +138,20 @@ def eyes_look(g: Grid, dx: int) -> Grid:
     return set_pixels(g, vacated + [(y, x + dx, "e") for y, x in moves])
 
 
+def brows_angry(g: Grid) -> Grid:
+    """Scowl: a brow over each eye, high on the outside and low towards the middle."""
+    middle = len(g[0]) / 2
+    changes: list[tuple[int, int, str]] = []
+    for run in eye_runs(g):
+        y, x = run[0]
+        outward = -1 if x < middle else 1
+        # Drawn like the eyes so they stand out (and show as gaps in monochrome, as eyes do).
+        for by, bx in ((y - 2, x + outward), (y - 1, x), (y - 1, x - outward)):
+            if by >= 0 and g[by][bx] in "bhu":
+                changes.append((by, bx, "e"))
+    return set_pixels(g, changes)
+
+
 def mouth_open(g: Grid) -> Grid:
     """Drop the jaw: extend each mouth pixel down one row."""
     return set_pixels(
@@ -226,6 +240,7 @@ def living(stage: Stage, *, sick: Palette, hatch_from: Grid | None = None) -> di
 
     happy = eyes_happy(base)
     closed = eyes_closed(base)
+    angry = brows_angry(base)
     anims = {
         "idle": Anim((c(base), up(base)), 1.25, o),
         "blink": Anim(frames(closed), 6, o, loop=False),
@@ -250,6 +265,17 @@ def living(stage: Stage, *, sick: Palette, hatch_from: Grid | None = None) -> di
         "look_left": Anim((shift(c(eyes_look(base, -1)), dx=-1),), 1, o),
         "look_right": Anim((shift(c(eyes_look(base, 1)), dx=1),), 1, o),
         "sick": Anim(frames(base, closed), 1, {**o, **sick}),
+        # A tantrum while misbehaving: scowling, stamping side to side and shouting.
+        "misbehave": Anim(
+            (
+                c(angry),
+                shift(c(mouth_open(angry)), dx=-1),
+                c(angry),
+                shift(c(mouth_open(angry)), dx=1),
+            ),
+            3,
+            o,
+        ),
         "clean": Anim(
             (sparkles(c(base), 0), sparkles(c(base), 1), sparkles(c(base), 0), c(base)),
             4,

@@ -300,6 +300,7 @@ LIVING = (
     AnimationKey.CLEAN,
     AnimationKey.LOOK_LEFT,
     AnimationKey.LOOK_RIGHT,
+    AnimationKey.MISBEHAVE,
 )
 REQUIRED: dict[LifeStage, tuple[AnimationKey, ...]] = {
     LifeStage.EGG: (AnimationKey.IDLE, AnimationKey.WOBBLE),
@@ -318,6 +319,7 @@ LOOPING = {
     AnimationKey.WOBBLE,
     AnimationKey.LOOK_LEFT,
     AnimationKey.LOOK_RIGHT,
+    AnimationKey.MISBEHAVE,
 }
 
 

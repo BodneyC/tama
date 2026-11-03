@@ -36,6 +36,7 @@ class RefusalReason(StrEnum):
     NOT_HUNGRY = "not_hungry"
     TOO_TIRED = "too_tired"
     NOT_SICK = "not_sick"
+    MISBEHAVING = "misbehaving"
 
 
 class MistakeReason(StrEnum):

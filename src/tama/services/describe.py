@@ -29,6 +29,7 @@ from tama.domain.events import (
     NeedLow,
     Played,
     Pooped,
+    RefusalReason,
     Refused,
     WokeUp,
 )
@@ -120,6 +121,10 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return "Lights on" if on else "Lights off"
         case Disciplined(effective=effective):
             return "Was disciplined" if effective else "Was scolded for nothing"
+        case Refused(action=Action.MEAL | Action.SNACK as food, reason=RefusalReason.MISBEHAVING):
+            return f"Turned its nose up at {_REFUSED_ACTIONS[food]}: misbehaving"
+        case Refused(action=Action.PLAY, reason=RefusalReason.MISBEHAVING):
+            return "Sulked and wouldn't play"
         case Refused(action=action, reason=reason):
             return f"Refused {_REFUSED_ACTIONS[action]}: {reason.value.replace('_', ' ')}"
         case _:

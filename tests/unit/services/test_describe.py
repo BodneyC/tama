@@ -93,6 +93,15 @@ def test_format_age(age: timedelta, text: str) -> None:
         (Disciplined(AGE, effective=False), "Was scolded for nothing"),
         (Refused(AGE, Action.MEAL, RefusalReason.NOT_HUNGRY), "Refused a meal: not hungry"),
         (Refused(AGE, Action.PLAY, RefusalReason.ASLEEP), "Refused to play: asleep"),
+        (
+            Refused(AGE, Action.MEAL, RefusalReason.MISBEHAVING),
+            "Turned its nose up at a meal: misbehaving",
+        ),
+        (
+            Refused(AGE, Action.SNACK, RefusalReason.MISBEHAVING),
+            "Turned its nose up at a snack: misbehaving",
+        ),
+        (Refused(AGE, Action.PLAY, RefusalReason.MISBEHAVING), "Sulked and wouldn't play"),
     ],
 )
 def test_describe_event(event: Event, text: str) -> None:
