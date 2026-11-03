@@ -18,8 +18,10 @@ rules (line detection, full boards, illegal moves) that bugs could easily hide i
   set once it is over. Left or Right moves there from `domain/minigame.py`. Like the rest of
   the domain, games import nothing from the UI and use no global randomness.
 - The pet's moves come from one pure function in `opponent.py`: take a winning move, else block
-  the player's immediate win, else (Four in a Row) avoid giving the player a win on top of
-  its piece, else pick the best-placed move, breaking ties with the injected `random.Random`.
+  the player's immediate win, else avoid any move after which the player could win at once
+  (in Four in a Row: dropping under the player's winning cell; it never applies in
+  Tic-Tac-Toe once blocks are taken), else pick the best-placed move, breaking ties with the
+  injected `random.Random`.
   With a per-stage **mistake chance** (in `Balance`) it plays a random legal move instead.
   This is a heuristic, not a search: it is predictable to test, cheap, and beatable, which
   suits a pet. Difficulty is tuned in `Balance` only.
