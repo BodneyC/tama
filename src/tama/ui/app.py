@@ -10,13 +10,16 @@ from textual.app import App
 from textual.binding import Binding, BindingType
 
 from tama.domain.pet import DEFAULT_SPECIES
+from tama.domain.stage import LifeStage
 from tama.errors import SaveError, SaveWriteError
 from tama.infra.clock import Clock
 from tama.persistence.repository import SaveRepository
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.colours import Mode
+from tama.ui.screens.away import AwaySummaryScreen
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
+from tama.ui.screens.memorial import MemorialScreen
 from tama.ui.screens.new_pet import NewPet, NewPetScreen
 from tama.ui.theme import css_variables, ui_palette
 from tama.ui.widgets.pet_view import ViewOptions
@@ -159,12 +162,8 @@ class TamaApp(App[None]):
         self._start(loaded.session)
         if loaded.recovered_from_backup:
             self.notify("Your save was damaged; recovered from the backup.", severity="warning")
-        if loaded.away.summary:
-            self.notify(
-                "\n".join(loaded.away.summary),
-                title="While you were away",
-                timeout=15,
-            )
+        if loaded.away.summary or loaded.away.pet_sitter:
+            self.push_screen(AwaySummaryScreen(loaded.session.pet.name, loaded.away))
 
     def _recover(self, error: SaveError, start_new: bool | None) -> None:  # noqa: FBT001 - screen result
         if not start_new:
@@ -200,10 +199,32 @@ class TamaApp(App[None]):
         if session.pet.species != self.species:
             self.species = session.pet.species
             self.refresh_css()  # the species may theme the UI colours
+        if session.pet.stage is LifeStage.DEAD:
+            self._show_memorial()
+            return
         self.main = MainScreen(
             session, tick_interval=self._tick_interval, view=self.view, bell=self.bell_enabled
         )
         self.push_screen(self.main)
+
+    def on_main_screen_pet_died(self, _message: MainScreen.PetDied) -> None:
+        """Replace the main screen (and any dialog over it) with the memorial."""
+        if self.main is not None:
+            while self.screen is not self.main:
+                self.pop_screen()
+            self.pop_screen()
+            self.main = None
+        self._show_memorial()
+
+    def _show_memorial(self) -> None:
+        if self.session is not None:
+            self.push_screen(MemorialScreen(self.session.pet, self.view), self._after_memorial)
+
+    def _after_memorial(self, new_egg: bool | None) -> None:  # noqa: FBT001 - screen result
+        if not new_egg or self.session is None:
+            self.action_quit_game()
+            return
+        self.push_screen(NewPetScreen(self.view, self.session.pet.species), self._hatch)
 
     def _install_signal_handlers(self) -> None:
         loop = asyncio.get_running_loop()

@@ -16,13 +16,15 @@ def error_text(error: SaveError) -> str:
     if isinstance(error, UnsupportedSaveVersionError):
         return (
             f"{error}\n\n"
-            "Your save was made by a newer version of tama, so this one won't touch it.\n"
-            "Please upgrade tama to keep playing."
+            "This save is from a newer version of tama, so this\n"
+            "version won't touch it. Please upgrade tama to keep\n"
+            "playing."
         )
     return (
         f"{error}\n\n"
         "Neither the save nor its backup could be read.\n"
-        "Starting a new pet keeps both files, renamed to <name>.corrupt-<time>."
+        "Starting a new pet keeps both files, renamed to\n"
+        "<name>.corrupt-<time>."
     )
 
 

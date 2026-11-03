@@ -4,7 +4,7 @@ import asyncio
 import os
 import signal
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from textual.content import Content
@@ -12,7 +12,7 @@ from textual.widgets import Static
 
 from tama.domain.animation import AnimationKey
 from tama.domain.balance import DEFAULT_BALANCE
-from tama.domain.pet import DEFAULT_SPECIES
+from tama.domain.events import Died
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import (
@@ -23,11 +23,14 @@ from tama.errors import (
 )
 from tama.infra.clock import FakeClock
 from tama.persistence.repository import LoadResult
+from tama.services.session import CatchUp, SessionSettings
 from tama.ui.app import EXIT_ERROR, TamaApp
 from tama.ui.colours import Look, Mode
+from tama.ui.screens.away import AwaySummaryScreen, away_text
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
+from tama.ui.screens.memorial import MemorialScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
 from tama.ui.sprites import load_sprite, overlay_content
 from tama.ui.widgets.pet_header import PetHeader
@@ -195,9 +198,94 @@ async def test_time_away_is_summarised() -> None:
     repo = repo_with(poop_progress=0)
     clock.advance(timedelta(hours=3))
     app = make_app(repo, clock=clock)
-    notes = Notes(app)
+    async with app.run_test() as pilot:
+        assert isinstance(app.screen, AwaySummaryScreen)
+        body = text(app, "#away-body")
+        assert "Mochi, while you were away (3h 0m):" in body
+        assert "Pooped" in body
+
+        await pilot.press("enter")
+        assert isinstance(app.screen, MainScreen)
+
+
+async def test_pet_sitter_is_mentioned_beyond_the_offline_cap() -> None:
+    clock = FakeClock(FIXED_NOW)
+    repo = repo_with()
+    clock.advance(timedelta(hours=3))
+    app = make_app(repo, clock=clock, settings=SessionSettings(offline_cap=timedelta(hours=1)))
     async with app.run_test():
-        assert "Pooped" in notes
+        assert "A pet sitter looked after Mochi for the last 2h 0m." in text(app, "#away-body")
+
+
+async def test_quiet_time_away_needs_no_summary() -> None:
+    clock = FakeClock(FIXED_NOW)
+    repo = repo_with()
+    clock.advance(timedelta(seconds=30))
+    app = make_app(repo, clock=clock)
+    async with app.run_test():
+        assert isinstance(app.screen, MainScreen)
+
+
+# --- Death ----------------------------------------------------------------------------------
+
+OLD: dict[str, Any] = {"stage": LifeStage.ELDER, "age": timedelta(days=15) - timedelta(minutes=1)}
+
+
+async def test_a_dead_pet_opens_its_memorial() -> None:
+    repo = repo_with(
+        species="owl",
+        stage=LifeStage.DEAD,
+        cause_of_death=DeathCause.OLD_AGE,
+        age=timedelta(days=15),
+        care_mistakes=2,
+    )
+    app = make_app(repo)
+    async with app.run_test():
+        assert isinstance(app.screen, MemorialScreen)
+        body = text(app, "#memorial-body")
+        assert "Mochi the owl" in body
+        assert "Passed away peacefully of old age" in body
+        assert "Lived 15d 0h" in body
+        assert "Care mistakes: 2" in body
+
+
+async def test_dying_during_play_opens_the_memorial() -> None:
+    clock = FakeClock(FIXED_NOW)
+    app = make_app(repo_with(lifespan=timedelta(days=15), **OLD), clock=clock)
+    async with app.run_test() as pilot:
+        clock.advance(timedelta(minutes=2))
+        app.tick()
+        await pilot.pause()
+
+        assert isinstance(app.screen, MemorialScreen)
+
+
+async def test_a_new_egg_after_the_memorial() -> None:
+    repo = repo_with(species="bear", stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, NewPetScreen)
+        assert text(app, "#species").startswith("Species: bear")
+
+        await pilot.press(*"Bun", "enter")
+        await pilot.pause()
+
+        assert isinstance(app.screen, MainScreen)
+        assert repo.game is not None
+        assert repo.game.pet.name == "Bun"
+        assert repo.game.pet.stage is LifeStage.EGG
+
+
+async def test_quitting_from_the_memorial_saves() -> None:
+    repo = repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        await pilot.press("q")
+
+    assert app.return_code == 0
+    assert repo.save_count == 1
 
 
 async def test_backup_recovery_is_mentioned() -> None:
@@ -251,7 +339,7 @@ async def test_a_newer_save_is_never_replaced(monkeypatch: pytest.MonkeyPatch) -
     repo = unloadable(monkeypatch, UnsupportedSaveVersionError("schema 9"))
     app = make_app(repo)
     async with app.run_test() as pilot:
-        assert "upgrade tama" in text(app, "#error-body")
+        assert "Please upgrade tama" in text(app, "#error-body")
         await pilot.press("n")
         await pilot.pause()
         assert isinstance(app.screen, ErrorScreen)
@@ -541,16 +629,13 @@ async def test_tick_before_a_pet_exists_does_nothing() -> None:
         assert app.session is None
 
 
-async def test_dead_pet_shows_a_tombstone_and_refuses_care() -> None:
-    app = make_app(repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE))
-    notes = Notes(app)
-    async with app.run_test() as pilot:
-        tombstone = load_sprite(DEFAULT_SPECIES, Variant.DEFAULT, LifeStage.DEAD, AnimationKey.IDLE)
-        assert text(app, "#sprite") == tombstone.frames(Look())[0].plain
-
-        await pilot.press("c")
-
-        assert "Refused to be cleaned: dead" in notes
+async def test_memorial_shows_the_species_gravestone() -> None:
+    app = make_app(
+        repo_with(species="owl", stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
+    )
+    async with app.run_test():
+        grave = load_sprite("owl", Variant.DEFAULT, LifeStage.DEAD, AnimationKey.IDLE)
+        assert app.screen.query_one(PetView).current == grave
 
 
 async def test_refreshing_before_the_screen_mounts_is_harmless() -> None:
@@ -725,3 +810,10 @@ async def test_blinking_follows_reduced_motion(reduced: bool, blinking: bool) ->
     app = make_app(repo_with(poop_count=1), view=ViewOptions(animate=True, reduced_motion=reduced))
     async with app.run_test():
         assert app.screen.query_one(PetHeader).blinking is blinking
+
+
+def test_no_pet_sitter_for_a_pet_that_died_while_away() -> None:
+    away = CatchUp(
+        timedelta(hours=80), timedelta(hours=72), (Died(timedelta(days=3), DeathCause.POOR_HEALTH),)
+    )
+    assert "pet sitter" not in away_text("Mochi", away)

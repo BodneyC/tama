@@ -89,13 +89,24 @@ ModalScreen {
   width: auto;
 }
 
+.dialog-hint {
+  color: $text-muted;
+  margin-top: 1;
+}
+
+#grave {
+  width: 100%;
+  content-align: center middle;
+  margin-bottom: 1;
+}
+
 .dialog-title {
   text-style: bold;
   color: $tama-accent;
   margin-bottom: 1;
 }
 
-NewPetScreen, ErrorScreen {
+NewPetScreen, ErrorScreen, MemorialScreen {
   align: center middle;
 }
 

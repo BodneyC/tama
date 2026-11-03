@@ -4,15 +4,18 @@ Regenerate with ``uv run pytest -n0 tests/ui/snapshots --snapshot-update`` and r
 """
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from textual.pilot import Pilot
 
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
+from tama.errors import CorruptSaveError, SaveError, UnsupportedSaveVersionError
 from tama.infra.clock import FakeClock
+from tama.persistence.repository import LoadResult
 from tama.ui.app import TamaApp
+from tama.ui.widgets.pet_header import PetHeader
 from tests.factories import FIXED_NOW
 from tests.ui.helpers import make_app, mono, repo_with
 
@@ -59,9 +62,40 @@ def test_asleep_with_lights_off(snap_compare: SnapCompare) -> None:
     assert snap_compare(app)
 
 
-def test_dead_pet(snap_compare: SnapCompare) -> None:
-    app = make_app(repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE))
+def test_memorial_screen(snap_compare: SnapCompare) -> None:
+    app = make_app(
+        repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE, care_mistakes=3)
+    )
     assert snap_compare(app)
+
+
+def test_away_summary(snap_compare: SnapCompare) -> None:
+    clock = FakeClock(FIXED_NOW)
+    repo = repo_with(poop_progress=0)
+    clock.advance(timedelta(hours=5))
+    assert snap_compare(make_app(repo, clock=clock))
+
+
+@pytest.mark.parametrize(
+    "error",
+    [CorruptSaveError("save.json: invalid JSON"), UnsupportedSaveVersionError("save is v9")],
+    ids=["corrupt", "newer"],
+)
+def test_error_screen(snap_compare: SnapCompare, error: SaveError) -> None:
+    repo = repo_with()
+
+    def broken() -> LoadResult:
+        raise error
+
+    repo.load = broken  # type: ignore[method-assign] # simulate an unreadable save
+    assert snap_compare(make_app(repo))
+
+
+def test_attention_indicator_blinked_off(snap_compare: SnapCompare) -> None:
+    async def blink(pilot: Pilot[None]) -> None:
+        pilot.app.screen.query_one(PetHeader).blink()
+
+    assert snap_compare(child_app(), run_before=blink)
 
 
 def test_main_screen_monochrome(snap_compare: SnapCompare) -> None:

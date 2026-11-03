@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
+from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
@@ -42,6 +43,9 @@ NOTABLE_EVENTS = (Evolved, Died, GotSick, Misbehaved, CareMistake, FellAsleep, W
 
 class MainScreen(Screen[None]):
     """Shows the pet and handles the care actions."""
+
+    class PetDied(Message):
+        """The pet has just died: time for the memorial."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("f", "feed", "Feed"),
@@ -123,6 +127,8 @@ class MainScreen(Screen[None]):
                 urgent = isinstance(event, Died | GotSick | CareMistake)
                 severity: SeverityLevel = "warning" if urgent else "information"
                 self.notify(describe_event(event), title=pet.name, severity=severity)
+        if any(isinstance(event, Died) for event in events):
+            self.post_message(self.PetDied())
 
     def _draw(self, events: Iterable[Event] = ()) -> None:
         pet = self.session.pet
