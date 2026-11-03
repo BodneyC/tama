@@ -97,28 +97,30 @@ and the `/add-sprite` command for the format.
       something in every look
 - [x] Generators split into `tools/sprites/` (shared kit + one module per species)
 
+**Accept:** Snapshot tests for each life stage's idle key frame in colour, on a dark and a light
+theme, plus one under `NO_COLOR`, each reviewed as a rendered image; manual check at
+`--speed 600`.
+
 ## M5.5 — More species
 
 Different-shaped pets (owl, bear, ...) using the per-species layout from ADR 0004.
 
-- [ ] Domain: `Species` on the pet (SPEC §2 update); decide how it's chosen: random at hatch
-      (seeded), picked on the name prompt, or by egg pattern (product decision, record in SPEC)
-- [ ] Persistence: save schema v2 with `species` (migration v1 → v2 defaults to `tama`), a v2
+- [x] Domain: `Pet.species` (SPEC §2), chosen by the player at hatching with
+      `tama --species ANIMAL` (ADR 0005); `--list-species` shows what has art
+- [x] Persistence: save schema v2 with `species` (migration v1 → v2 defaults to `tama`), a v2
       fixture, and the v1 fixture still loading
-- [ ] `tama.ui.sprites.species_of(pet)` returns the pet's species; `TamaApp.species` follows the
+- [x] `tama.ui.sprites.species_of(pet)` returns the pet's species; `TamaApp.species` follows the
       loaded pet (and `refresh_css()` on change) so species UI colours apply
 - [ ] `tools/sprites/owl.py`: base grids for every stage (pixel vocabulary), dark/light palette,
       optional `[ui]` accent; registered in `generate.py`
 - [ ] `tools/sprites/bear.py`: likewise
 - [ ] Snapshots: each species' stages on dark and light themes, reviewed as images
-- [ ] Species shown in `status` output and the status dialog
+- [x] Species shown in the status dialog
+- [ ] Species shown in `tama status` output
+- [ ] Optional: choose the species on the name prompt too (not only via the CLI)
 
 **Accept:** a new pet can hatch as an owl or a bear, renders correctly in both theme modes and
 monochrome, and an old v1 save still loads as a `tama`.
-
-**Accept:** Snapshot tests for each life stage's idle key frame in colour, on a dark and a light
-theme, plus one under `NO_COLOR`, each reviewed as a rendered image; manual check at
-`--speed 600`.
 
 ## M6 — Remaining screens & polish
 

@@ -117,8 +117,8 @@ or a recipe in `kit.py` (`living()`, `hatch()`, `wobble()`, transformations), th
    and light values (plus `UI` overrides if it should theme the app).
 2. Add its `build` to `COLLECTIONS` in `tools/sprites/generate.py`.
 3. Regenerate. The tests require every SPEC §5.2 animation for every species directory.
-4. Until the domain tracks species (roadmap M5.5), it won't appear in play; preview it with
-   snapshots or a contact sheet.
+4. Play it: `tama --new --species <species>` (it appears in `tama --list-species` as soon as
+   `sprites/<species>/base.toml` exists).
 
 Hand-drawn species are fine too: create `sprites/<species>/` with `base.toml` and files by hand,
 and don't add it to the generator (which only rewrites collections it owns).

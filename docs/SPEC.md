@@ -26,7 +26,8 @@ All stats are integers clamped to `0..100`.
 | `discipline` | 0..100, affects obedience | no drift | no drift |
 
 Plus non-stat fields: `weight` (grams, int), `age` (`timedelta` of simulated life),
-`poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species_variant`,
+`poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species` (the animal, fixed
+at hatching; default `tama`), `variant` (adult form),
 `born_at`, `last_updated_at`, `care_mistakes` (int).
 
 Awake decay is scaled by life stage (BABY ×1.5, ELDER ×0.75); asleep drift is not. Asleep
@@ -200,6 +201,9 @@ config, which overrides defaults.
 ```
 tama                       # play (load or create)
 tama --new                 # start over (confirmation prompt if a live pet exists)
+tama --species owl         # which animal hatches from a new egg (with --new to replace a pet);
+                           # an existing pet can't change species. Default: tama
+tama --list-species        # the animals that have art
 tama --save-path PATH
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)
