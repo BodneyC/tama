@@ -1,0 +1,36 @@
+# ADR 0003: Colour pixel-art sprites rendered with block characters
+
+- **Status:** Accepted
+- **Date:** 2026-11-03
+
+## Context
+
+M4 shipped single-frame ASCII sprites (`.txt` files of characters like `( o o )`). They are
+legible but don't look like a virtual pet. The goal is pixel art: chunky, coloured, built from
+the full, half and shaded block characters (`█ ▀ ▄ ░ ▒ ▓`).
+
+Drawing directly in block glyphs plus separate colour layers is error-prone: the artist has to
+think in half-cells and keep three grids in sync.
+
+## Decision
+
+- Sprites are authored as **pixel grids** in TOML (`<variant>/<stage>/<animation>.toml`):
+  one character per pixel, a `[palette]` mapping characters to hex colours, `.` for
+  transparent, plus `fps` and `loop`.
+- The renderer composes **two pixel rows per terminal row** using `▀`/`▄`/`█`/space with
+  foreground/background colours. This gives roughly square pixels and double vertical resolution.
+- Palette entries may set `shade = "light" | "medium" | "dark"`; a cell whose two pixels are the
+  same shaded entry is drawn with `░`/`▒`/`▓` for texture and dithering.
+- Parsing and validation use `tomllib` plus a Pydantic model in `tama.ui.sprites`; rendered
+  frames are cached as Textual `Content` (styled strips) per (variant, stage, animation).
+- Under `NO_COLOR` (or a monochrome terminal), opaque pixels are drawn in the default colour, so
+  sprites must keep a readable silhouette without colour.
+
+## Consequences
+
+- Sprites look like pixel art and share one consistent palette per character.
+- The renderer is a small, pure function (pixels → cells) that is easy to unit-test.
+- The M4 ASCII `.txt` sprites and their loader are replaced in M5; `test_sprites.py` changes
+  from "ASCII and ≤ 16×8 characters" to the pixel-format rules (see `/add-sprite`).
+- Truecolour looks best; Textual downsamples to 256/16 colours automatically on lesser
+  terminals.

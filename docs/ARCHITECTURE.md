@@ -74,8 +74,8 @@ src/tama/
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
 │   │   └── dialogs.py     # Help, Status, FeedMenu, MiniGame modals
 │   ├── widgets/           # pet_header (name/stats/attention), pet_stage (sprite + indicators)
-│   └── sprites.py         # load + cache frames from assets via importlib.resources
-└── assets/sprites/        # <variant>/<stage>/<animation>.txt (frames separated by a line "---")
+│   └── sprites.py         # load, validate and render pixel sprites; cache frames as Content
+└── assets/sprites/        # <variant>/<stage>/<animation>.toml (pixel grid + palette, ADR 0003)
 ```
 
 Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests/ui/...`,
@@ -113,6 +113,7 @@ knows nothing about how events are presented.
 - `domain/animation.py` decides *which* animation should be playing (pure, unit-tested).
 - `ui/widgets/pet_view.py` (a `Static` subclass) owns *frame playback*: a `set_interval` timer
   advances the frame index; a one-shot queue plays reaction animations before reverting.
+- Sprites are pixel grids rendered to block characters, two pixels per cell (ADR 0003).
 - `ui/sprites.py` parses sprite files once (`functools.cache`) into `tuple[Frame, ...]`, validating
   that all frames of an animation share dimensions (a test asserts this for every asset).
 - Missing sprite for a variant falls back to the default variant, then a placeholder — never crash.

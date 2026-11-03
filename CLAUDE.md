@@ -8,7 +8,7 @@ starting any task, then read the docs it links to that are relevant to the task.
 **tama** — a terminal (TUI) virtual pet in the spirit of the original Tamagotchi.
 The pet hatches, grows through life stages, gets hungry/unhappy/dirty/sick over time
 (including while the app is closed), and is cared for through keyboard actions. It is
-animated with ASCII/Unicode sprites and its state is persisted between sessions.
+animated with colour pixel-art sprites (block characters) and its state is persisted between sessions.
 
 The goal is a **quality** codebase: strict typing, high test coverage, clean
 architecture, reproducible tooling, and a polished user experience.
@@ -77,8 +77,8 @@ See `docs/ARCHITECTURE.md` for detail. Summary:
 5. **Saves are versioned and atomic.** Every save file has `schema_version`. Write to a temp
    file in the same dir, `fsync`, then `os.replace`. Keep one `.bak`. Never crash on a corrupt
    save — surface a recoverable error to the user.
-6. **Sprites are data, not code.** Animation frames live in `src/tama/assets/sprites/*.txt`
-   and are loaded via `importlib.resources`.
+6. **Sprites are data, not code.** Pixel-art frames live in `src/tama/assets/sprites/**/*.toml`
+   and are loaded via `importlib.resources` (format: ADR 0003 and `/add-sprite`).
 
 ## Code conventions
 

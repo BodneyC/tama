@@ -10,7 +10,7 @@
 | UI behaviour | `tests/ui/` | `App.run_test()` + `Pilot`, pytest-asyncio | Press keys, assert on screen/widget state and session state. |
 | UI snapshots | `tests/ui/snapshots/` | pytest-textual-snapshot | SVG snapshots (stored as `__snapshots__/**/*.raw`) of key screens at 80×24 with a `FakeClock`, fixed seed and no tick timer. |
 | Integration | `tests/integration/` | pytest, Typer `CliRunner` | CLI flags, `tama status`, full load→play→save→reload cycle. |
-| Assets | `tests/unit/test_sprites.py` | pytest (parametrised) | Every sprite file parses; frames are rectangular & consistent; every (stage, animation) required by `domain.animation` exists for the default variant. |
+| Assets | `tests/unit/test_sprites.py` | pytest (parametrised) | Every sprite file parses; palette covers every pixel; even height and size limits; frames consistent; every (stage, animation) required by `domain.animation` exists for the default variant. Renderer tested cell by cell. |
 
 ## Conventions
 
