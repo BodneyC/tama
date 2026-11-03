@@ -15,6 +15,7 @@ from tama.infra.config import Config
 from tama.infra.paths import CONFIG_PATH_ENV
 from tama.persistence.repository import JsonSaveRepository
 from tama.services.session import GameSession, SessionSettings
+from tama.ui.sprites import available_species
 from tama.ui.widgets.pet_view import ViewOptions
 from tests.factories import FIXED_NOW
 
@@ -93,8 +94,7 @@ def test_invalid_speed_is_a_usage_error() -> None:
     result = runner.invoke(app, ["--speed", "0"])
 
     assert result.exit_code == 2
-    # Typer's error panel may be styled (CI forces colour), so compare without ANSI codes.
-    assert "--speed" in click.unstyle(result.stderr)
+    assert "--speed" in panel_text(result.stderr)
     assert FakeApp.instances == []
 
 
@@ -174,16 +174,18 @@ def test_app_exit_code_is_propagated() -> None:
 # --- Species ------------------------------------------------------------------------------------
 
 
-@pytest.fixture
-def owls_too(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(cli, "available_species", lambda: ("owl", "tama"))
+def panel_text(styled: str) -> str:
+    """Typer's error panel as plain text: no ANSI codes (CI forces colour), box or wrapping."""
+    plain = click.unstyle(styled).translate(str.maketrans("", "", "│╭╮╰╯─"))
+    return " ".join(plain.split())
 
 
 def test_list_species() -> None:
     result = runner.invoke(app, ["--list-species"])
 
     assert result.exit_code == 0
-    assert result.stdout == "tama\n"
+    assert result.stdout.splitlines() == list(available_species())
+    assert {"tama", "owl", "bear"} <= set(result.stdout.splitlines())
     assert FakeApp.instances == []
 
 
@@ -191,11 +193,10 @@ def test_unknown_species_is_a_usage_error() -> None:
     result = runner.invoke(app, ["--species", "dragon"])
 
     assert result.exit_code == 2
-    assert "choose from: tama" in click.unstyle(result.stderr)
+    assert f"choose from: {', '.join(available_species())}" in panel_text(result.stderr)
     assert FakeApp.instances == []
 
 
-@pytest.mark.usefixtures("owls_too")
 def test_species_for_a_first_pet() -> None:
     result = runner.invoke(app, ["--species", "owl"])
 
@@ -203,7 +204,6 @@ def test_species_for_a_first_pet() -> None:
     assert launched().kwargs["new_pet_species"] == "owl"
 
 
-@pytest.mark.usefixtures("owls_too")
 def test_an_existing_pet_cannot_change_species(tmp_path: Path) -> None:
     path = tmp_path / "save.json"
     existing_pet(path)
@@ -226,7 +226,6 @@ def test_naming_the_existing_species_is_fine(tmp_path: Path) -> None:
     assert launched().ran
 
 
-@pytest.mark.usefixtures("owls_too")
 def test_starting_over_with_another_species(tmp_path: Path) -> None:
     path = tmp_path / "save.json"
     existing_pet(path)
@@ -240,7 +239,6 @@ def test_starting_over_with_another_species(tmp_path: Path) -> None:
     assert launched().kwargs["start_new"] is True
 
 
-@pytest.mark.usefixtures("owls_too")
 def test_unreadable_save_is_left_for_the_app_to_explain(tmp_path: Path) -> None:
     path = tmp_path / "save.json"
     path.write_text("{ broken", encoding="utf-8")

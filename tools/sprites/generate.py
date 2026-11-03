@@ -3,19 +3,24 @@
     uv run python -m tools.sprites.generate
 
 To add a species, write ``tools/sprites/<species>.py`` with ``NAME`` and ``build()`` (copy
-``tama.py``) and add it to ``COLLECTIONS``. Only generated collections are rewritten; any
+``owl.py``) and add it to ``COLLECTIONS``. Only generated collections are rewritten; any
 hand-drawn species directory is left alone.
 """
 
 from collections.abc import Callable
 from pathlib import Path
 
-from tools.sprites import overlays, tama
+from tools.sprites import bear, overlays, owl, tama
 from tools.sprites.kit import Collection
 
 ROOT = Path(__file__).resolve().parents[2] / "src" / "tama" / "assets" / "sprites"
 
-COLLECTIONS: tuple[Callable[[], Collection], ...] = (tama.build, overlays.build)
+COLLECTIONS: tuple[Callable[[], Collection], ...] = (
+    tama.build,
+    owl.build,
+    bear.build,
+    overlays.build,
+)
 """Every generated collection: one per species, plus the shared overlays."""
 
 

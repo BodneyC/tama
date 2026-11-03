@@ -361,21 +361,27 @@ def test_every_required_animation_has_its_own_file(
     assert (ROOT / species / variant / stage / f"{animation}.toml").is_file()
 
 
+def parse_shipped(species: str, variant: Variant, stage: LifeStage, name: str) -> SpriteFile:
+    """A shipped animation file, parsed but not rendered (rendering every look is slow)."""
+    path = ROOT / species / variant / stage / f"{name}.toml"
+    return SpriteFile.parse(path.read_text(encoding="utf-8"))
+
+
 @pytest.mark.parametrize("species", species_dirs())
 def test_reactions_are_one_shot_and_loops_loop(species: str) -> None:
     for stage, animations in REQUIRED.items():
         for animation in animations:
-            sprite = load_sprite(species, Variant.DEFAULT, stage, animation)
-            assert sprite.loop is (animation in LOOPING), (stage, animation)
+            parsed = parse_shipped(species, Variant.DEFAULT, stage, animation)
+            assert parsed.loop is (animation in LOOPING), (stage, animation)
 
 
 @pytest.mark.parametrize("species", species_dirs())
 def test_animations_of_a_stage_share_one_canvas(species: str) -> None:
     for stage, animations in REQUIRED.items():
         sizes = {
-            (len(grid), len(grid[0]))
+            (len(frame.rows), len(frame.rows[0]))
             for animation in animations
-            for grid in load_sprite(species, Variant.DEFAULT, stage, animation).cells(DARK)
+            for frame in parse_shipped(species, Variant.DEFAULT, stage, animation).frames
         }
         assert len(sizes) == 1, (stage, sizes)
 
@@ -405,17 +411,17 @@ def test_every_shipped_sprite_draws_something_in_every_look() -> None:
     for path in ROOT.rglob("*.toml"):
         if path.name == "base.toml":
             continue
-        parts = path.relative_to(ROOT).parts
-        sprite = (
-            load_overlay(path.stem)
-            if parts[0] == sprites.OVERLAYS
-            else load_sprite(
-                parts[0], Variant(parts[1]), LifeStage(parts[2]), AnimationKey(path.stem)
-            )
-        )
-        for look in LOOKS:
-            for grid in sprite.cells(look):
-                assert any(c.glyph != " " for row in grid for c in row), (path, look)
+        base = load_base(path.relative_to(ROOT).parts[0])
+        assert base is not None
+        parsed = SpriteFile.parse(path.read_text(encoding="utf-8"))
+        palette = {**base.palette, **parsed.palette}
+        for frame in parsed.frames:
+            # Whether a frame shows anything depends only on which pixels it uses, so render
+            # each distinct pixel once (whole frames in every look make this test slow).
+            used = "".join(sorted(set("".join(frame.rows)) - {"."}))
+            for look in LOOKS:
+                (cells,) = render_cells((used, "." * len(used)), palette, look)
+                assert any(c.glyph != " " for c in cells), (path, look)
 
 
 def test_sprite_cells_match_frames() -> None:
@@ -567,7 +573,7 @@ def test_available_species_lists_directories_with_a_palette(art: Path) -> None:
 
 
 def test_shipped_species() -> None:
-    assert sprites.available_species() == (DEFAULT_SPECIES,)
+    assert sprites.available_species() == ("bear", "owl", DEFAULT_SPECIES)
 
 
 def test_pets_are_drawn_as_their_own_species() -> None:
