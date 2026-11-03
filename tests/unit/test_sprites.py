@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from tools import generate_sprites
 
 from tama.domain.animation import AnimationKey
 from tama.domain.stage import LifeStage, Variant
@@ -15,10 +16,15 @@ from tama.ui.sprites import (
     PaletteEntry,
     Shade,
     SpriteFile,
+    hstack,
+    load_overlay,
     load_sprite,
+    overlay_content,
     render_cells,
     to_content,
 )
+
+OVERLAYS = ("zzz", "sick", "poop")
 
 INK = PaletteEntry(color="#112233")  # dark: a gap in monochrome
 RED = PaletteEntry(color="#ff0000")
@@ -31,8 +37,10 @@ PALETTE = {"k": INK, "r": RED, "c": CRIMSON, "f": FUZZ, "p": PAPER}
 @pytest.fixture(autouse=True)
 def clear_cache() -> Iterator[None]:
     load_sprite.cache_clear()
+    load_overlay.cache_clear()
     yield
     load_sprite.cache_clear()
+    load_overlay.cache_clear()
 
 
 def cell(top: str, bottom: str, *, color: bool = True) -> Cell:
@@ -191,6 +199,81 @@ def test_every_shipped_sprite_is_valid(path: Path) -> None:
     SpriteFile.parse(path.read_text(encoding="utf-8"))
 
 
+LIVING = (
+    AnimationKey.IDLE,
+    AnimationKey.BLINK,
+    AnimationKey.EAT,
+    AnimationKey.PLAY,
+    AnimationKey.HAPPY,
+    AnimationKey.REFUSE,
+    AnimationKey.SLEEP,
+    AnimationKey.SICK,
+    AnimationKey.CLEAN,
+)
+REQUIRED: dict[LifeStage, tuple[AnimationKey, ...]] = {
+    LifeStage.EGG: (AnimationKey.IDLE, AnimationKey.WOBBLE),
+    LifeStage.BABY: (*LIVING, AnimationKey.HATCH),
+    LifeStage.CHILD: (*LIVING, AnimationKey.EVOLVE),
+    LifeStage.TEEN: (*LIVING, AnimationKey.EVOLVE),
+    LifeStage.ADULT: (*LIVING, AnimationKey.EVOLVE),
+    LifeStage.ELDER: (*LIVING, AnimationKey.EVOLVE),
+    LifeStage.DEAD: (AnimationKey.IDLE,),
+}
+"""Every animation SPEC §5.2 needs, per stage ("dead" uses the dead stage's idle)."""
+
+
+@pytest.mark.parametrize(
+    ("variant", "stage", "animation"),
+    [(Variant.DEFAULT, s, a) for s, anims in REQUIRED.items() for a in anims]
+    + [
+        (v, s, a)
+        for v in (Variant.GOOD, Variant.SCRUFFY)
+        for s in (LifeStage.ADULT, LifeStage.ELDER)
+        for a in REQUIRED[s]
+    ],
+    ids=str,
+)
+def test_every_required_animation_has_its_own_file(
+    variant: Variant, stage: LifeStage, animation: AnimationKey
+) -> None:
+    path = Path(str(sprites.sprite_root())) / variant / stage / f"{animation}.toml"
+
+    assert path.is_file()
+
+
+def test_reactions_are_one_shot_and_loops_loop() -> None:
+    for stage, animations in REQUIRED.items():
+        for animation in animations:
+            sprite = load_sprite(Variant.DEFAULT, stage, animation)
+            looping = animation in {
+                AnimationKey.IDLE,
+                AnimationKey.SLEEP,
+                AnimationKey.SICK,
+                AnimationKey.WOBBLE,
+            }
+            assert sprite.loop is looping, (stage, animation)
+
+
+def test_animations_of_a_stage_share_one_canvas() -> None:
+    for stage, animations in REQUIRED.items():
+        sizes = {
+            (len(grid), len(grid[0]))
+            for animation in animations
+            for grid in load_sprite(Variant.DEFAULT, stage, animation).cells(color=True)
+        }
+        assert len(sizes) == 1, (stage, sizes)
+
+
+def test_generated_art_is_up_to_date() -> None:
+    """The committed sprites must match tools/generate_sprites.py (run it after editing)."""
+    root = Path(str(sprites.sprite_root()))
+    expected = generate_sprites.sprite_set()
+
+    on_disk = {p.relative_to(root): p.read_text(encoding="utf-8") for p in root.rglob("*.toml")}
+
+    assert on_disk == expected
+
+
 @pytest.mark.parametrize("stage", list(LifeStage))
 def test_every_stage_has_an_idle_sprite(stage: LifeStage) -> None:
     sprite = load_sprite(Variant.DEFAULT, stage, AnimationKey.IDLE)
@@ -202,15 +285,43 @@ def test_every_stage_has_an_idle_sprite(stage: LifeStage) -> None:
 # --- Loading & fallbacks --------------------------------------------------------------------
 
 
-def test_missing_variant_falls_back_to_default() -> None:
+TINY = '[palette]\nk = "#000000"\n[[frames]]\npixels = "kk\\nkk"\n'
+
+
+@pytest.fixture
+def art(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """An empty sprite root to populate per test."""
+    monkeypatch.setattr(sprites, "sprite_root", lambda: tmp_path)
+    return tmp_path
+
+
+def draw(root: Path, variant: str, stage: str, animation: str) -> None:
+    path = root / variant / stage / f"{animation}.toml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(TINY, encoding="utf-8")
+
+
+def test_missing_variant_falls_back_to_default(art: Path) -> None:
+    draw(art, "default", "adult", "idle")
+
     assert load_sprite(Variant.GOOD, LifeStage.ADULT, AnimationKey.IDLE) is load_sprite(
         Variant.DEFAULT, LifeStage.ADULT, AnimationKey.IDLE
     )
 
 
-def test_missing_animation_falls_back_to_idle() -> None:
+def test_missing_animation_falls_back_to_idle(art: Path) -> None:
+    draw(art, "default", "child", "idle")
+
     assert load_sprite(Variant.DEFAULT, LifeStage.CHILD, AnimationKey.EAT) is load_sprite(
         Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE
+    )
+
+
+def test_default_variant_animation_is_used_for_a_missing_variant_animation(art: Path) -> None:
+    draw(art, "default", "adult", "eat")
+
+    assert load_sprite(Variant.GOOD, LifeStage.ADULT, AnimationKey.EAT) is load_sprite(
+        Variant.DEFAULT, LifeStage.ADULT, AnimationKey.EAT
     )
 
 
@@ -257,3 +368,51 @@ def test_broken_art_uses_a_placeholder_and_logs(
 def test_placeholder_renders_something() -> None:
     assert PLACEHOLDER.frames(color=True)[0].plain == "?"
     assert PLACEHOLDER.frames(color=False)[0].plain == "?"
+
+
+# --- Composition & overlays -----------------------------------------------------------------
+
+
+def test_hstack_bottom_aligns_with_a_gap() -> None:
+    tall = ((Cell("a"),), (Cell("b"),))
+    short = ((Cell("c"), Cell("d")),)
+
+    stacked = hstack([tall, short], gap=1)
+
+    assert [[c.glyph for c in row] for row in stacked] == [
+        ["a", " ", " ", " "],
+        ["b", " ", "c", "d"],
+    ]
+
+
+def test_hstack_of_nothing_is_empty() -> None:
+    assert hstack([]) == ()
+
+
+def test_sprite_cells_match_frames() -> None:
+    sprite = load_sprite(Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE)
+
+    assert to_content(sprite.cells(color=True)[0]) == sprite.frames(color=True)[0]
+    assert to_content(sprite.cells(color=False)[0]) == sprite.frames(color=False)[0]
+
+
+@pytest.mark.parametrize("name", OVERLAYS)
+def test_every_overlay_exists(name: str) -> None:
+    assert load_overlay(name) is not PLACEHOLDER
+
+
+def test_missing_overlay_is_a_placeholder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(sprites, "sprite_root", lambda: tmp_path)
+
+    assert load_overlay("nope") is PLACEHOLDER
+    assert "nope.toml" in caplog.text
+
+
+def test_overlay_content_places_overlays_side_by_side() -> None:
+    one = overlay_content(["poop"], color=True)
+    two = overlay_content(["poop", "poop"], color=True)
+
+    one_width = len(one.plain.split("\n")[0])
+    assert len(two.plain.split("\n")[0]) == 2 * one_width + 2

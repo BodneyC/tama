@@ -39,7 +39,7 @@ TRANSPARENT = "."
 MONO_INK_THRESHOLD = 0.45
 """In monochrome, pixels darker than this (relative luminance) become gaps."""
 MAX_WIDTH = 32
-MAX_HEIGHT = 16
+MAX_HEIGHT = 20
 _HEX_COLOUR = r"^#[0-9a-fA-F]{6}$"
 
 
@@ -212,12 +212,18 @@ def to_content(cells: Sequence[Sequence[Cell]]) -> Content:
 # --- Loading ----------------------------------------------------------------------------------
 
 
+CellGrid = tuple[tuple[Cell, ...], ...]
+"""One rendered frame: rows of terminal cells."""
+
+
 @dataclass(frozen=True, slots=True)
 class Sprite:
     """A loaded animation, pre-rendered in colour and monochrome."""
 
     fps: float
     loop: bool
+    color_cells: tuple[CellGrid, ...]
+    mono_cells: tuple[CellGrid, ...]
     color_frames: tuple[Content, ...]
     mono_frames: tuple[Content, ...]
 
@@ -225,24 +231,73 @@ class Sprite:
         """The rendered frames, in colour or monochrome (for ``NO_COLOR``)."""
         return self.color_frames if color else self.mono_frames
 
+    def cells(self, *, color: bool) -> tuple[CellGrid, ...]:
+        """The frames as cell grids (for composing several sprites side by side)."""
+        return self.color_cells if color else self.mono_cells
+
+    @classmethod
+    def from_cells(
+        cls,
+        fps: float,
+        color_cells: tuple[CellGrid, ...],
+        mono_cells: tuple[CellGrid, ...],
+        *,
+        loop: bool,
+    ) -> Self:
+        """Build a sprite from rendered cell grids."""
+        return cls(
+            fps,
+            loop,
+            color_cells,
+            mono_cells,
+            tuple(to_content(grid) for grid in color_cells),
+            tuple(to_content(grid) for grid in mono_cells),
+        )
+
     @classmethod
     def from_file(cls, parsed: SpriteFile) -> Self:
         """Render every frame of a parsed sprite file."""
 
-        def render(*, color: bool) -> tuple[Content, ...]:
+        def render(*, color: bool) -> tuple[CellGrid, ...]:
             return tuple(
-                to_content(render_cells(f.rows, parsed.palette, color=color)) for f in parsed.frames
+                tuple(map(tuple, render_cells(f.rows, parsed.palette, color=color)))
+                for f in parsed.frames
             )
 
-        return cls(parsed.fps, parsed.loop, render(color=True), render(color=False))
+        return cls.from_cells(parsed.fps, render(color=True), render(color=False), loop=parsed.loop)
 
 
-PLACEHOLDER = Sprite(fps=1, loop=True, color_frames=(Content("?"),), mono_frames=(Content("?"),))
+_PLACEHOLDER_GRID: CellGrid = ((Cell("?"),),)
+PLACEHOLDER = Sprite.from_cells(1, (_PLACEHOLDER_GRID,), (_PLACEHOLDER_GRID,), loop=True)
+
+
+def hstack(grids: Sequence[CellGrid], gap: int = 1) -> CellGrid:
+    """Place cell grids side by side, bottom-aligned, ``gap`` blank cells apart."""
+    if not grids:
+        return ()
+    height = max(len(grid) for grid in grids)
+    rows: list[list[Cell]] = [[] for _ in range(height)]
+    for index, grid in enumerate(grids):
+        width = max((len(row) for row in grid), default=0)
+        padded = [(Cell(" "),) * width] * (height - len(grid)) + list(grid)
+        for row, cells in zip(rows, padded, strict=True):
+            if index:
+                row.extend([Cell(" ")] * gap)
+            row.extend(cells)
+    return tuple(tuple(row) for row in rows)
 
 
 def sprite_root() -> Traversable:
     """The directory holding all sprite files."""
     return files("tama.assets") / "sprites"
+
+
+def _parse_resource(resource: Traversable) -> Sprite:
+    try:
+        return Sprite.from_file(SpriteFile.parse(resource.read_text(encoding="utf-8")))
+    except (tomllib.TOMLDecodeError, ValidationError):
+        logger.exception("Invalid sprite file %s", resource)
+        return PLACEHOLDER
 
 
 def _resource(variant: Variant, stage: LifeStage, animation: AnimationKey) -> Traversable:
@@ -259,11 +314,7 @@ def load_sprite(variant: Variant, stage: LifeStage, animation: AnimationKey) -> 
     """
     resource = _resource(variant, stage, animation)
     if resource.is_file():
-        try:
-            return Sprite.from_file(SpriteFile.parse(resource.read_text(encoding="utf-8")))
-        except (tomllib.TOMLDecodeError, ValidationError):
-            logger.exception("Invalid sprite file %s", resource)
-            return PLACEHOLDER
+        return _parse_resource(resource)
     if variant is not Variant.DEFAULT and _resource(Variant.DEFAULT, stage, animation).is_file():
         return load_sprite(Variant.DEFAULT, stage, animation)
     if animation is not AnimationKey.IDLE:
@@ -271,3 +322,22 @@ def load_sprite(variant: Variant, stage: LifeStage, animation: AnimationKey) -> 
     if variant is not Variant.DEFAULT:
         return load_sprite(Variant.DEFAULT, stage, AnimationKey.IDLE)
     return PLACEHOLDER
+
+
+@cache
+def load_overlay(name: str) -> Sprite:
+    """Load (and cache) an overlay sprite from ``sprites/overlays/<name>.toml``.
+
+    Missing or broken overlays become the placeholder (and are logged).
+    """
+    resource = sprite_root() / "overlays" / f"{name}.toml"
+    if not resource.is_file():
+        logger.warning("Missing overlay sprite %s", resource)
+        return PLACEHOLDER
+    return _parse_resource(resource)
+
+
+def overlay_content(names: Sequence[str], *, color: bool) -> Content:
+    """Render overlay sprites (first frame of each) side by side."""
+    grids = [load_overlay(name).cells(color=color)[0] for name in names]
+    return to_content(hstack(grids, gap=2))
