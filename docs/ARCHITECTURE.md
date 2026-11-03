@@ -103,6 +103,8 @@ tools/sprites/             # dev only, not shipped
 ├── tama.py, owl.py, bear.py  # one module per species: base grids + dark/light palette
 ├── overlays.py
 └── generate.py            # python -m tools.sprites.generate
+tools/balance.py           # simulated players live whole lives; judge Balance changes on this
+tools/games.py             # scripted players vs the pet at every stage: board-game win rates
 ```
 
 Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests/ui/...`,

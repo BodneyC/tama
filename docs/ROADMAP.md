@@ -167,8 +167,11 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
 - [x] Reduced motion: no thinking pause or falling pieces
 - [x] Snapshots: game select; each board game mid-game and finished; monochrome and light
       variants of Four in a Row; all fit 60×20
-- [ ] Balance check: extend `tools/balance.py` (or a sibling) to play many games with a simple
-      scripted player and confirm young pets are easy and adults challenging
+- [x] Balance check: extend `tools/balance.py` (or a sibling) to play many games with a simple
+      scripted player and confirm young pets are easy and adults challenging.
+      Done in `tools/games.py`, no tuning needed: a casual player (takes wins and blocks,
+      otherwise random) beats a baby 79% / 72% of the time (Four in a Row / Tic-Tac-Toe) and an
+      adult 33% / 32%; against adults Tic-Tac-Toe is mostly draws (61%).
 
 **Accept:** from the main screen a player can pick each of the three games, play it to a win,
 draw or loss with the keyboard, and see the right effect on the pet; the board games are

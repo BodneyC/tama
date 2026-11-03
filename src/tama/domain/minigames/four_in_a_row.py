@@ -27,6 +27,12 @@ def _lines() -> tuple[tuple[Cell, ...], ...]:
 
 LINES = _lines()
 """Every run of four cells on the board (69 of them)."""
+LINES_THROUGH: dict[Cell, tuple[tuple[Cell, ...], ...]] = {
+    (column, row): tuple(line for line in LINES if (column, row) in line)
+    for column in range(COLUMNS)
+    for row in range(ROWS)
+}
+"""The runs of four that pass through each cell, so a move only checks its own lines."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,7 +110,9 @@ class FourInARow:
 
     def wins_with(self, column: int, side: Side) -> bool:
         """Whether ``side`` would make four by dropping into ``column`` now."""
-        return self._with(column, side).winner is side
+        after = self._with(column, side)
+        cell = (column, len(self.columns[column]))
+        return any(all(after.at(*other) is side for other in line) for line in LINES_THROUGH[cell])
 
     def preference(self, column: int) -> int:
         """How the pet ranks ``column`` when nothing else decides: lower is better."""
