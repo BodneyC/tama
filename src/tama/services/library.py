@@ -5,9 +5,12 @@ It holds the lock on whichever pet is open, so one pet is only ever open in one 
 """
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import tzinfo
 from pathlib import Path
 
+from tama.domain.balance import Balance
 from tama.domain.pet import DEFAULT_SPECIES
 from tama.infra.clock import Clock
 from tama.persistence.lock import PetLock
@@ -34,6 +37,11 @@ class PetLibrary:
         self._settings = settings
         self._lock: PetLock | None = None
         self.open_file: PetFile | None = None
+
+    @property
+    def balance(self) -> Balance:
+        """The game's tunable numbers."""
+        return self._settings.balance
 
     @property
     def tz(self) -> tzinfo:
@@ -87,6 +95,19 @@ class PetLibrary:
         )
         self.roster.set_last(file)
         return session
+
+    @contextmanager
+    def borrow(self, file: PetFile) -> Iterator[GameSession]:
+        """Lock and load ``file``'s pet for a quick change (``tama --pause``), then let go.
+
+        Raises:
+            PetLockedError: If it is open in another tama.
+            SaveError: If it can't be loaded.
+        """
+        with PetLock(file.path):
+            yield GameSession.load(
+                repo=file.repo(), clock=self._clock, settings=self._settings
+            ).session
 
     def set_aside(self) -> list[Path]:
         """Move the open, unreadable pet's files aside (``.corrupt-<time>``) and close it.

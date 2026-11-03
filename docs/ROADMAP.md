@@ -237,10 +237,10 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
       on SIGTERM/SIGHUP)
 - [x] Services: `PetSummary` for every pet as of now (read-only capped catch-up, never saves);
       unique-name check for living pets; 9-pet limit; startup time with 9 pets measured
-- [ ] CLI: `--pet NAME` (case-insensitive, unique prefix, living before dead; ambiguous or
+- [x] CLI: `--pet NAME` (case-insensitive, unique prefix, living before dead; ambiguous or
       unknown → usage error listing the pets); `--new` adds a pet (refused at 9);
       `--species` with `--pet` errors on a different species; `--save-path` still plays one file
-- [ ] CLI: `--status` (and `tama status` as an alias): one line per pet, last played first with
+- [x] CLI: `--status` (and `tama status` as an alias): one line per pet, last played first with
       `*`; `--status --pet NAME` for one; exit codes 0/1/2 as SPEC §8
 - [x] UI: `PetSelectScreen` — small idle sprites, name, species, stage, age, `⚠` reasons or `⏸`,
       gravestones for dead pets, "can't be read" rows; `↑`/`↓`, `1`–`9`, `Enter`, `n`, `a`
@@ -249,7 +249,7 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
       the name prompt rejects a living pet's name; the memorial's "new egg" adds a pet
 - [x] UI: header `⚠ +N` for other pets needing care (re-checked every minute, read-only; no
       bell; paused pets never count); Help text and footer updated
-- [ ] `--pause`/`--resume` accept `--pet NAME` and skip pets open in another tama (locks)
+- [x] `--pause`/`--resume` accept `--pet NAME` and skip pets open in another tama (locks)
 - [x] Unreadable pets open the per-file `ErrorScreen` without affecting the others
 - [ ] Snapshots: pet select (several pets incl. one dead, one needing care, one unreadable;
       light theme; monochrome); header with `⚠ +N`; all fit 60×20

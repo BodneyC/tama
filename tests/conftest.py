@@ -16,6 +16,7 @@ def isolate_user_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     home.mkdir()
     monkeypatch.setenv("TAMA_SAVE_PATH", str(home / "save.json"))
     monkeypatch.setenv("TAMA_CONFIG_PATH", str(home / "config.toml"))
+    monkeypatch.setenv("TAMA_DATA_DIR", str(home / "data"))
     monkeypatch.setenv("HOME", str(home))
     for var in ("XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
         monkeypatch.setenv(var, str(home / var.lower()))
