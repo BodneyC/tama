@@ -32,6 +32,9 @@
   whose mistake chance is 0 (it must take wins and blocks) or 1 (it must still only make legal
   moves). Property tests: random legal games always end with exactly one result within the
   board's size. Snapshot each board game mid-game and finished, in monochrome too.
+- Several pets (ADR 0007): roster tests use `tmp_path` and real files; assert that read-only
+  views (`--status`, the pet select screen, the header count) leave every pet file byte-for-byte
+  unchanged, and that two sessions can't hold the same pet's lock.
 - Reviewing snapshots: Pilot tests can't see layout bugs (an empty dialog still "contains"
   its text), so look at every new or changed snapshot. Render one to PNG, swapping in a
   locally installed monospace font that has the block glyphs (Textual's SVGs ask for Fira Code):

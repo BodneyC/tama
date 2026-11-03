@@ -60,12 +60,16 @@ src/tama/
 ├── services/
 │   ├── session.py         # GameSession: create/load (+ offline catch-up), tick, act, save
 │   ├── autosave.py        # AutosavePolicy: interval + immediate save on milestones
+│   ├── roster.py          # PetSummary per pet "as of now" (read-only catch-up), last played
 │   └── describe.py        # plain-text status line and event summaries (CLI + TUI)
 ├── persistence/
 │   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
 │   ├── codec.py           # encode()/decode(): JSON text <-> SaveGame (incl. migration)
 │   ├── migrations.py      # versioned migration steps
-│   └── repository.py      # SaveRepository protocol + JsonSaveRepository (atomic, .bak)
+│   ├── repository.py      # SaveRepository protocol + JsonSaveRepository (atomic, .bak)
+│   ├── roster.py          # PetRoster: list/create/archive pet files in pets/, last.json,
+│   │                      # legacy save.json migration (ADR 0007)
+│   └── lock.py            # per-pet lock file (pid; stale locks taken over)
 ├── infra/
 │   ├── clock.py           # Clock protocol, SystemClock, FakeClock (tests), ScaledClock(--speed)
 │   ├── paths.py           # save/config/log paths (platformdirs + CLI/env overrides)
@@ -76,6 +80,7 @@ src/tama/
 │   ├── app.tcss           # Textual CSS (theme variables only)
 │   ├── screens/
 │   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action
+│   │   ├── pet_select.py  # PetSelectScreen: every pet as of now; play, hatch, archive
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
 │   │   ├── dialogs.py     # Help, Status, FeedMenu modals
 │   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget)
@@ -174,6 +179,18 @@ UI to show, rather than crashing the game; `session.close()` raises so shutdown 
 The domain `Pet` is not a Pydantic model. `persistence/models.py` maps between the domain and
 versioned DTOs. This keeps the domain dependency-free and lets the file format evolve
 independently (migrations operate on raw dicts before validation).
+
+### Several pets
+
+Each pet is still exactly one `SaveRepository` (one file + `.bak`) and one `GameSession`;
+nothing in the domain knows there is more than one pet. `persistence/roster.py` owns the
+`pets/` directory: it lists pet files (the listing is the source of truth), creates a file
+for a new pet, archives one, remembers the last-played pet and moves a legacy `save.json` in.
+`services/roster.py` turns the listing into `PetSummary` values by loading each pet and
+running the same capped catch-up as `GameSession.load` **without saving**, so `--status`,
+the pet select screen and the header's "other pets need care" count all agree and never
+write. Only the pet that is open is saved, and only while its lock is held (ADR 0007).
+`--save-path` bypasses the roster and plays a single file, as before.
 
 ### Error handling
 

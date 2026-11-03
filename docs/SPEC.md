@@ -95,6 +95,7 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 | `l` | Lights on/off | Toggles lights | — |
 | `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25. Otherwise: happiness −20. | Asleep |
 | `s` | Status | Opens stats panel (hearts/bars, age, weight, stage) | — |
+| `t` | Tamas | Saves, then opens the pet select screen to switch pets (§6.1) | — |
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
 
@@ -169,11 +170,13 @@ there), and with reduced motion the icon is steady instead of blinking.
 └─────────────────────────────────────────────────────────┘
 ```
 
-- **Header:** name, stage, age, compact stat icons (colour-coded by level), attention indicator.
+- **Header:** name, stage, age, compact stat icons (colour-coded by level), attention indicator
+  (plus `⚠ +N` when other pets need care, §6.1).
 - **Stage:** the animated pet, poops, sickness skull/bubbles, Zzz when asleep; dimmed when
   lights off (via Textual CSS class on the stage).
 - **Footer:** key bindings (Textual `Footer`).
-- **Screens:** `NewPetScreen` (name entry + egg), `MainScreen`, `StatusScreen` (modal),
+- **Screens:** `PetSelectScreen` (§6.1), `NewPetScreen` (name entry + egg), `MainScreen`,
+  `StatusScreen` (modal),
   `FeedMenu` (modal), `GameSelectScreen` (modal), one modal per mini-game (`LeftRightScreen`,
   `FourInARowScreen`, `TicTacToeScreen`), `AwaySummaryScreen` (modal), `MemorialScreen`,
   `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery). Every game fits the minimum
@@ -204,8 +207,10 @@ there), and with reduced motion the icon is steady instead of blinking.
 
 ## 6. Persistence
 
-- Location: `platformdirs.user_data_path("tama") / "save.json"`; overridable with
-  `--save-path PATH` or `TAMA_SAVE_PATH` env var (CLI wins).
+- Location: one file per pet in `platformdirs.user_data_path("tama") / "pets/"` (§6.1);
+  `--save-path PATH` or the `TAMA_SAVE_PATH` env var (CLI wins) instead plays exactly one save
+  file, outside the pet list (handy for experiments and tests). In this section, `save.json`
+  stands for any one pet's file.
 - Format: JSON, human-readable, Pydantic model with `schema_version: int`.
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
 - Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
@@ -216,6 +221,44 @@ there), and with reduced motion the icon is steady instead of blinking.
 - Migrations: `persistence/migrations.py` holds `dict[int, Callable[[dict], dict]]` stepping
   `vN → vN+1`. Every schema bump adds a migration and a fixture test from a real old save.
 - RNG state is persisted so a reloaded game continues deterministically.
+
+### 6.1 Several tamas
+
+A player can keep up to **9 tamas** at once (so `1`–`9` can pick them). Each is an
+independent pet with its own species, RNG and save file, and **all of them live in real time**:
+a pet that isn't open ages and gets hungry exactly as if tama were closed (§2.5, with its own
+offline cap), so neglecting one costs that pet, not the others.
+
+- **Storage:** `pets/<slug>-<id>.json` (+ its own `.bak`), where `<slug>` is the pet's name made
+  filename-safe and `<id>` a short random hex id fixed at hatching. The directory listing *is*
+  the list of pets; there is no index to fall out of step. `pets/last.json` remembers which pet
+  was played last (if it is missing or unreadable, the most recently updated pet is used).
+  Pet files keep the existing save schema; no schema bump is needed.
+- **Names:** living pets have distinct names (compared case-insensitively); the name prompt
+  explains a clash ("You already have a Mochi"). A dead pet's name may be reused.
+- **Launching:** with no pets, `tama` shows the name prompt. With exactly one pet, it opens
+  it. With several, it shows the **pet select** screen with the last-played pet pre-selected,
+  so `Enter` continues where you left off. `tama --pet NAME` skips the screen.
+- **Pet select screen:** one row per pet, each simulated up to now in memory (not saved): its
+  idle sprite (small), name, species, stage, age, and the attention indicator `⚠` with
+  reasons if it needs care; dead pets show a gravestone and "passed away (…) at <age>";
+  unreadable files show "can't be read". Keys: `↑`/`↓` or `1`–`9` select, `Enter` plays,
+  `n` hatches a new egg (name prompt; refused at 9 pets, saying so), `a` archives the
+  selected pet (dead pets only, after a `y`/`n` confirmation), `Esc`/`q` quit. An unreadable
+  pet opens the `ErrorScreen` for that file only; the other pets are unaffected.
+- **Switching while playing:** `t` on the main screen saves the current pet and opens the pet
+  select screen. The UI colours follow whichever pet is open (ADR 0004).
+- **Other pets needing care:** while one pet is open, the header also shows `⚠ +N` when N
+  other living pets need attention (re-checked every minute from their saves, read-only); the
+  bell does not ring for other pets.
+- **Death:** the memorial's "new egg" adds a new pet; the dead one stays in the list as a
+  memorial until archived. **Archiving** moves its files to `pets/archive/` (never deleted),
+  where tama no longer lists them.
+- **One window per pet:** opening a pet takes a lock (`pets/<file>.lock` holding the process
+  id); a second tama asked for the same pet says it's already open elsewhere. Stale locks
+  (process gone) are taken over. `--status` never takes locks.
+- **Upgrading:** on first run with the new layout, an existing `save.json` (+ `.bak`) in the
+  data directory is moved into `pets/` and becomes the last-played pet; nothing is lost.
 
 ## 7. Config
 
@@ -237,17 +280,22 @@ config, which overrides defaults.
 ## 8. CLI
 
 ```
-tama                       # play (load or create)
-tama --new                 # start over (confirmation prompt if a live pet exists)
-tama --species owl         # which animal the name prompt starts on (with --new to replace a pet);
-                           # an existing pet can't change species. Default: tama
+tama                       # play: name prompt, the only pet, or the pet select screen (§6.1)
+tama --pet NAME            # play this pet (case-insensitive; a unique prefix is enough;
+                           # living pets win over dead ones of the same name)
+tama --new                 # hatch an additional egg (refused at 9 pets)
+tama --species owl         # which animal the name prompt starts on; a pet can't change
+                           # species (with --pet, naming another species is an error). Default: tama
+tama --status              # one line per pet, as of now (read-only, no TUI): the status line
+                           # below, last-played pet first and marked `*`, then by name;
+                           # with --pet, just that pet. Exit 0 ok, 1 no pets yet,
+                           # 2 if any pet's save is unreadable (its line says so) / bad config
 tama --list-species        # the animals that have art
-tama --save-path PATH
+tama --save-path PATH      # play exactly this one save file, outside the pet list
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)
 tama --reduced-motion / --quiet
-tama status                # print one-line pet status without the TUI (good for shell prompts),
-                           # e.g. "Mochi · child owl · 1h 0m · hunger 80 · ...";
-                           # read-only. Exit 0 ok, 1 no pet yet, 2 unreadable save / bad config
+tama status                # same as --status (kept for existing shell prompts). Status line,
+                           # e.g. "Mochi · child owl · 1h 0m · hunger 80 · ..."
 tama --version
 ```

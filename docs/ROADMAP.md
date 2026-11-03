@@ -174,6 +174,41 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
 draw or loss with the keyboard, and see the right effect on the pet; the board games are
 readable in colour, light theme and monochrome at 60×20.
 
+## M6.6 — Several tamas
+
+Keep up to nine pets, pick which to play, and see them all from the shell (SPEC §6.1, ADR 0007).
+
+- [ ] Persistence: `PetRoster` over `pets/` — list pet files, create `<slug>-<id>.json` for a
+      new pet, `last.json` (fallback: most recently updated), archive to `pets/archive/`;
+      tests with `tmp_path` incl. unreadable files, a missing/corrupt `last.json`, and names
+      that need slugging (spaces, emoji, path separators)
+- [ ] Persistence: legacy migration — an existing `save.json` (+ `.bak`) moves into `pets/` and
+      becomes last played; idempotent; an interrupted move never loses a file
+- [ ] Persistence: per-pet lock (`.lock` with pid; stale locks taken over; released on exit and
+      on SIGTERM/SIGHUP)
+- [ ] Services: `PetSummary` for every pet as of now (read-only capped catch-up, never saves);
+      unique-name check for living pets; 9-pet limit; startup time with 9 pets measured
+- [ ] CLI: `--pet NAME` (case-insensitive, unique prefix, living before dead; ambiguous or
+      unknown → usage error listing the pets); `--new` adds a pet (refused at 9);
+      `--species` with `--pet` errors on a different species; `--save-path` still plays one file
+- [ ] CLI: `--status` (and `tama status` as an alias): one line per pet, last played first with
+      `*`; `--status --pet NAME` for one; exit codes 0/1/2 as SPEC §8
+- [ ] UI: `PetSelectScreen` — small idle sprites, name, species, stage, age, `⚠` reasons,
+      gravestones for dead pets, "can't be read" rows; `↑`/`↓`, `1`–`9`, `Enter`, `n`, `a`
+      (confirm), `Esc`/`q`; shown at launch when there are several pets
+- [ ] UI: `t` on the main screen saves and switches pets; UI colours follow the open pet;
+      the name prompt rejects a living pet's name; the memorial's "new egg" adds a pet
+- [ ] UI: header `⚠ +N` for other pets needing care (re-checked every minute, read-only; no
+      bell); Help text and footer updated
+- [ ] Unreadable pets open the per-file `ErrorScreen` without affecting the others
+- [ ] Snapshots: pet select (several pets incl. one dead, one needing care, one unreadable;
+      light theme; monochrome); header with `⚠ +N`; all fit 60×20
+- [ ] Docs: README/`--help` explain several pets and the changed `--new`
+
+**Accept:** with three pets saved (one dead), `tama` offers all three, plays the chosen one,
+switches to another with `t`, and `tama --status` prints each pet's state as of now without
+changing any save; an old single `save.json` is picked up automatically.
+
 ## M7 — Release readiness
 
 - [ ] README with screenshot/GIF (e.g. via `vhs` or `asciinema`), install instructions
