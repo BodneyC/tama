@@ -97,9 +97,17 @@ class Balance:
     play_min_energy: int = 10
     play_energy: int = -10
     play_win_happiness: int = 20
+    play_draw_happiness: int = 10
     play_lose_happiness: int = 5
     play_win_weight: int = -1
     discipline_gain: int = 25
+
+    # The pet as a board-game opponent: the chance it plays a random move instead of a good one
+    baby_mistake_chance: float = 0.6
+    child_mistake_chance: float = 0.4
+    teen_mistake_chance: float = 0.25
+    adult_mistake_chance: float = 0.15
+    elder_mistake_chance: float = 0.2  # a little rusty
     discipline_unwarranted_happiness: int = -20
 
     def __post_init__(self) -> None:
@@ -132,6 +140,22 @@ class Balance:
         if stage is LifeStage.ELDER:
             return self.elder_decay_multiplier
         return Fraction(1)
+
+    def opponent_mistake_chance(self, stage: LifeStage) -> float:
+        """Return how often a pet at ``stage`` plays a random move in a board game."""
+        match stage:
+            case LifeStage.BABY:
+                return self.baby_mistake_chance
+            case LifeStage.CHILD:
+                return self.child_mistake_chance
+            case LifeStage.TEEN:
+                return self.teen_mistake_chance
+            case LifeStage.ADULT:
+                return self.adult_mistake_chance
+            case LifeStage.ELDER:
+                return self.elder_mistake_chance
+            case _:  # eggs and dead pets
+                raise InvalidArgumentError(f"a pet can't play board games as {stage.value}")
 
 
 DEFAULT_BALANCE = Balance()

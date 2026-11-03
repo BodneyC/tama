@@ -54,3 +54,23 @@ def test_stage_decay_multiplier(stage: LifeStage, expected: Fraction) -> None:
 def test_default_night_window() -> None:
     assert DEFAULT_BALANCE.night_start == time(22)
     assert DEFAULT_BALANCE.night_end == time(7)
+
+
+@pytest.mark.parametrize(
+    ("stage", "expected"),
+    [
+        (LifeStage.BABY, 0.6),
+        (LifeStage.CHILD, 0.4),
+        (LifeStage.TEEN, 0.25),
+        (LifeStage.ADULT, 0.15),
+        (LifeStage.ELDER, 0.2),
+    ],
+)
+def test_opponent_mistake_chance_per_stage(stage: LifeStage, expected: float) -> None:
+    assert DEFAULT_BALANCE.opponent_mistake_chance(stage) == expected
+
+
+@pytest.mark.parametrize("stage", [LifeStage.EGG, LifeStage.DEAD])
+def test_eggs_and_dead_pets_never_play(stage: LifeStage) -> None:
+    with pytest.raises(InvalidArgumentError, match="play"):
+        DEFAULT_BALANCE.opponent_mistake_chance(stage)

@@ -1,10 +1,11 @@
-"""The "Left or Right" guessing mini-game (SPEC §3)."""
+"""The "Left or Right" guessing mini-game (SPEC §3.1)."""
 
 from dataclasses import dataclass
 from enum import StrEnum
 from random import Random
 from typing import Self
 
+from tama.domain.minigames import GameResult
 from tama.errors import GameOverError, InvalidArgumentError
 
 
@@ -60,9 +61,11 @@ class LeftRightGame:
         return sum(result.correct for result in self.results)
 
     @property
-    def won(self) -> bool:
-        """Whether the game is over and the player guessed enough rounds."""
-        return self.is_over and self.wins >= self.wins_needed
+    def result(self) -> GameResult | None:
+        """``WIN`` with enough correct guesses, else ``LOSS``; ``None`` until it is over."""
+        if not self.is_over:
+            return None
+        return GameResult.WIN if self.wins >= self.wins_needed else GameResult.LOSS
 
     @property
     def last_result(self) -> RoundResult | None:

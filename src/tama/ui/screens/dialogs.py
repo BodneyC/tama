@@ -10,7 +10,8 @@ from textual.widgets import Static
 
 from tama.domain.animation import AnimationKey
 from tama.domain.events import Action
-from tama.domain.minigame import Direction, LeftRightGame
+from tama.domain.minigames import GameResult
+from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.pet import Pet
 from tama.domain.stats import STAT_MAX, Stat
 from tama.services.describe import format_age
@@ -137,8 +138,8 @@ class FeedMenu(ModalScreen[Action | None]):
         self.dismiss(Action(food))
 
 
-class MiniGameScreen(ModalScreen[bool | None]):
-    """Left or Right: guess which way the pet will look. Dismisses with whether you won."""
+class MiniGameScreen(ModalScreen[GameResult | None]):
+    """Left or Right: guess which way the pet will look. Dismisses with the result."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("left", "guess('left')", "Left"),
@@ -181,8 +182,8 @@ class MiniGameScreen(ModalScreen[bool | None]):
 
     def action_finish(self) -> None:
         """Close once the game is over."""
-        if self.game.is_over:
-            self.dismiss(self.game.won)
+        if self.game.result is not None:
+            self.dismiss(self.game.result)
 
     def _render_game(self) -> None:
         name = self._session.pet.name
@@ -192,8 +193,8 @@ class MiniGameScreen(ModalScreen[bool | None]):
         if last is not None:
             verdict = "Right!" if last.correct else "Wrong!"
             lines.append(f"{name} looked {last.pet_looked.value}. {verdict}")
-        if game.is_over:
-            outcome = "You won!" if game.won else "You lost."
+        if game.result is not None:
+            outcome = "You won!" if game.result is GameResult.WIN else "You lost."
             lines += ["", f"{outcome} Press Enter."]
         else:
             lines += ["", f"Which way will {name} look?  ←  →"]

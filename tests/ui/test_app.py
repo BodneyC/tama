@@ -13,6 +13,7 @@ from textual.widgets import Static
 from tama.domain.animation import AnimationKey
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.events import Died
+from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import (
@@ -40,7 +41,7 @@ from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, mono, repo_with, text
 
 if TYPE_CHECKING:
-    from tama.domain.minigame import LeftRightGame
+    from tama.domain.minigames.left_right import LeftRightGame
 
 # --- Starting up --------------------------------------------------------------------------
 
@@ -497,7 +498,7 @@ async def test_playing_the_mini_game() -> None:
 
         await pilot.press("left", "right", "left", "right", "left")
         assert game_screen.game.is_over
-        won = game_screen.game.won
+        won = game_screen.game.result is GameResult.WIN
         await pilot.press("enter")
         await pilot.pause()
 

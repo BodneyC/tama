@@ -24,6 +24,7 @@ from tama.domain.events import (
     Refused,
     WokeUp,
 )
+from tama.domain.minigames import GameResult
 from tama.services.describe import describe_event
 from tama.services.session import GameSession
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
@@ -161,9 +162,9 @@ class MainScreen(Screen[None]):
             self._report(outcome)
             return
 
-        def played(won: bool | None) -> None:  # noqa: FBT001 - dismiss result, not a flag
-            if won is not None:
-                self._report(self.session.finish_game(won=won))
+        def played(result: GameResult | None) -> None:
+            if result is not None:
+                self._report(self.session.finish_game(result))
 
         self.app.push_screen(MiniGameScreen(self.session, self._view), played)
 

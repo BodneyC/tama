@@ -26,6 +26,7 @@ from tama.domain.events import (
     Refused,
     WokeUp,
 )
+from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.services.describe import describe_event, format_age, status_line, summarize
@@ -80,8 +81,9 @@ def test_format_age(age: timedelta, text: str) -> None:
         (MisbehaviourIgnored(AGE), "Got away with misbehaving"),
         (Ate(AGE, Action.MEAL), "Ate a meal"),
         (Ate(AGE, Action.SNACK), "Ate a snack"),
-        (Played(AGE, won=True), "Won a game"),
-        (Played(AGE, won=False), "Lost a game"),
+        (Played(AGE, GameResult.WIN), "Won a game"),
+        (Played(AGE, GameResult.DRAW), "Drew a game"),
+        (Played(AGE, GameResult.LOSS), "Lost a game"),
         (Cleaned(AGE, 2), "Was cleaned up"),
         (MedicineGiven(AGE, cured=True), "Was cured"),
         (MedicineGiven(AGE, cured=False), "Took some medicine"),

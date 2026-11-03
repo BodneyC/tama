@@ -23,6 +23,7 @@ from tama.domain.events import (
     RefusalReason,
     Refused,
 )
+from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tests.factories import make_pet
 
@@ -53,8 +54,9 @@ def test_looping_animation_reflects_state(
         (Evolved(AGE, LifeStage.BABY, LifeStage.CHILD, Variant.DEFAULT), AnimationKey.EVOLVE),
         (Ate(AGE, Action.MEAL), AnimationKey.EAT),
         (Ate(AGE, Action.SNACK), AnimationKey.EAT),
-        (Played(AGE, won=True), AnimationKey.HAPPY),
-        (Played(AGE, won=False), AnimationKey.PLAY),
+        (Played(AGE, GameResult.WIN), AnimationKey.HAPPY),
+        (Played(AGE, GameResult.DRAW), AnimationKey.PLAY),
+        (Played(AGE, GameResult.LOSS), AnimationKey.PLAY),
         (Cleaned(AGE, poops_removed=1), AnimationKey.CLEAN),
         (MedicineGiven(AGE, cured=True), AnimationKey.HAPPY),
         (MedicineGiven(AGE, cured=False), None),

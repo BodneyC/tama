@@ -14,7 +14,8 @@ from tama.domain.actions import apply, apply_game_outcome
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
-from tama.domain.minigame import Direction, LeftRightGame
+from tama.domain.minigames import GameResult
+from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.pet import DEFAULT_SPECIES, ZERO, Pet, new_egg
 from tama.domain.simulation import advance, skip_to
 from tama.errors import SaveWriteError
@@ -196,9 +197,9 @@ class GameSession:
         """
         return self._commit(apply(self._pet, action, self._ctx))
 
-    def finish_game(self, *, won: bool) -> Outcome:
+    def finish_game(self, result: GameResult) -> Outcome:
         """Apply a finished mini-game's result, saving if it was accepted."""
-        return self._commit(apply_game_outcome(self._pet, won=won, ctx=self._ctx))
+        return self._commit(apply_game_outcome(self._pet, result, ctx=self._ctx))
 
     def guess(self, game: LeftRightGame, direction: Direction) -> LeftRightGame:
         """Play a mini-game round using the session's RNG (so it is saved and reproducible)."""

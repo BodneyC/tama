@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 from tama.domain.actions import apply, apply_game_outcome
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.events import Action
+from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
 from tama.domain.simulation import advance
 from tama.domain.stats import DRIFTING, STAT_MAX, STAT_MIN, Stat
@@ -67,14 +68,18 @@ def test_age_never_decreases_and_never_outpaces_time(pet: Pet, elapsed: timedelt
     assert out.pet.updated_at == pet.updated_at + elapsed
 
 
-@given(pets(alive=True), st.lists(st.one_of(actions, st.booleans()), max_size=10), st.integers())
-def test_actions_preserve_invariants(pet: Pet, moves: list[Action | bool], seed: int) -> None:
+@given(
+    pets(alive=True),
+    st.lists(st.one_of(actions, st.sampled_from(GameResult)), max_size=10),
+    st.integers(),
+)
+def test_actions_preserve_invariants(pet: Pet, moves: list[Action | GameResult], seed: int) -> None:
     ctx = make_ctx(seed)
     for move in moves:
-        # A bool stands for finishing a mini-game (won or lost).
+        # A GameResult stands for finishing a mini-game.
         out = (
-            apply_game_outcome(pet, won=move, ctx=ctx)
-            if isinstance(move, bool)
+            apply_game_outcome(pet, move, ctx=ctx)
+            if isinstance(move, GameResult)
             else apply(pet, move, ctx)
         )
         assert out.refusal is None or out.pet == pet

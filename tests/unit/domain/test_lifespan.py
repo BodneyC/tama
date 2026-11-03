@@ -8,6 +8,7 @@ import pytest
 from tama.domain.actions import apply, apply_game_outcome, refusal
 from tama.domain.context import Context
 from tama.domain.events import Action, Died, Event, Evolved
+from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet, new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import DeathCause, LifeStage, Variant
@@ -30,7 +31,7 @@ def attentive_care(pet: Pet, ctx: Context) -> Pet:
     if pet.stats.hunger < 70:
         act(Action.MEAL)
     if pet.stats.happiness < 70 and refusal(pet, Action.PLAY, ctx.balance) is None:
-        pet = apply_game_outcome(pet, won=True, ctx=ctx).pet
+        pet = apply_game_outcome(pet, GameResult.WIN, ctx=ctx).pet
     if pet.misbehaving:
         act(Action.DISCIPLINE)
     if pet.is_asleep == pet.lights_on:

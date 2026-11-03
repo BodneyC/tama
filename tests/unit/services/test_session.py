@@ -10,7 +10,8 @@ import pytest
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.context import Context
 from tama.domain.events import Action, Ate, Evolved, Played, RefusalReason
-from tama.domain.minigame import Direction, LeftRightGame
+from tama.domain.minigames import GameResult
+from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.pet import new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage
@@ -252,7 +253,7 @@ def test_finish_game_applies_result_and_saves(clock: FakeClock) -> None:
     repo = saved(stats=Stats(happiness=50))
     session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
 
-    outcome = session.finish_game(won=True)
+    outcome = session.finish_game(GameResult.WIN)
 
     assert isinstance(outcome.events[0], Played)
     assert session.pet.stats.happiness == 70

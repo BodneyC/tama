@@ -21,6 +21,7 @@ from tama.domain.actions import apply, apply_game_outcome, refusal
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Died, Event, GotSick
+from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet, new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage, Variant
@@ -76,7 +77,9 @@ def care(pet: Pet, ctx: Context) -> Pet:
     for _ in range(3):  # a few games while it's unhappy and has the energy
         if pet.stats.happiness >= 70 or refusal(pet, Action.PLAY, ctx.balance) is not None:
             break
-        pet = apply_game_outcome(pet, won=ctx.rng.random() < 0.6, ctx=ctx).pet
+        pet = apply_game_outcome(
+            pet, GameResult.WIN if ctx.rng.random() < 0.6 else GameResult.LOSS, ctx=ctx
+        ).pet
     if pet.stats.happiness < 50:
         act(Action.SNACK)
     if pet.misbehaving:

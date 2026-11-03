@@ -2,7 +2,8 @@ from random import Random
 
 import pytest
 
-from tama.domain.minigame import Direction, LeftRightGame, RoundResult
+from tama.domain.minigames import GameResult
+from tama.domain.minigames.left_right import Direction, LeftRightGame, RoundResult
 from tama.errors import GameOverError, InvalidArgumentError, TamaError
 
 
@@ -20,7 +21,7 @@ def test_new_game_has_five_rounds_and_needs_three_wins() -> None:
     assert game.wins_needed == 3
     assert game.round_number == 1
     assert not game.is_over
-    assert not game.won
+    assert game.result is None
     assert game.last_result is None
 
 
@@ -75,9 +76,9 @@ def test_winning_needs_enough_correct_guesses() -> None:
         RoundResult(Direction.LEFT, Direction.RIGHT),
     ) * 3
 
-    assert LeftRightGame(results=rounds).won
+    assert LeftRightGame(results=rounds).result is GameResult.WIN
     assert LeftRightGame(results=rounds).wins == 3
-    assert not LeftRightGame(results=lost_rounds).won
+    assert LeftRightGame(results=lost_rounds).result is GameResult.LOSS
 
 
 def test_cannot_guess_after_game_over() -> None:

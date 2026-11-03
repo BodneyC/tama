@@ -32,11 +32,17 @@ from tama.domain.events import (
     Refused,
     WokeUp,
 )
+from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
 
 _NEED_LOW = {Stat.HUNGER: "Got hungry", Stat.HAPPINESS: "Got unhappy", Stat.HYGIENE: "Got dirty"}
+_PLAYED = {
+    GameResult.WIN: "Won a game",
+    GameResult.DRAW: "Drew a game",
+    GameResult.LOSS: "Lost a game",
+}
 _MISTAKES = {
     MistakeReason.HUNGER: "Was left starving",
     MistakeReason.HAPPINESS: "Was left miserable",
@@ -104,8 +110,8 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return "Got away with misbehaving"
         case Ate(food=food):
             return f"Ate a {food.value}"
-        case Played(won=won):
-            return "Won a game" if won else "Lost a game"
+        case Played(result=result):
+            return _PLAYED[result]
         case Cleaned():
             return "Was cleaned up"
         case MedicineGiven(cured=cured):
