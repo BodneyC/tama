@@ -1,0 +1,106 @@
+/* tama: uses theme variables throughout so it works on light and dark themes. */
+
+PetHeader {
+  dock: top;
+  height: 2;
+  padding: 0 1;
+  background: $panel;
+}
+
+#header-top {
+  height: 1;
+}
+
+#identity {
+  width: 1fr;
+  text-style: bold;
+}
+
+#stats {
+  width: auto;
+}
+
+#attention {
+  height: 1;
+  color: $warning;
+  text-style: bold;
+}
+
+PetStage {
+  height: 1fr;
+  align: center middle;
+}
+
+#sprite {
+  width: auto;
+  height: auto;
+}
+
+#overlay {
+  width: auto;
+  height: 1;
+  margin-top: 1;
+}
+
+PetStage.lights-off {
+  background: $background-darken-3;
+  color: $text-muted;
+}
+
+#too-small {
+  display: none;
+  height: 1fr;
+  content-align: center middle;
+  color: $warning;
+}
+
+MainScreen.-too-small #too-small {
+  display: block;
+}
+
+MainScreen.-too-small PetHeader,
+MainScreen.-too-small PetStage {
+  display: none;
+}
+
+ModalScreen {
+  align: center middle;
+}
+
+.dialog {
+  width: auto;
+  max-width: 64;
+  height: auto;
+  padding: 1 2;
+  border: round $accent;
+  background: $surface;
+}
+
+.dialog-title {
+  text-style: bold;
+  color: $accent;
+  margin-bottom: 1;
+}
+
+NewPetScreen {
+  align: center middle;
+}
+
+#new-pet {
+  width: 44;
+  height: auto;
+  padding: 1 2;
+  border: round $accent;
+  background: $surface;
+}
+
+#egg {
+  width: 100%;
+  content-align: center middle;
+  margin-bottom: 1;
+}
+
+#name-error {
+  height: 1;
+  color: $error;
+}
