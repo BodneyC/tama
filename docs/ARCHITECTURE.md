@@ -53,8 +53,9 @@ src/tama/
 │   ├── minigame.py        # Left/Right game state machine
 │   └── animation.py       # select_animation(pet, last_event) -> AnimationKey (pure)
 ├── services/
-│   ├── session.py         # GameSession: holds current Pet, applies ticks/actions, emits events
-│   └── autosave.py        # debounced save policy
+│   ├── session.py         # GameSession: create/load (+ offline catch-up), tick, act, save
+│   ├── autosave.py        # AutosavePolicy: interval + immediate save on milestones
+│   └── describe.py        # plain-text status line and event summaries (CLI + TUI)
 ├── persistence/
 │   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
 │   ├── codec.py           # encode()/decode(): JSON text <-> SaveGame (incl. migration)
@@ -115,8 +116,14 @@ knows nothing about how events are presented.
 
 ### Time in the UI
 
-`TamaApp` runs a 1 s `set_interval` that calls `session.tick(clock.now())`. The session computes
-elapsed since the last tick. With `ScaledClock`, `--speed` just scales elapsed time.
+`TamaApp` runs a 1 s `set_interval` that calls `session.tick()`. The session reads its injected
+`Clock` and catches up from `pet.updated_at`, using the same capped catch-up path as loading
+(so a laptop sleeping with the game open behaves like the game being closed). With
+`ScaledClock`, `--speed` just scales elapsed time. Actions don't tick first; the pet is at most
+one tick old.
+
+Save failures during ticks and actions are logged and exposed as `session.save_error` for the
+UI to show, rather than crashing the game; `session.close()` raises so shutdown can report.
 
 ### Persistence boundary
 

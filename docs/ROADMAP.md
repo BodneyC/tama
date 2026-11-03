@@ -47,10 +47,10 @@ expected sequence of stage events.
 
 ## M3 — Services
 
-- [ ] `GameSession`: `load_or_create`, `tick(now)`, `act(action)`, offline catch-up with cap,
-      event aggregation for away summary, clock-went-backwards handling
-- [ ] Autosave policy (interval, after action, on stage change, on shutdown)
-- [ ] `tama status` CLI subcommand (no TUI)
+- [x] `GameSession`: `create`/`load` (the UI picks which), `tick()`, `act(action)`,
+      `finish_game(won=)`, offline catch-up with cap, away summary, clock-went-backwards handling
+- [x] Autosave policy (interval, after action, on stage change, on shutdown)
+- [x] `tama status` CLI subcommand (no TUI)
 
 **Accept:** Integration test: create pet → advance FakeClock 5 h → reload → away-summary
 events match expectations; file on disk is valid.
@@ -82,6 +82,7 @@ events match expectations; file on disk is valid.
 - [ ] `FeedMenu`, `MiniGameScreen`, `AwaySummaryScreen`, `MemorialScreen`, `ErrorScreen`
 - [ ] Attention calls with blinking indicator + optional bell
 - [ ] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only
+      (known: an untreated sick child dies in ~2.5 h — sickness may need to be gentler)
 - [ ] Logging to file; no stray terminal output
 
 **Accept:** A complete life can be played start to finish; every screen has a snapshot test.

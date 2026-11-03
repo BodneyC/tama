@@ -79,7 +79,9 @@ for the remainder (stats frozen). Show a "While you were away…" summary dialog
 notable events (got hungry, pooped ×3, fell asleep, got sick, evolved, ...).
 
 Clock going backwards (system clock change) must not crash or rewind the pet: treat negative
-elapsed time as zero and log a warning.
+elapsed time as zero, re-anchor the pet to the new "now", and log a warning.
+
+The same capped catch-up applies to large gaps while the game is open (e.g. a laptop sleeping).
 
 ## 3. Actions (player verbs)
 
@@ -192,6 +194,7 @@ tama --save-path PATH
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)
 tama --reduced-motion / --quiet
-tama status                # print one-line pet status without the TUI (good for shell prompts)
+tama status                # print one-line pet status without the TUI (good for shell prompts);
+                           # read-only. Exit 0 ok, 1 no pet yet, 2 unreadable save / bad config
 tama --version
 ```
