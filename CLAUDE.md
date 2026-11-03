@@ -108,6 +108,7 @@ See `docs/ARCHITECTURE.md` for detail. Summary:
   overall, 100% branch coverage for `tama.domain`.
 - Small, focused commits using [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`).
+- Commit directly to `main`; don't create a branch unless asked.
 - When a decision deviates from or extends these docs, update the docs in the same change and
   add an ADR for anything architectural.
 - If a UI snapshot changes, inspect the SVG diff before accepting with `--snapshot-update`.
