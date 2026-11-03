@@ -65,6 +65,18 @@ def advance(pet: Pet, elapsed: timedelta, ctx: Context) -> Outcome:
     return Outcome(advanced, tuple(events))
 
 
+def skip_to(pet: Pet, when: datetime) -> Pet:
+    """Move the pet's clock to ``when`` without simulating anything in between.
+
+    Used for time that must not affect the pet: offline time beyond the catch-up cap (the
+    "pet sitter"), and the system clock jumping backwards.
+
+    Raises:
+        InvalidArgumentError: If ``when`` is naive.
+    """
+    return replace(pet, updated_at=when)
+
+
 def is_night(when: datetime, ctx: Context) -> bool:
     """Whether ``when`` falls in the night window, in the player's time zone."""
     local = when.astimezone(ctx.tz).time()

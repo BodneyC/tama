@@ -20,7 +20,7 @@ from tama.domain.events import (
     WokeUp,
 )
 from tama.domain.pet import Pet, Timers
-from tama.domain.simulation import advance, is_night, sickness_chance
+from tama.domain.simulation import advance, is_night, sickness_chance, skip_to
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.errors import InvalidArgumentError
@@ -503,3 +503,20 @@ def test_elder_dies_of_old_age_at_lifespan() -> None:
     assert out.pet.cause_of_death is DeathCause.OLD_AGE
     assert out.pet.age == timedelta(days=15)
     assert out.events[-1] == Died(timedelta(days=15), DeathCause.OLD_AGE)
+
+
+# --- Skipping time ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("delta", [timedelta(hours=5), timedelta(hours=-3)])
+def test_skip_to_moves_the_clock_without_simulating(delta: timedelta) -> None:
+    pet = make_pet(carry=timedelta(seconds=20))
+
+    skipped = skip_to(pet, pet.updated_at + delta)
+
+    assert skipped == replace(pet, updated_at=pet.updated_at + delta)
+
+
+def test_skip_to_requires_aware_time() -> None:
+    with pytest.raises(InvalidArgumentError, match="timezone-aware"):
+        skip_to(make_pet(), FIXED_NOW.replace(tzinfo=None))
