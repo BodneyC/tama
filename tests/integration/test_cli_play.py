@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, ClassVar
 
+import click
 import pytest
 from typer.testing import CliRunner
 
@@ -91,7 +92,8 @@ def test_invalid_speed_is_a_usage_error() -> None:
     result = runner.invoke(app, ["--speed", "0"])
 
     assert result.exit_code == 2
-    assert "--speed" in result.stderr
+    # Typer's error panel may be styled (CI forces colour), so compare without ANSI codes.
+    assert "--speed" in click.unstyle(result.stderr)
     assert FakeApp.instances == []
 
 
