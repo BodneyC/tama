@@ -35,3 +35,7 @@ class SaveWriteError(SaveError):
 
 class ConfigError(TamaError):
     """The config file is malformed or has invalid values."""
+
+
+class IllegalMoveError(TamaError):
+    """A mini-game move that the rules don't allow (a full column, a taken cell, ...)."""

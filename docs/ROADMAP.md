@@ -143,15 +143,15 @@ monochrome, and an old v1 save still loads as a `tama`.
 
 Two board games against the pet, chosen from a game select dialog (SPEC §3.1, ADR 0006).
 
-- [ ] Domain: `tama.domain.minigames` package with `GameKind` and `GameResult` (win/draw/loss);
+- [x] Domain: `tama.domain.minigames` package with `GameKind` and `GameResult` (win/draw/loss);
       move Left or Right there from `domain/minigame.py`
-- [ ] Domain: `apply_game_outcome(pet, result, ctx)` and `Played(result)` with the draw effect
+- [x] Domain: `apply_game_outcome(pet, result, ctx)` and `Played(result)` with the draw effect
       (happiness +10, energy −10); `Balance.play_draw_happiness` and per-stage opponent
       mistake chances
-- [ ] Domain: Four in a Row (7×6): drop, full columns, win in all four directions (winning
+- [x] Domain: Four in a Row (7×6): drop, full columns, win in all four directions (winning
       cells reported), draw on a full board — test-first
-- [ ] Domain: Tic-Tac-Toe (3×3): place, occupied cells, all eight lines, draw — test-first
-- [ ] Domain: `opponent.py`: wins, blocks, avoids handing Four in a Row wins, positional
+- [x] Domain: Tic-Tac-Toe (3×3): place, occupied cells, all eight lines, draw — test-first
+- [x] Domain: `opponent.py`: wins, blocks, avoids handing Four in a Row wins, positional
       preference, mistakes; property tests (random legal games always finish with exactly one
       result; the pet never makes an illegal move; with no mistakes it never misses a win or a
       block)

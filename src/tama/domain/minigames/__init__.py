@@ -22,3 +22,19 @@ class GameResult(StrEnum):
     WIN = "win"
     DRAW = "draw"
     LOSS = "loss"
+
+
+class Side(StrEnum):
+    """Who a piece or mark belongs to. The player always moves first."""
+
+    PLAYER = "player"
+    PET = "pet"
+
+
+def result_for(winner: Side | None, *, full: bool) -> GameResult | None:
+    """A board game's result from the player's side: ``None`` while it can go on."""
+    if winner is Side.PLAYER:
+        return GameResult.WIN
+    if winner is Side.PET:
+        return GameResult.LOSS
+    return GameResult.DRAW if full else None
