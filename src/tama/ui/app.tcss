@@ -38,7 +38,7 @@ PetStage {
 
 #overlay {
   width: auto;
-  height: 1;
+  height: auto;
   margin-top: 1;
 }
 

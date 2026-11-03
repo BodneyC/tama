@@ -9,12 +9,12 @@ from datetime import UTC, datetime
 import pytest
 from textual.pilot import Pilot
 
-from tama.domain.stage import DeathCause, LifeStage
+from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.infra.clock import FakeClock
 from tama.ui.app import TamaApp
 from tests.factories import FIXED_NOW
-from tests.ui.helpers import make_app, repo_with
+from tests.ui.helpers import make_app, mono, repo_with
 
 SnapCompare = Callable[..., bool]
 NIGHT = datetime(2026, 1, 1, 23, tzinfo=UTC)
@@ -66,15 +66,35 @@ def test_dead_pet(snap_compare: SnapCompare) -> None:
 
 def test_main_screen_monochrome(snap_compare: SnapCompare) -> None:
     app = make_app(
-        repo_with(stats=Stats(hunger=20, happiness=45, energy=70), poop_count=1), monochrome=True
+        repo_with(stats=Stats(hunger=20, happiness=45, energy=70), poop_count=1), view=mono()
     )
     assert snap_compare(app)
 
 
-@pytest.mark.parametrize("stage", [s for s in LifeStage if s is not LifeStage.DEAD])
+LIVING_STAGES = [s for s in LifeStage if s is not LifeStage.DEAD]
+
+
+@pytest.mark.parametrize("stage", LIVING_STAGES)
 def test_idle_sprite_per_stage(snap_compare: SnapCompare, stage: LifeStage) -> None:
     app = make_app(repo_with(stage=stage))
     assert snap_compare(app, terminal_size=(60, 20))
+
+
+@pytest.mark.parametrize("stage", LIVING_STAGES)
+def test_idle_sprite_per_stage_light_theme(snap_compare: SnapCompare, stage: LifeStage) -> None:
+    app = make_app(repo_with(stage=stage), theme="textual-light")
+    assert snap_compare(app, terminal_size=(60, 20))
+
+
+@pytest.mark.parametrize("variant", [Variant.GOOD, Variant.SCRUFFY])
+def test_adult_variants(snap_compare: SnapCompare, variant: Variant) -> None:
+    app = make_app(repo_with(stage=LifeStage.ADULT, variant=variant))
+    assert snap_compare(app, terminal_size=(60, 20))
+
+
+def test_sick_pet_with_overlays(snap_compare: SnapCompare) -> None:
+    app = make_app(repo_with(sickness_doses=1, poop_count=2))
+    assert snap_compare(app)
 
 
 def test_terminal_too_small(snap_compare: SnapCompare) -> None:

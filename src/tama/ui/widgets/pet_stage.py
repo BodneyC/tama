@@ -1,49 +1,49 @@
-"""The stage: the pet's sprite plus what's around it (poop, sickness, sleep)."""
+"""The stage: the animated pet plus what's around it (poop, sickness, sleep)."""
 
+from collections.abc import Iterable
 from typing import override
 
 from textual.app import ComposeResult
 from textual.containers import Container
-from textual.content import Content
 from textual.widgets import Static
 
-from tama.domain.animation import looping_animation
+from tama.domain.events import Event
 from tama.domain.pet import Pet
-from tama.ui.sprites import load_sprite
+from tama.ui.sprites import overlay_content
+from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 
-def overlay_text(pet: Pet) -> str:
-    """Indicators shown under the pet."""
-    parts: list[str] = []
+def overlay_names(pet: Pet) -> list[str]:
+    """Indicator sprites shown under the pet, in order."""
+    names: list[str] = []
     if pet.is_asleep:
-        parts.append("Zzz")
+        names.append("zzz")
     if pet.is_sick:
-        parts.append("☠ sick")
-    parts.extend(["💩"] * pet.poop_count)
-    return "  ".join(parts)
-
-
-def sprite_frame(pet: Pet, *, color: bool) -> Content:
-    """The frame to show for ``pet``: the first frame of its looping animation."""
-    return load_sprite(pet.variant, pet.stage, looping_animation(pet)).frames(color=color)[0]
+        names.append("sick")
+    names.extend(["poop"] * pet.poop_count)
+    return names
 
 
 class PetStage(Container):
-    """Centred sprite and indicators; dimmed when the lights are off."""
+    """Centred, animated pet and indicators; dimmed when the lights are off."""
 
-    def __init__(self, *, monochrome: bool = False) -> None:
-        """Draw sprites without colour if ``monochrome`` (e.g. ``NO_COLOR``)."""
+    def __init__(self, options: ViewOptions | None = None) -> None:
+        """Draw with the given view options."""
         super().__init__()
-        self._color = not monochrome
+        self._options = options or ViewOptions()
 
     @override
     def compose(self) -> ComposeResult:
         """Build the stage."""
-        yield Static(id="sprite", markup=False)
+        yield PetView(self._options, id="sprite")
         yield Static(id="overlay", markup=False)
 
-    def show(self, pet: Pet) -> None:
-        """Update the stage for ``pet``."""
-        self.query_one("#sprite", Static).update(sprite_frame(pet, color=self._color))
-        self.query_one("#overlay", Static).update(overlay_text(pet))
+    def show(self, pet: Pet, events: Iterable[Event] = ()) -> None:
+        """Update the stage for ``pet``, reacting to ``events`` that just happened."""
+        view = self.query_one(PetView)
+        view.show(pet)
+        view.react(events)
+        self.query_one("#overlay", Static).update(
+            overlay_content(overlay_names(pet), color=not self._options.monochrome)
+        )
         self.set_class(not pet.lights_on, "lights-off")

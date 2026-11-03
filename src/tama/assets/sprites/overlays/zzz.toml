@@ -9,7 +9,9 @@ z = "#9fc5e8"
 [[frames]]
 pixels = """
 zzzz....
-..z..zzz
+...z....
+..z.zzz.
 .z....z.
-zzzz.zzz
+zzzz.z..
+....zzz.
 """

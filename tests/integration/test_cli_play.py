@@ -14,6 +14,7 @@ from tama.infra.config import Config
 from tama.infra.paths import CONFIG_PATH_ENV
 from tama.persistence.repository import JsonSaveRepository
 from tama.services.session import GameSession, SessionSettings
+from tama.ui.widgets.pet_view import ViewOptions
 from tests.factories import FIXED_NOW
 
 runner = CliRunner()
@@ -62,8 +63,8 @@ def test_plain_tama_launches_the_app_with_defaults() -> None:
     assert kwargs["seed"] is None
     assert kwargs["start_new"] is False
     assert kwargs["bell"] is False
-    assert kwargs["reduced_motion"] is False
-    assert kwargs["monochrome"] is False
+    assert kwargs["view"] == ViewOptions()
+    assert kwargs["theme"] is None
 
 
 def test_no_color_environment_draws_monochrome(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -71,7 +72,7 @@ def test_no_color_environment_draws_monochrome(monkeypatch: pytest.MonkeyPatch) 
 
     runner.invoke(app, [])
 
-    assert launched().kwargs["monochrome"] is True
+    assert launched().kwargs["view"].monochrome is True
 
 
 def test_save_path_option(tmp_path: Path) -> None:
@@ -130,7 +131,7 @@ def test_flags_override_config(monkeypatch: pytest.MonkeyPatch) -> None:
     runner.invoke(app, ["--quiet", "--reduced-motion"])
 
     assert launched().kwargs["bell"] is False
-    assert launched().kwargs["reduced_motion"] is True
+    assert launched().kwargs["view"].reduced_motion is True
 
 
 def test_config_is_used_without_flags() -> None:
@@ -139,6 +140,14 @@ def test_config_is_used_without_flags() -> None:
     runner.invoke(app, [])
 
     assert launched().kwargs["bell"] is Config(bell=True).bell
+
+
+def test_theme_comes_from_config() -> None:
+    Path(os.environ[CONFIG_PATH_ENV]).write_text('theme = "nord"\n', encoding="utf-8")
+
+    runner.invoke(app, [])
+
+    assert launched().kwargs["theme"] == "nord"
 
 
 def test_bad_config_stops_before_launching() -> None:

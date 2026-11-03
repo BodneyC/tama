@@ -16,6 +16,7 @@ from tama.persistence.repository import JsonSaveRepository
 from tama.services.describe import status_line
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.app import TamaApp
+from tama.ui.widgets.pet_view import ViewOptions
 
 app = typer.Typer(add_completion=False, no_args_is_help=False)
 
@@ -104,8 +105,8 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
         seed=seed,
         start_new=new,
         bell=config.bell,
-        reduced_motion=config.reduced_motion,
-        monochrome=no_color_requested(),
+        view=ViewOptions(monochrome=no_color_requested(), reduced_motion=config.reduced_motion),
+        theme=config.theme,
     )
     tui.run()
     raise typer.Exit(code=tui.return_code or 0)

@@ -20,10 +20,10 @@ from tama.ui.app import EXIT_ERROR
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
-from tama.ui.sprites import load_sprite
+from tama.ui.sprites import load_sprite, overlay_content
 from tests.factories import FIXED_NOW
 from tests.fakes import InMemorySaveRepository
-from tests.ui.helpers import Notes, make_app, repo_with, text
+from tests.ui.helpers import Notes, make_app, mono, repo_with, text
 
 if TYPE_CHECKING:
     from tama.domain.minigame import LeftRightGame
@@ -83,6 +83,19 @@ async def test_start_new_hatches_even_when_a_save_exists() -> None:
         assert isinstance(app.screen, NewPetScreen)
 
 
+async def test_theme_from_config_is_applied() -> None:
+    app = make_app(repo_with(), theme="nord")
+    async with app.run_test():
+        assert app.theme == "nord"
+
+
+async def test_unknown_theme_is_ignored(caplog: pytest.LogCaptureFixture) -> None:
+    app = make_app(repo_with(), theme="no-such-theme")
+    async with app.run_test():
+        assert app.theme == "textual-dark"
+        assert "no-such-theme" in caplog.text
+
+
 async def test_existing_save_opens_the_main_screen() -> None:
     app = make_app(repo_with(stats=Stats(hunger=10)))
     async with app.run_test():
@@ -138,7 +151,7 @@ async def test_clean() -> None:
         assert app.session.pet.poop_count == 0
         assert app.session.pet.stats.hygiene == 100
         assert "Was cleaned up" in notes
-        assert "💩" not in text(app, "#overlay")
+        assert text(app, "#overlay").strip() == ""
 
 
 async def test_medicine() -> None:
@@ -172,7 +185,7 @@ async def test_sprite_is_drawn_in_colour_by_default() -> None:
 
 
 async def test_monochrome_sprite_has_no_colours() -> None:
-    app = make_app(repo_with(), monochrome=True)
+    app = make_app(repo_with(), view=mono())
     async with app.run_test():
         sprite = app.screen.query_one("#sprite", Static).render()
 
@@ -185,7 +198,7 @@ async def test_sleeping_pet_shows_zzz() -> None:
     night = FIXED_NOW.replace(hour=23)
     app = make_app(repo_with(is_asleep=True, updated_at=night), clock=FakeClock(night))
     async with app.run_test():
-        assert text(app, "#overlay") == "Zzz"
+        assert text(app, "#overlay") == overlay_content(["zzz"], color=True).plain
 
 
 async def test_failed_save_after_an_action_is_shown() -> None:
@@ -365,7 +378,7 @@ async def test_routine_events_are_not_announced() -> None:
         clock.advance(timedelta(hours=2))
         app.tick()
 
-        assert "💩" in text(app, "#overlay")
+        assert text(app, "#overlay") == overlay_content(["poop"], color=True).plain
         assert "Pooped" not in notes
 
 

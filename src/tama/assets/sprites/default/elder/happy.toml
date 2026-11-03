@@ -21,7 +21,7 @@ pixels = """
 ...kbbhhbbbbbbbbbbbbbbk...
 ...kbhhbbbbbbbbbbbbbbbk...
 ..kbbbbwwbbbbbbbbwwbbbbk..
-..kbbbbbkbbbbbbbbkbbbbbk..
+..kbbbbbkkbbbbbbbkkbbbbk..
 ..kbbbrrbbbbbbbbbbrrbbbk..
 ..kbbbbbbbbmmmmbbbbbbbbk..
 ..kkbbbbbbbbbbbbbbbbbbkk..
@@ -45,7 +45,7 @@ pixels = """
 ...kbbhhbbbbbbbbbbbbbbk...
 ...kbhhbbbbbbbbbbbbbbbk...
 ..kbbbbwwbbbbbbbbwwbbbbk..
-..kbbbbbkbbbbbbbbkbbbbbk..
+..kbbbbbkkbbbbbbbkkbbbbk..
 ..kbbbrrbbbbbbbbbbrrbbbk..
 ..kbbbbbbbbmmmmbbbbbbbbk..
 ..kkbbbbbbbbbbbbbbbbbbkk..
@@ -65,7 +65,7 @@ pixels = """
 ...kbbhhbbbbbbbbbbbbbbk...
 ...kbhhbbbbbbbbbbbbbbbk...
 ..kbbbbwwbbbbbbbbwwbbbbk..
-..kbbbbbkbbbbbbbbkbbbbbk..
+..kbbbbbkkbbbbbbbkkbbbbk..
 ..kbbbrrbbbbbbbbbbrrbbbk..
 ..kbbbbbbbbmmmmbbbbbbbbk..
 ..kkbbbbbbbbbbbbbbbbbbkk..
@@ -89,7 +89,7 @@ pixels = """
 ...kbbhhbbbbbbbbbbbbbbk...
 ...kbhhbbbbbbbbbbbbbbbk...
 ..kbbbbwwbbbbbbbbwwbbbbk..
-..kbbbbbkbbbbbbbbkbbbbbk..
+..kbbbbbkkbbbbbbbkkbbbbk..
 ..kbbbrrbbbbbbbbbbrrbbbk..
 ..kbbbbbbbbmmmmbbbbbbbbk..
 ..kkbbbbbbbbbbbbbbbbbbkk..

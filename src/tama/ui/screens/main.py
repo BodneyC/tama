@@ -27,6 +27,7 @@ from tama.services.session import GameSession
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_stage import PetStage
+from tama.ui.widgets.pet_view import ViewOptions
 
 if TYPE_CHECKING:
     from textual.notifications import SeverityLevel
@@ -54,23 +55,26 @@ class MainScreen(Screen[None]):
     ]
 
     def __init__(
-        self, session: GameSession, *, tick_interval: float | None = None, monochrome: bool = False
+        self,
+        session: GameSession,
+        *,
+        tick_interval: float | None = None,
+        view: ViewOptions | None = None,
     ) -> None:
         """Show ``session``'s pet, ticking it every ``tick_interval`` seconds (if given).
 
         The screen owns the timer so ticking stops as soon as the screen goes away.
-        ``monochrome`` draws sprites without colour (``NO_COLOR``).
         """
         super().__init__()
         self.session = session
         self._tick_interval = tick_interval
-        self._monochrome = monochrome
+        self._view = view or ViewOptions()
 
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
         yield PetHeader()
-        yield PetStage(monochrome=self._monochrome)
+        yield PetStage(self._view)
         yield Static(
             f"Terminal too small: tama needs at least {MIN_WIDTH}x{MIN_HEIGHT}.",
             id="too-small",
@@ -105,18 +109,19 @@ class MainScreen(Screen[None]):
         """
         if not self.is_mounted:
             return
-        self._draw()
+        events = list(new_events)
+        self._draw(events)
         pet = self.session.pet
-        for event in new_events:
+        for event in events:
             if isinstance(event, NOTABLE_EVENTS):
                 urgent = isinstance(event, Died | GotSick | CareMistake)
                 severity: SeverityLevel = "warning" if urgent else "information"
                 self.notify(describe_event(event), title=pet.name, severity=severity)
 
-    def _draw(self) -> None:
+    def _draw(self, events: Iterable[Event] = ()) -> None:
         pet = self.session.pet
         self.query_one(PetHeader).show(pet, self.session.balance)
-        self.query_one(PetStage).show(pet)
+        self.query_one(PetStage).show(pet, events)
 
     # --- Actions --------------------------------------------------------------------------
 
@@ -158,6 +163,6 @@ class MainScreen(Screen[None]):
         for event in outcome.events:
             severity: SeverityLevel = "warning" if isinstance(event, Refused) else "information"
             self.notify(describe_event(event), title=self.session.pet.name, severity=severity)
-        self.refresh_pet()
+        self._draw(outcome.events)
         if self.session.save_error is not None:
             self.notify(f"Couldn't save: {self.session.save_error}", severity="error")

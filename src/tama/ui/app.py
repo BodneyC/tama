@@ -14,6 +14,7 @@ from tama.persistence.repository import SaveRepository
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NewPetScreen
+from tama.ui.widgets.pet_view import ViewOptions
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,8 @@ class TamaApp(App[None]):
         tick_interval: Seconds between ticks; ``None`` disables the timer (tests tick by hand).
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
         bell: Ring the terminal bell on new attention calls (used from M6).
-        reduced_motion: Limit animation to key frames (used from M5).
-        monochrome: Draw sprites without colour (``NO_COLOR``).
+        view: How the pet is drawn (colour, animation, reduced motion).
+        theme: Textual theme name from the config (unknown names are ignored).
     """
 
     CSS_PATH = "app.tcss"
@@ -55,8 +56,8 @@ class TamaApp(App[None]):
         tick_interval: float | None = 1.0,
         handle_signals: bool = True,
         bell: bool = False,
-        reduced_motion: bool = False,
-        monochrome: bool = False,
+        view: ViewOptions | None = None,
+        theme: str | None = None,
     ) -> None:
         """Wire the app to its dependencies."""
         super().__init__()
@@ -68,8 +69,12 @@ class TamaApp(App[None]):
         self._tick_interval = tick_interval
         self._handle_signals = handle_signals
         self.bell_enabled = bell
-        self.reduced_motion = reduced_motion
-        self.monochrome = monochrome
+        self.view = view or ViewOptions()
+        if theme is not None:
+            if theme in self.available_themes:
+                self.theme = theme
+            else:
+                logger.warning("Unknown theme %r; using the default", theme)
         self._quit_failed = False
         self._installed_signals: list[signal.Signals] = []
         self.session: GameSession | None = None
@@ -82,7 +87,7 @@ class TamaApp(App[None]):
         if self._repo.exists() and not self._start_new:
             self._load()
         else:
-            self.push_screen(NewPetScreen(monochrome=self.monochrome), self._hatch)
+            self.push_screen(NewPetScreen(self.view), self._hatch)
 
     def on_unmount(self) -> None:
         """Remove signal handlers."""
@@ -154,9 +159,7 @@ class TamaApp(App[None]):
 
     def _start(self, session: GameSession) -> None:
         self.session = session
-        self.main = MainScreen(
-            session, tick_interval=self._tick_interval, monochrome=self.monochrome
-        )
+        self.main = MainScreen(session, tick_interval=self._tick_interval, view=self.view)
         self.push_screen(self.main)
 
     def _install_signal_handlers(self) -> None:

@@ -88,7 +88,11 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = ["-ra", "--strict-markers", "--strict-config", "--cov=tama", "--cov-report=term-missing"]
 markers = ["slow: slower tests (long simulations, many hypothesis examples)"]
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    # pytest-textual-snapshot's failure report uses datetime.utcnow(); don't let that hide the diff.
+    "ignore:datetime.datetime.utcnow:DeprecationWarning:pytest_textual_snapshot",
+]
 
 [tool.coverage.run]
 branch = true

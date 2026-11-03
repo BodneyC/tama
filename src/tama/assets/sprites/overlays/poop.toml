@@ -9,8 +9,10 @@ p = "#8b5a2b"
 
 [[frames]]
 pixels = """
-...p..
-..pp..
-.pphp.
-pppppp
+...pp...
+..pphp..
+..pppp..
+.pphppp.
+pppppppp
+.pppppp.
 """

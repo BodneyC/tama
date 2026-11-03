@@ -11,6 +11,7 @@ from tama.persistence.models import SaveGame
 from tama.persistence.repository import SaveRepository
 from tama.services.session import SessionSettings
 from tama.ui.app import TamaApp
+from tama.ui.widgets.pet_view import ViewOptions
 from tests.factories import FIXED_NOW, make_pet
 from tests.fakes import InMemorySaveRepository
 
@@ -31,6 +32,7 @@ def make_app(
         "settings": SessionSettings(),
         "tick_interval": None,
         "handle_signals": False,
+        "view": ViewOptions(animate=False),
         **kwargs,
     }
     return TamaApp(
@@ -38,6 +40,11 @@ def make_app(
         clock=clock or FakeClock(FIXED_NOW),
         **options,
     )
+
+
+def mono(**kwargs: Any) -> ViewOptions:
+    """View options for a monochrome, non-animated test app."""
+    return ViewOptions(monochrome=True, animate=False, **kwargs)
 
 
 def text(app: App[Any], selector: str) -> str:

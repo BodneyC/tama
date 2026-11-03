@@ -251,18 +251,26 @@ def set_pixels(g: Grid, pixels: Iterable[tuple[int, int, str]]) -> Grid:
     return tuple("".join(row) for row in rows)
 
 
+def _eye_line(g: Grid, *, at_top: bool) -> Grid:
+    """Replace each eye with a two-pixel horizontal line at its top or bottom pixel."""
+    changes: list[tuple[int, int, str]] = []
+    for run in eye_runs(g):
+        changes += [(y, x, "b") for y, x in run]
+        y, x = run[0] if at_top else run[-1]
+        changes.append((y, x, "k"))
+        if g[y][x + 1] in "bh":
+            changes.append((y, x + 1, "k"))
+    return set_pixels(g, changes)
+
+
 def eyes_closed(g: Grid) -> Grid:
-    """Close each eye to a line at its lowest pixel."""
-    return set_pixels(
-        g, [(y, x, "k" if (y, x) == run[-1] else "b") for run in eye_runs(g) for y, x in run]
-    )
+    """Close each eye to a short line at its lowest pixel."""
+    return _eye_line(g, at_top=False)
 
 
 def eyes_happy(g: Grid) -> Grid:
-    """Squint each eye into a line at its highest pixel (a smile-y look)."""
-    return set_pixels(
-        g, [(y, x, "k" if (y, x) == run[0] else "b") for run in eye_runs(g) for y, x in run]
-    )
+    """Squint each eye into a short line at its highest pixel (a smile-y look)."""
+    return _eye_line(g, at_top=True)
 
 
 def eyes_look(g: Grid, dx: int) -> Grid:
@@ -452,12 +460,20 @@ def hatch(baby: Stage) -> Anim:
 # --- Overlays --------------------------------------------------------------------------------
 
 OVERLAYS: dict[str, Anim] = {
-    "zzz": Anim((grid("zzzz....\n..z..zzz\n.z....z.\nzzzz.zzz"),), 1, {"z": '"#9fc5e8"'}),
+    "zzz": Anim(
+        (grid("zzzz....\n...z....\n..z.zzz.\n.z....z.\nzzzz.z..\n....zzz."),),
+        1,
+        {"z": '"#9fc5e8"'},
+    ),
     "sick": Anim(
-        (grid(".wwww.\nwkwwkw\n.wwww.\n.w.ww."),), 1, {"w": '"#e8e8e8"', "k": '"#333333"'}
+        (grid("..wwww..\n.wwwwww.\nwkkwwkkw\nwwwwwwww\n.wwkkww.\n..w.w.w."),),
+        1,
+        {"w": '"#e8e8e8"', "k": '"#333333"'},
     ),
     "poop": Anim(
-        (grid("...p..\n..pp..\n.pphp.\npppppp"),), 1, {"p": '"#8b5a2b"', "h": '"#b07a45"'}
+        (grid("...pp...\n..pphp..\n..pppp..\n.pphppp.\npppppppp\n.pppppp."),),
+        1,
+        {"p": '"#8b5a2b"', "h": '"#b07a45"'},
     ),
 }
 

@@ -15,6 +15,7 @@ from tama.domain.pet import MAX_NAME_LENGTH, validate_name
 from tama.domain.stage import LifeStage, Variant
 from tama.errors import InvalidArgumentError
 from tama.ui.sprites import load_sprite
+from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 NAME_RULE = f"Names are 1-{MAX_NAME_LENGTH} printable characters."
 
@@ -40,20 +41,17 @@ class NewPetScreen(Screen[str]):
 
     BINDINGS: ClassVar[list[BindingType]] = [Binding("escape", "dismiss", "Quit")]
 
-    def __init__(self, *, monochrome: bool = False) -> None:
-        """Draw the egg without colour if ``monochrome``."""
+    def __init__(self, view: ViewOptions | None = None) -> None:
+        """Show a wobbling egg, drawn with ``view`` options."""
         super().__init__()
-        self._color = not monochrome
+        self._view = view or ViewOptions()
 
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
-        egg = load_sprite(Variant.DEFAULT, LifeStage.EGG, AnimationKey.IDLE).frames(
-            color=self._color
-        )[0]
         with Vertical(id="new-pet"):
             yield Static("A new egg has appeared!", classes="dialog-title")
-            yield Static(egg, id="egg", markup=False)
+            yield PetView(self._view, id="egg")
             yield Input(
                 placeholder="Name your pet",
                 max_length=MAX_NAME_LENGTH,
@@ -62,6 +60,11 @@ class NewPetScreen(Screen[str]):
                 id="name",
             )
             yield Static(id="name-error", markup=False)
+
+    def on_mount(self) -> None:
+        """Start the egg wobbling."""
+        wobble = load_sprite(Variant.DEFAULT, LifeStage.EGG, AnimationKey.WOBBLE)
+        self.query_one(PetView).set_loop(wobble)
 
     @on(Input.Submitted, "#name")
     def _submit(self, event: Input.Submitted) -> None:

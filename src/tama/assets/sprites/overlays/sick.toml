@@ -9,8 +9,10 @@ w = "#e8e8e8"
 
 [[frames]]
 pixels = """
-.wwww.
-wkwwkw
-.wwww.
-.w.ww.
+..wwww..
+.wwwwww.
+wkkwwkkw
+wwwwwwww
+.wwkkww.
+..w.w.w.
 """
