@@ -154,21 +154,34 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 ## 6. Persistence
 
 - Location: `platformdirs.user_data_path("tama") / "save.json"`; overridable with
-  `--save-path PATH` or `TAMA_SAVE_PATH` env var.
+  `--save-path PATH` or `TAMA_SAVE_PATH` env var (CLI wins).
 - Format: JSON, human-readable, Pydantic model with `schema_version: int`.
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
-- Atomic write + `save.json.bak` rotation. On a corrupt/unreadable primary, try the backup;
-  if both fail, show `ErrorScreen` offering: start new pet (moves bad file to
-  `save.json.corrupt-<timestamp>`) or quit.
+- Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
+  the backup (and tell the player it was recovered); if both fail, show `ErrorScreen`
+  offering: start new pet (moves bad files to `save.json[.bak].corrupt-<timestamp>`) or quit.
+- A save from a *newer* schema version is never replaced by the backup or overwritten: the
+  player is told to upgrade tama.
 - Migrations: `persistence/migrations.py` holds `dict[int, Callable[[dict], dict]]` stepping
   `vN → vN+1`. Every schema bump adds a migration and a fixture test from a real old save.
 - RNG state is persisted so a reloaded game continues deterministically.
 
 ## 7. Config
 
-`platformdirs.user_config_path("tama") / "config.toml"` (read with `tomllib`), all optional:
-`bell`, `reduced_motion`, `night_start`, `night_end`, `offline_cap_hours`, `theme`.
-CLI flags override config, which overrides defaults.
+`platformdirs.user_config_path("tama") / "config.toml"` (overridable with `TAMA_CONFIG_PATH`),
+read with `tomllib`. All keys optional:
+
+```toml
+bell = false              # ring the terminal bell on new attention calls
+reduced_motion = false
+night_start = 22:00:00    # TOML local time, or a string like "22:00"
+night_end = 07:00:00
+offline_cap_hours = 72    # >= 0; 0 freezes the pet while tama is closed
+theme = "nord"            # any Textual theme name
+```
+
+Unknown keys or wrong types are an error (reported, not silently ignored). CLI flags override
+config, which overrides defaults.
 
 ## 8. CLI
 

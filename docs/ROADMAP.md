@@ -37,11 +37,11 @@ expected sequence of stage events.
 
 ## M2 — Persistence
 
-- [ ] `SaveFileV1` Pydantic model + domain mapping (incl. RNG state via `getstate()`)
-- [ ] `JsonSaveRepository`: atomic write, `.bak` rotation, load-with-fallback
-- [ ] Corrupt/missing/unwritable handling with typed errors
-- [ ] Migration framework + test that a v1 fixture file in `tests/fixtures/saves/` loads
-- [ ] `infra/paths.py`, `infra/config.py` (TOML + env + CLI precedence)
+- [x] `SaveFileV1` Pydantic model + domain mapping (incl. RNG state via `getstate()`)
+- [x] `JsonSaveRepository`: atomic write, `.bak` rotation, load-with-fallback
+- [x] Corrupt/missing/unwritable handling with typed errors
+- [x] Migration framework + test that a v1 fixture file in `tests/fixtures/saves/` loads
+- [x] `infra/paths.py`, `infra/config.py` (TOML + env + CLI precedence)
 
 **Accept:** Round-trip property test: `load(save(pet)) == pet` for arbitrary pets.
 

@@ -56,12 +56,13 @@ src/tama/
 │   ├── session.py         # GameSession: holds current Pet, applies ticks/actions, emits events
 │   └── autosave.py        # debounced save policy
 ├── persistence/
-│   ├── models.py          # Pydantic SaveFileV<N>, to_domain()/from_domain()
-│   ├── repository.py      # SaveRepository protocol + JsonSaveRepository (atomic, .bak)
-│   └── migrations.py      # versioned migration steps
+│   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
+│   ├── codec.py           # encode()/decode(): JSON text <-> SaveGame (incl. migration)
+│   ├── migrations.py      # versioned migration steps
+│   └── repository.py      # SaveRepository protocol + JsonSaveRepository (atomic, .bak)
 ├── infra/
 │   ├── clock.py           # Clock protocol, SystemClock, FakeClock (tests), ScaledClock(--speed)
-│   ├── paths.py           # platformdirs wrappers
+│   ├── paths.py           # save/config/log paths (platformdirs + CLI/env overrides)
 │   ├── config.py          # Config dataclass, TOML loader, precedence merge
 │   └── logging.py         # file logging setup
 ├── ui/
