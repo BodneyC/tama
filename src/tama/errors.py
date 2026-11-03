@@ -39,3 +39,12 @@ class ConfigError(TamaError):
 
 class IllegalMoveError(TamaError):
     """A mini-game move that the rules don't allow (a full column, a taken cell, ...)."""
+
+
+class PetLockedError(TamaError):
+    """The pet is already open in another tama process."""
+
+    def __init__(self, message: str, *, pid: int) -> None:
+        """Record which process holds the pet."""
+        super().__init__(message)
+        self.pid = pid
