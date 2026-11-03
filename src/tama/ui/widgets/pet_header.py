@@ -27,10 +27,10 @@ STAT_ICONS: dict[Stat, str] = {
 def level_style(value: int) -> str:
     """Theme colour for a stat value: fine, worrying, or urgent."""
     if value >= 50:
-        return "$success"
+        return "$tama-stat-good"
     if value >= 25:
-        return "$warning"
-    return "$error"
+        return "$tama-stat-warning"
+    return "$tama-stat-bad"
 
 
 def identity_text(pet: Pet) -> str:

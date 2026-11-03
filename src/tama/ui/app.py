@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import signal
-from typing import ClassVar
+from typing import ClassVar, override
 
 from textual.app import App
 from textual.binding import Binding, BindingType
@@ -12,8 +12,11 @@ from tama.errors import SaveError, SaveWriteError
 from tama.infra.clock import Clock
 from tama.persistence.repository import SaveRepository
 from tama.services.session import GameSession, SessionSettings
+from tama.ui.colours import Mode
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NewPetScreen
+from tama.ui.sprites import DEFAULT_SPECIES
+from tama.ui.theme import css_variables, ui_palette
 from tama.ui.widgets.pet_view import ViewOptions
 
 logger = logging.getLogger(__name__)
@@ -79,6 +82,19 @@ class TamaApp(App[None]):
         self._installed_signals: list[signal.Signals] = []
         self.session: GameSession | None = None
         self.main: MainScreen | None = None
+
+    species: str = DEFAULT_SPECIES
+    """Whose UI colours (``base.toml`` ``[ui]``) to use; set before CSS is built."""
+
+    @override
+    def get_theme_variable_defaults(self) -> dict[str, str]:
+        """The ``$tama-*`` UI colours for the active theme's mode (ADR 0004)."""
+        theme = self.current_theme
+        return css_variables(
+            ui_palette(self.species),
+            mode=Mode.of(dark=theme.dark),
+            theme_colours=theme.to_color_system().generate(),
+        )
 
     def on_mount(self) -> None:
         """Load the saved pet, or ask for a name for a new one."""

@@ -12,7 +12,7 @@ from textual.containers import Container
 from tama.domain.animation import AnimationKey
 from tama.domain.events import Action, Ate, Event, Evolved, FellAsleep, RefusalReason, Refused
 from tama.domain.stage import LifeStage, Variant
-from tama.ui.sprites import Sprite, load_sprite
+from tama.ui.sprites import DEFAULT_SPECIES, Sprite, load_sprite
 from tama.ui.widgets.pet_view import PetView, ViewOptions, steps_per_frame
 from tests.factories import make_pet
 
@@ -40,7 +40,7 @@ def still_view(**options: bool) -> PetView:
 
 
 def sprite(stage: LifeStage, key: AnimationKey) -> Sprite:
-    return load_sprite(Variant.DEFAULT, stage, key)
+    return load_sprite(DEFAULT_SPECIES, Variant.DEFAULT, stage, key)
 
 
 def playing_reaction(view: PetView) -> Sprite | None:
@@ -89,7 +89,7 @@ async def test_reaction_plays_once_then_returns_to_the_loop() -> None:
         view.react([Ate(AGE, Action.MEAL)])
         eat = sprite(LifeStage.CHILD, AnimationKey.EAT)
         assert view.current is eat
-        frames = len(view.current.frames(color=True))
+        frames = len(view.current.frames(view.look))
 
         run_steps(view, frames * steps_per_frame(view.current.fps) - 1)
         assert playing_reaction(view) is eat
@@ -193,7 +193,7 @@ async def test_idle_pet_wanders_within_the_stage() -> None:
     view = still_view()
     async with Host(view).run_test(size=(60, 20)):
         view.show(CHILD)
-        frame_width = len(view.current.cells(color=True)[0][0])
+        frame_width = len(view.current.cells(view.look)[0][0])
         limit = (60 - frame_width) // 2 - 2
         seen: set[int] = set()
 

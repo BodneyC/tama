@@ -20,7 +20,8 @@ from textual.widgets import Static
 from tama.domain.animation import AnimationKey, looping_animation, reaction_animation
 from tama.domain.events import Event
 from tama.domain.pet import Pet
-from tama.ui.sprites import PLACEHOLDER, Sprite, load_sprite
+from tama.ui.colours import Look, Mode
+from tama.ui.sprites import DEFAULT_SPECIES, PLACEHOLDER, Sprite, load_sprite, species_of
 
 STEP_SECONDS = 0.1
 BLINK_EVERY = (30, 70)
@@ -66,6 +67,7 @@ class PetView(Static):
         options = options or ViewOptions()
         self._options = options
         self._color = not options.monochrome
+        self._species = DEFAULT_SPECIES
         self._rng = rng or Random()
         self._pet: Pet | None = None
         self._loop: Sprite = PLACEHOLDER
@@ -81,6 +83,11 @@ class PetView(Static):
     def still(self) -> bool:
         """Whether only static key frames are shown."""
         return self._options.reduced_motion
+
+    @property
+    def look(self) -> Look:
+        """How sprites are drawn right now: the app theme's mode, in colour or not."""
+        return Look(Mode.of(dark=self.app.current_theme.dark), color=self._color)
 
     @property
     def current(self) -> Sprite:
@@ -104,7 +111,8 @@ class PetView(Static):
         """Loop the animation that suits ``pet``'s state."""
         self._pet = pet
         key = looping_animation(pet)
-        self.set_loop(load_sprite(pet.variant, pet.stage, key), key)
+        self._species = species_of(pet)
+        self.set_loop(load_sprite(self._species, pet.variant, pet.stage, key), key)
 
     def react(self, events: Iterable[Event]) -> None:
         """Play a one-shot reaction to the last event that has one (call after ``show``)."""
@@ -121,7 +129,7 @@ class PetView(Static):
         if self._steps >= steps_per_frame(sprite.fps):
             self._steps = 0
             self.frame += 1
-            if self.frame >= len(sprite.frames(color=self._color)):
+            if self.frame >= len(sprite.frames(self.look)):
                 self.frame = 0
                 self.reaction = None
         if self.reaction is None and self._loop_key is AnimationKey.IDLE and self._pet is not None:
@@ -129,7 +137,7 @@ class PetView(Static):
         self._draw()
 
     def _start_reaction(self, pet: Pet, key: AnimationKey) -> None:
-        self.reaction = load_sprite(pet.variant, pet.stage, key)
+        self.reaction = load_sprite(species_of(pet), pet.variant, pet.stage, key)
         self.frame = self._steps = 0
         self._draw()
 
@@ -146,11 +154,11 @@ class PetView(Static):
             self.offset_x = max(-limit, min(limit, self.offset_x + step))
 
     def _wander_limit(self) -> int:
-        frame_width = len(self.current.cells(color=self._color)[0][0])
+        frame_width = len(self.current.cells(self.look)[0][0])
         stage_width = self.parent.size.width if isinstance(self.parent, Widget) else 0
         return max(0, (stage_width - frame_width) // 2 - WANDER_MARGIN)
 
     def _draw(self) -> None:
-        frames = self.current.frames(color=self._color)
+        frames = self.current.frames(self.look)
         self.update(frames[min(self.frame, len(frames) - 1)])
         self.styles.offset = (self.offset_x, 0)

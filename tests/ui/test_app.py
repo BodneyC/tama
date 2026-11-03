@@ -17,10 +17,12 @@ from tama.errors import CorruptSaveError
 from tama.infra.clock import FakeClock
 from tama.persistence.repository import LoadResult
 from tama.ui.app import EXIT_ERROR
+from tama.ui.colours import Look, Mode
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
-from tama.ui.sprites import load_sprite, overlay_content
+from tama.ui.sprites import DEFAULT_SPECIES, load_sprite, overlay_content
+from tama.ui.widgets.pet_view import PetView
 from tests.factories import FIXED_NOW
 from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, mono, repo_with, text
@@ -87,6 +89,26 @@ async def test_theme_from_config_is_applied() -> None:
     app = make_app(repo_with(), theme="nord")
     async with app.run_test():
         assert app.theme == "nord"
+
+
+async def test_ui_colours_come_from_the_species_and_follow_the_mode() -> None:
+    app = make_app(repo_with())
+    async with app.run_test() as pilot:
+        assert app.get_css_variables()["tama-accent"] == "#f6b26b"
+        assert app.get_css_variables()["tama-stat-good"] == app.get_css_variables()["success"]
+
+        app.theme = "textual-light"
+        await pilot.pause()
+
+        assert app.get_css_variables()["tama-accent"] == "#b45f06"
+
+
+async def test_pet_is_drawn_for_the_theme_mode() -> None:
+    app = make_app(repo_with(), theme="textual-light")
+    async with app.run_test():
+        view = app.screen.query_one(PetView)
+
+        assert view.look == Look(Mode.LIGHT, color=True)
 
 
 async def test_unknown_theme_is_ignored(caplog: pytest.LogCaptureFixture) -> None:
@@ -198,7 +220,7 @@ async def test_sleeping_pet_shows_zzz() -> None:
     night = FIXED_NOW.replace(hour=23)
     app = make_app(repo_with(is_asleep=True, updated_at=night), clock=FakeClock(night))
     async with app.run_test():
-        assert text(app, "#overlay") == overlay_content(["zzz"], color=True).plain
+        assert text(app, "#overlay") == overlay_content(["zzz"], Look()).plain
 
 
 async def test_failed_save_after_an_action_is_shown() -> None:
@@ -378,7 +400,7 @@ async def test_routine_events_are_not_announced() -> None:
         clock.advance(timedelta(hours=2))
         app.tick()
 
-        assert text(app, "#overlay") == overlay_content(["poop"], color=True).plain
+        assert text(app, "#overlay") == overlay_content(["poop"], Look()).plain
         assert "Pooped" not in notes
 
 
@@ -407,8 +429,8 @@ async def test_dead_pet_shows_a_tombstone_and_refuses_care() -> None:
     app = make_app(repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE))
     notes = Notes(app)
     async with app.run_test() as pilot:
-        tombstone = load_sprite(Variant.DEFAULT, LifeStage.DEAD, AnimationKey.IDLE)
-        assert text(app, "#sprite") == tombstone.frames(color=True)[0].plain
+        tombstone = load_sprite(DEFAULT_SPECIES, Variant.DEFAULT, LifeStage.DEAD, AnimationKey.IDLE)
+        assert text(app, "#sprite") == tombstone.frames(Look())[0].plain
 
         await pilot.press("c")
 

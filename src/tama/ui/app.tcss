@@ -4,7 +4,8 @@ PetHeader {
   dock: top;
   height: 2;
   padding: 0 1;
-  background: $panel;
+  background: $tama-header-background;
+  color: $tama-header-text;
 }
 
 #header-top {
@@ -22,7 +23,7 @@ PetHeader {
 
 #attention {
   height: 1;
-  color: $warning;
+  color: $tama-attention;
   text-style: bold;
 }
 
@@ -43,12 +44,12 @@ PetStage {
 }
 
 PetStage.lights-off {
-  background: $background-darken-3;
+  background: $tama-lights-off;
 }
 
 /* Tint the children themselves: it dims the sprite's explicit pixel colours too. */
 PetStage.lights-off > Static {
-  tint: $background-darken-3 55%;
+  tint: $tama-lights-off 55%;
 }
 
 #too-small {
@@ -76,7 +77,7 @@ ModalScreen {
   max-width: 64;
   height: auto;
   padding: 1 2;
-  border: round $accent;
+  border: round $tama-accent;
   background: $surface;
 }
 
@@ -86,7 +87,7 @@ ModalScreen {
 
 .dialog-title {
   text-style: bold;
-  color: $accent;
+  color: $tama-accent;
   margin-bottom: 1;
 }
 
@@ -98,7 +99,7 @@ NewPetScreen {
   width: 44;
   height: auto;
   padding: 1 2;
-  border: round $accent;
+  border: round $tama-accent;
   background: $surface;
 }
 

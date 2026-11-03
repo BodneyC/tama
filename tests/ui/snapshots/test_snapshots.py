@@ -97,6 +97,15 @@ def test_sick_pet_with_overlays(snap_compare: SnapCompare) -> None:
     assert snap_compare(app)
 
 
+def test_main_screen_monochrome_light_theme(snap_compare: SnapCompare) -> None:
+    app = make_app(
+        repo_with(stats=Stats(hunger=20, happiness=45, energy=70), poop_count=1),
+        view=mono(),
+        theme="textual-light",
+    )
+    assert snap_compare(app)
+
+
 def test_terminal_too_small(snap_compare: SnapCompare) -> None:
     assert snap_compare(child_app(), terminal_size=(50, 15))
 

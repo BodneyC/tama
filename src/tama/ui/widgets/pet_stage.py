@@ -43,7 +43,5 @@ class PetStage(Container):
         view = self.query_one(PetView)
         view.show(pet)
         view.react(events)
-        self.query_one("#overlay", Static).update(
-            overlay_content(overlay_names(pet), color=not self._options.monochrome)
-        )
+        self.query_one("#overlay", Static).update(overlay_content(overlay_names(pet), view.look))
         self.set_class(not pet.lights_on, "lights-off")

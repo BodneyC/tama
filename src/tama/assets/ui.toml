@@ -1,0 +1,15 @@
+# Default UI colours (ADR 0004). Each becomes the CSS variable $tama-<name>.
+#
+# Values are a hex colour, a Textual theme variable ("$panel", "$success", ...) so the default
+# follows the active theme, or a table { dark = "...", light = "..." }. A species can override
+# any of these in the [ui] table of its sprites/<species>/base.toml.
+
+[ui]
+header-background = "$panel"        # the pet's name/stats bar
+header-text = "$foreground"         # name, stage and age
+stat-good = "$success"              # a stat at 50 or more
+stat-warning = "$warning"           # 25-49
+stat-bad = "$error"                 # below 25
+attention = "$warning"              # the "needs: ..." line
+accent = "$accent"                  # dialog borders and titles
+lights-off = { dark = "#000000", light = "#3a3a3a" }   # stage tint when the lights are off
