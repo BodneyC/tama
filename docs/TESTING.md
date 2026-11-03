@@ -32,6 +32,8 @@
   whose mistake chance is 0 (it must take wins and blocks) or 1 (it must still only make legal
   moves). Property tests: random legal games always end with exactly one result within the
   board's size. Snapshot each board game mid-game and finished, in monochrome too.
+- Holiday (ADR 0008): property-test that advancing a paused pet by any duration changes only
+  `updated_at`, and that pause → wait → resume equals not having waited at all.
 - Several pets (ADR 0007): roster tests use `tmp_path` and real files; assert that read-only
   views (`--status`, the pet select screen, the header count) leave every pet file byte-for-byte
   unchanged, and that two sessions can't hold the same pet's lock.

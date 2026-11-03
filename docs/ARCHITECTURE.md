@@ -48,6 +48,7 @@ src/tama/
 │   ├── events.py          # Event types, Action/RefusalReason enums, Outcome(pet, events)
 │   ├── simulation.py      # advance(pet, elapsed, ctx) -> Outcome
 │   ├── lifecycle.py       # stage transitions, adult variant selection, death
+│   ├── holiday.py         # pause/resume: settled-pet check, frozen pets (ADR 0008)
 │   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
 │   ├── attention.py       # attention_reasons(pet, balance) (SPEC §4)
 │   ├── minigames/         # pure game state machines (ADR 0006)
@@ -179,6 +180,15 @@ UI to show, rather than crashing the game; `session.close()` raises so shutdown 
 The domain `Pet` is not a Pydantic model. `persistence/models.py` maps between the domain and
 versioned DTOs. This keeps the domain dependency-free and lets the file format evolve
 independently (migrations operate on raw dicts before validation).
+
+### Holiday (pause)
+
+A paused pet is ordinary domain state (`Pet.paused_since`), not a UI or session trick, so every
+path agrees: `advance` on a paused pet only re-anchors `updated_at` (no steps, no RNG, no
+events), actions are refused with `RefusalReason.ON_HOLIDAY`, and `attention_reasons` is empty.
+`holiday.py` decides whether a pet may be paused (the same checks as attention calls) and
+produces the pause/resume events. Because it lives in the domain, the TUI, `tama --pause` and
+the read-only pet summaries need no special cases (ADR 0008).
 
 ### Several pets
 

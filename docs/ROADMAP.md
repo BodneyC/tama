@@ -174,7 +174,35 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
 draw or loss with the keyboard, and see the right effect on the pet; the board games are
 readable in colour, light theme and monochrome at 60×20.
 
-## M6.6 — Several tamas
+## M6.6 — Holiday (pause)
+
+Freeze a settled pet while you're away and bring it back later (SPEC §2.6, ADR 0008). Comes
+before several tamas, which makes it matter more.
+
+- [ ] Domain: `Pet.paused_since`; `advance` on a paused pet only re-anchors `updated_at` (no
+      steps, events or RNG use) — test-first, plus a property test that any paused duration
+      leaves everything else unchanged
+- [ ] Domain: `holiday.py` — `pause(pet, now)` refused unless hatched, alive and without
+      attention calls (refusal lists the reasons); `resume(pet, now)`; `PausedForHoliday` /
+      `ResumedFromHoliday(length)` events
+- [ ] Domain: care actions refused with `RefusalReason.ON_HOLIDAY`; no attention calls while
+      paused; lifespan counts living time only
+- [ ] Persistence: save schema v3 with `paused_since` (v2 → v3 migration, a v3 fixture, the v1
+      and v2 fixtures still loading)
+- [ ] Services: `GameSession.pause()` / `resume()` (saved immediately); catch-up and the away
+      summary skip paused time ("Was on holiday for 3d 2h")
+- [ ] UI: `h` toggles holiday; header `⏸ on holiday since <date>`; dimmed sleep frame with a
+      suitcase overlay sprite (generated with the other overlays); refusals explained; Help
+      and footer updated
+- [ ] CLI: `tama --pause` / `--resume` (all pets, or `--pet NAME` once M6.7 lands); one line
+      per pet; exit 2 if any pause was refused; `--status` shows paused pets
+- [ ] Snapshots: a paused pet (dark, light, monochrome); the refusal toast
+
+**Accept:** a settled pet paused with `h` (or `tama --pause`) and left for a simulated week
+comes back exactly as it was, at the same age, when resumed; a hungry or sick pet can't be
+paused; the save survives the v2 → v3 upgrade.
+
+## M6.7 — Several tamas
 
 Keep up to nine pets, pick which to play, and see them all from the shell (SPEC §6.1, ADR 0007).
 
@@ -193,13 +221,14 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
       `--species` with `--pet` errors on a different species; `--save-path` still plays one file
 - [ ] CLI: `--status` (and `tama status` as an alias): one line per pet, last played first with
       `*`; `--status --pet NAME` for one; exit codes 0/1/2 as SPEC §8
-- [ ] UI: `PetSelectScreen` — small idle sprites, name, species, stage, age, `⚠` reasons,
+- [ ] UI: `PetSelectScreen` — small idle sprites, name, species, stage, age, `⚠` reasons or `⏸`,
       gravestones for dead pets, "can't be read" rows; `↑`/`↓`, `1`–`9`, `Enter`, `n`, `a`
       (confirm), `Esc`/`q`; shown at launch when there are several pets
 - [ ] UI: `t` on the main screen saves and switches pets; UI colours follow the open pet;
       the name prompt rejects a living pet's name; the memorial's "new egg" adds a pet
 - [ ] UI: header `⚠ +N` for other pets needing care (re-checked every minute, read-only; no
-      bell); Help text and footer updated
+      bell; paused pets never count); Help text and footer updated
+- [ ] `--pause`/`--resume` accept `--pet NAME` and skip pets open in another tama (locks)
 - [ ] Unreadable pets open the per-file `ErrorScreen` without affecting the others
 - [ ] Snapshots: pet select (several pets incl. one dead, one needing care, one unreadable;
       light theme; monochrome); header with `⚠ +N`; all fit 60×20

@@ -28,7 +28,8 @@ All stats are integers clamped to `0..100`.
 Plus non-stat fields: `weight` (grams, int), `age` (`timedelta` of simulated life),
 `poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species` (the animal, fixed
 at hatching; default `tama`), `variant` (adult form),
-`born_at`, `last_updated_at`, `care_mistakes` (int).
+`born_at`, `last_updated_at`, `care_mistakes` (int), `paused_since` (when the pet went on
+holiday, §2.6; empty while it is living normally).
 
 Awake decay is scaled by life stage (BABY ×1.5, ELDER ×0.75); asleep drift is not. Asleep
 rates are deliberately gentle so a well-fed pet survives a 9-hour night.
@@ -84,6 +85,31 @@ elapsed time as zero, re-anchor the pet to the new "now", and log a warning.
 
 The same capped catch-up applies to large gaps while the game is open (e.g. a laptop sleeping).
 
+A pet on holiday (§2.6) is not simulated at all: catch-up skips the paused time, and the
+"While you were away…" dialog only covers time the pet was living.
+
+### 2.6 Holiday (pause)
+
+A pet left alone dies in about 12–16 hours (§2.3), so a player going away for a day or more can
+put a pet **on holiday**: it is frozen in time until they resume it.
+
+- **While on holiday nothing happens:** no aging (the 14–18-day lifespan counts only living
+  time), no drift, poop, sickness, misbehaviour, sleep changes or care mistakes. The pet keeps
+  its stats, timers and fractional progress exactly, and the RNG is not used.
+- **Only a settled pet can go on holiday:** it must be hatched and alive, with no attention
+  calls (§4): every need at 25 or more, not sick, no poop, not misbehaving, and lights off if
+  it is asleep. Otherwise the request is refused with the reasons, so pausing can't be used
+  to dodge a need that is already low. Eggs and dead pets can't be paused.
+- **Resuming is always explicit** (`h` again, or `tama --resume`), so opening tama to look
+  doesn't wake a pet. On resume the pet picks up exactly where it was, re-anchored to now, and
+  living time starts again; a pet paused during the night wakes on the normal schedule.
+- **Showing it:** the header reads `⏸ on holiday since <date>`, the stage shows the pet's
+  sleep frame dimmed with a small suitcase overlay sprite, and every care action is refused
+  with "on holiday" (status, help, switching pets and quit still work). Paused pets raise no
+  attention calls and are never counted as "needing care".
+- **Events:** `PausedForHoliday` and `ResumedFromHoliday` (with the holiday's length) appear in
+  toasts and the "While you were away" summary ("Was on holiday for 3d 2h").
+
 ## 3. Actions (player verbs)
 
 | Key | Action | Effect | Refused when |
@@ -95,6 +121,7 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 | `l` | Lights on/off | Toggles lights | — |
 | `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25. Otherwise: happiness −20. | Asleep |
 | `s` | Status | Opens stats panel (hearts/bars, age, weight, stage) | — |
+| `h` | Holiday | Puts a settled pet on holiday (frozen in time), or brings it back (§2.6) | Egg, dead, (to pause) any attention call |
 | `t` | Tamas | Saves, then opens the pet select screen to switch pets (§6.1) | — |
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
@@ -147,7 +174,8 @@ baby 60%, child 40%, teen 25%, adult 15%, elder 20%: elders get a little rusty).
 
 ## 4. Attention calls
 
-When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
+A pet on holiday raises no calls (§2.6). Otherwise, when a need drops below 25, the pet
+becomes sick, poops, or misbehaves, raise an
 **attention call**: an icon in the header blinks and a terminal bell (`\a`) sounds once
 (bell configurable / off by default via `--quiet`). Calls clear when resolved; a call that
 comes back later rings again. Calls already active when tama opens don't ring (the player is
@@ -171,7 +199,7 @@ there), and with reduced motion the icon is steady instead of blinking.
 ```
 
 - **Header:** name, stage, age, compact stat icons (colour-coded by level), attention indicator
-  (plus `⚠ +N` when other pets need care, §6.1).
+  (plus `⚠ +N` when other pets need care, §6.1), or `⏸ on holiday since <date>` (§2.6).
 - **Stage:** the animated pet, poops, sickness skull/bubbles, Zzz when asleep; dimmed when
   lights off (via Textual CSS class on the stage).
 - **Footer:** key bindings (Textual `Footer`).
@@ -198,7 +226,8 @@ there), and with reduced motion the icon is steady instead of blinking.
 - One-shot animations (eat, refuse, …) play once, then return to the state-appropriate loop.
 - Frame timing is driven by Textual `set_interval`; the animation *selection* is a pure
   function of pet state (testable without a UI).
-- Status indicators (Zzz, sickness, poop) are small pixel sprites under the pet.
+- Status indicators (Zzz, sickness, poop, and a suitcase for a pet on holiday) are small pixel
+  sprites under the pet.
 - The egg on the name prompt wobbles; hatching cracks the egg and the baby pops out; evolving
   flashes the new form.
 - Theme: uses Textual themes (config `theme`); must look good on both dark and light terminals.
@@ -211,7 +240,8 @@ there), and with reduced motion the icon is steady instead of blinking.
   `--save-path PATH` or the `TAMA_SAVE_PATH` env var (CLI wins) instead plays exactly one save
   file, outside the pet list (handy for experiments and tests). In this section, `save.json`
   stands for any one pet's file.
-- Format: JSON, human-readable, Pydantic model with `schema_version: int`.
+- Format: JSON, human-readable, Pydantic model with `schema_version: int` (v3 adds
+  `paused_since`; the v2 → v3 migration sets it to empty, i.e. not on holiday).
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
 - Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
   the backup (and tell the player it was recovered); if both fail, show `ErrorScreen`
@@ -227,7 +257,8 @@ there), and with reduced motion the icon is steady instead of blinking.
 A player can keep up to **9 tamas** at once (so `1`–`9` can pick them). Each is an
 independent pet with its own species, RNG and save file, and **all of them live in real time**:
 a pet that isn't open ages and gets hungry exactly as if tama were closed (§2.5, with its own
-offline cap), so neglecting one costs that pet, not the others.
+offline cap), so neglecting one costs that pet, not the others. Pets on holiday (§2.6) are
+the exception: they stay frozen until resumed.
 
 - **Storage:** `pets/<slug>-<id>.json` (+ its own `.bak`), where `<slug>` is the pet's name made
   filename-safe and `<id>` a short random hex id fixed at hatching. The directory listing *is*
@@ -241,7 +272,8 @@ offline cap), so neglecting one costs that pet, not the others.
   so `Enter` continues where you left off. `tama --pet NAME` skips the screen.
 - **Pet select screen:** one row per pet, each simulated up to now in memory (not saved): its
   idle sprite (small), name, species, stage, age, and the attention indicator `⚠` with
-  reasons if it needs care; dead pets show a gravestone and "passed away (…) at <age>";
+  reasons if it needs care, or `⏸ on holiday since <date>`; dead pets show a gravestone and
+  "passed away (…) at <age>";
   unreadable files show "can't be read". Keys: `↑`/`↓` or `1`–`9` select, `Enter` plays,
   `n` hatches a new egg (name prompt; refused at 9 pets, saying so), `a` archives the
   selected pet (dead pets only, after a `y`/`n` confirmation), `Esc`/`q` quit. An unreadable
@@ -288,9 +320,15 @@ tama --species owl         # which animal the name prompt starts on; a pet can't
                            # species (with --pet, naming another species is an error). Default: tama
 tama --status              # one line per pet, as of now (read-only, no TUI): the status line
                            # below, last-played pet first and marked `*`, then by name;
+                           # pets on holiday read "Mochi · adult owl · on holiday since 3 Nov";
                            # with --pet, just that pet. Exit 0 ok, 1 no pets yet,
                            # 2 if any pet's save is unreadable (its line says so) / bad config
 tama --list-species        # the animals that have art
+tama --pause               # put every living pet on holiday without opening the TUI (§2.6);
+                           # with --pet, just that pet. Prints one line per pet: paused, already
+                           # paused, or refused with the reasons (exit 2 if any was refused or
+                           # is open in another tama)
+tama --resume              # bring every pet back from holiday (or just --pet NAME)
 tama --save-path PATH      # play exactly this one save file, outside the pet list
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)
