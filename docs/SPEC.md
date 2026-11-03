@@ -29,7 +29,8 @@ Plus non-stat fields: `weight` (grams, int), `age` (`timedelta` of simulated lif
 `poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species` (the animal, fixed
 at hatching; default `tama`), `variant` (adult form),
 `born_at`, `last_updated_at`, `care_mistakes` (int), `paused_since` (when the pet went on
-holiday, §2.6; empty while it is living normally).
+holiday, §2.6; empty while it is living normally), `stay_awake` (how much longer a pet the
+player woke stays up, §2.4) and `woken_tantrum` (its current tantrum came from being woken).
 
 Awake decay is scaled by life stage (BABY ×1.5, ELDER ×0.75); asleep drift is not. Asleep
 rates are deliberately gentle so a well-fed pet survives a 9-hour night.
@@ -69,9 +70,17 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
 ### 2.4 Sleep
 
 - Pet gets sleepy when energy < 20 or during its "night" (22:00–07:00 local time, configurable).
-- Asleep: most actions are refused (pet stays asleep), stats drift per the asleep column.
+- Asleep: most actions are refused (pet stays asleep), including medicine: a pet that falls
+  sick in the night can be left to sleep it off or woken for its dose. Stats drift per the
+  asleep column.
 - Player should turn the lights off; it wakes when energy reaches 100 and it's day.
-  (v1 has no action to wake the pet early; it would just fall asleep again.)
+- **Waking it early** (`w`): the pet wakes grumpy: happiness −20, energy −20, and it throws a
+  tantrum (as misbehaviour, §3; a tantrum it was already having carries on unchanged). It
+  then stays up for 30 min whatever the time or its energy, after which the normal rules
+  apply: at night it drops straight back off, and by day the lost energy brings its next
+  sleep forward. Disciplining a tantrum the player caused this way ends it but earns no
+  discipline, so waking can't be used to raise a well-behaved adult; ignoring it still costs
+  discipline −10 after 30 min.
 
 ### 2.5 Offline progression
 
@@ -117,9 +126,10 @@ put a pet **on holiday**: it is frozen in time until they resume it.
 | `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. | Asleep, egg, dead, misbehaving, (meal) hunger ≥ 95 |
 | `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, misbehaving, energy < 10 |
 | `c` | Clean | Removes all poop, hygiene → 100 | — |
-| `m` | Medicine | Cures one dose of sickness | Not sick |
+| `m` | Medicine | Cures one dose of sickness | Asleep, not sick |
 | `l` | Lights on/off | Toggles lights | — |
-| `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25. Otherwise: happiness −20. | Asleep |
+| `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25 (+0 for a tantrum from being woken). Otherwise: happiness −20. | Asleep |
+| `w` | Wake | Wakes a sleeping pet early (§2.4): happiness −20, energy −20, a tantrum, stays up 30 min. Not shown in the footer (no room); listed in Help. | Awake, egg |
 | `s` | Status | Opens stats panel (hearts/bars, age, weight, stage) | — |
 | `h` | Holiday | Puts a settled pet on holiday (frozen in time), or brings it back (§2.6) | Egg, dead, (to pause) any attention call |
 | `t` | Tamas | Saves, then opens the pet select screen to switch pets (§6.1) | — |
@@ -132,7 +142,7 @@ close with `Esc` (or their own key). On the name prompt, `↑`/`↓` choose the 
 the egg changes to match) and `Esc` quits without creating a pet.
 
 Refused actions play a short "shake head" animation and show a toast explaining why.
-A dead pet refuses everything; an egg refuses feeding, play, discipline and medicine.
+A dead pet refuses everything; an egg refuses feeding, play, discipline, medicine and waking.
 
 **Misbehaviour:** each simulated hour, an awake, healthy pet of CHILD stage or older has a 15%
 chance to start misbehaving (an attention call with no real need). While misbehaving it throws
@@ -245,7 +255,8 @@ there), and with reduced motion the icon is steady instead of blinking.
   file, outside the pet list (handy for experiments and tests). In this section, `save.json`
   stands for any one pet's file.
 - Format: JSON, human-readable, Pydantic model with `schema_version: int` (v3 adds
-  `paused_since`; the v2 → v3 migration sets it to empty, i.e. not on holiday).
+  `paused_since`; the v2 → v3 migration sets it to empty, i.e. not on holiday. v4 adds
+  `stay_awake` and `woken_tantrum`; the v3 → v4 migration sets them to zero and false).
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
 - Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
   the backup (and tell the player it was recovered); if both fail, show `ErrorScreen`

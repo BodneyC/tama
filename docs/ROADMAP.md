@@ -259,6 +259,27 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
 switches to another with `t`, and `tama --status` prints each pet's state as of now without
 changing any save; an old single `save.json` is picked up automatically.
 
+## M6.8 — Waking the pet
+
+Asked for after M6.7: medicine was accepted while the pet slept, and there was no way to wake
+it (SPEC §2.4).
+
+- [x] Medicine is refused while asleep ("Fast asleep: wake it up to give medicine")
+- [x] Domain: `Action.WAKE` — happiness −20, energy −20, a tantrum (`woken_tantrum`; one it
+      was already having carries on), then `stay_awake` 30 min that night and tiredness can't
+      cut short; refused when awake or an egg. Disciplining a woken tantrum earns nothing, so
+      waking can't farm discipline; ignoring it still costs −10. Numbers in `Balance`
+- [x] Persistence: save schema v4 with `stay_awake` and `woken_tantrum` (v3 → v4 migration,
+      a v4 fixture, the v1-v3 fixtures still loading)
+- [x] UI: `w` wakes the pet; listed in Help but not the footer (it would push `? Help` off at
+      60 columns); toasts for waking, "Already awake" and the medicine refusal
+- [x] `tools/balance.py`: players wake a sick sleeping pet for its medicine. Without that a
+      busy player (every 2 h) lost a child that fell sick just before bedtime; with it every
+      profile matches the numbers from before this change (busy: 20/20 to old age)
+
+**Accept:** a sick pet asleep at 23:00 refuses `m`; `w` then `m` cures it at the cost of
+happiness, energy and a tantrum, and it is back asleep half an hour later.
+
 ## M7 — Release readiness
 
 - [ ] README with screenshot/GIF (e.g. via `vhs` or `asciinema`), install instructions
