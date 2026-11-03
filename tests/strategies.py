@@ -3,6 +3,8 @@
 from dataclasses import replace
 from datetime import timedelta
 from fractions import Fraction
+from random import Random
+from typing import Any
 
 from hypothesis import strategies as st
 
@@ -73,3 +75,14 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
 
 
 actions = st.sampled_from(list(Action))
+
+
+@st.composite
+def rng_states(draw: st.DrawFn) -> tuple[Any, ...]:
+    """States of a ``random.Random`` part-way through a sequence, sometimes mid-``gauss``."""
+    rng = Random(draw(st.integers()))
+    for _ in range(draw(st.integers(min_value=0, max_value=5))):
+        rng.random()
+    if draw(st.booleans()):
+        rng.gauss()  # leaves a cached value in the state's gauss_next slot
+    return rng.getstate()
