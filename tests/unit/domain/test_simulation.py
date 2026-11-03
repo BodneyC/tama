@@ -431,15 +431,24 @@ def test_young_pets_do_not_misbehave() -> None:
     assert not out.pet.misbehaving
 
 
+def test_misbehaviour_waits_half_an_hour_to_be_disciplined() -> None:
+    pet = make_pet(stats=Stats(discipline=50), misbehaving=True)
+
+    out = run(pet, 30 * MIN)
+
+    assert out.pet.misbehaving
+    assert out.pet.stats.discipline == 50
+
+
 def test_ignored_misbehaviour_lowers_discipline() -> None:
     pet = make_pet(stats=Stats(discipline=50), misbehaving=True)
 
-    out = run(pet, 6 * MIN)
+    out = run(pet, 31 * MIN)
 
     assert not out.pet.misbehaving
     assert out.pet.stats.discipline == 40
     assert out.pet.timers.misbehaving == timedelta(0)
-    assert MisbehaviourIgnored(pet.age + 6 * MIN) in out.events
+    assert MisbehaviourIgnored(pet.age + 31 * MIN) in out.events
 
 
 def test_hourly_rolls_use_the_rng_deterministically() -> None:

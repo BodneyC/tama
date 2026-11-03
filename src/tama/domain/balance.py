@@ -77,7 +77,9 @@ class Balance:
     # Misbehaviour (rolled once per simulated hour)
     misbehave_chance: float = 0.15
     misbehave_min_stage: LifeStage = LifeStage.CHILD
-    misbehave_ignore_grace: timedelta = timedelta(minutes=5)
+    # Long enough for a player checking in every half hour or so to catch most episodes
+    # (tools/balance.py: 86% caught; 5 min caught only 24%, so good adults were rare).
+    misbehave_ignore_grace: timedelta = timedelta(minutes=30)
     misbehave_ignored_discipline: int = -10
 
     # Attention

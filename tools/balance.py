@@ -20,7 +20,15 @@ from statistics import mean
 from tama.domain.actions import apply, apply_game_outcome, refusal
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
-from tama.domain.events import Action, Died, Event, GotSick
+from tama.domain.events import (
+    Action,
+    Died,
+    Event,
+    Evolved,
+    GotSick,
+    Misbehaved,
+    MisbehaviourIgnored,
+)
 from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet, new_egg
 from tama.domain.simulation import advance
@@ -67,6 +75,8 @@ def care(pet: Pet, ctx: Context) -> Pet:
         nonlocal pet
         pet = apply(pet, action, ctx).pet  # refused actions just don't happen
 
+    if pet.misbehaving:  # first: a tantrum refuses food and games
+        act(Action.DISCIPLINE)
     if pet.is_sick:
         act(Action.MEDICINE)
         act(Action.MEDICINE)
@@ -82,8 +92,6 @@ def care(pet: Pet, ctx: Context) -> Pet:
         ).pet
     if pet.stats.happiness < 50:
         act(Action.SNACK)
-    if pet.misbehaving:
-        act(Action.DISCIPLINE)
     if pet.is_asleep == pet.lights_on:
         act(Action.LIGHTS)
     return pet
@@ -99,6 +107,10 @@ class Life:
     age: timedelta = timedelta(0)
     mistakes: int = 0
     sicknesses: int = 0
+    misbehaved: int = 0
+    ignored: int = 0
+    discipline_at_adult: int | None = None
+    mistakes_at_adult: int | None = None
     events: Counter[str] = field(default_factory=Counter)
 
 
@@ -107,15 +119,19 @@ def live(player: Player, seed: int, balance: Balance) -> Life:
     ctx = Context(rng=Random(seed), balance=balance, tz=UTC)
     pet = new_egg("Sim", START, Random(seed), balance)
     life = Life()
-    last_check = START - player.every
+    # Players aren't in step with the pet's clock: each gap is 0.5-1.5x their usual one, drawn
+    # from the player's own RNG so the pet's randomness is the same for every profile.
+    habits = Random(seed + 1_000_003)
+    next_check = START
     now = START
     while pet.is_alive:
         out = advance(pet, TICK, ctx)
         pet, now = out.pet, now + TICK
         record(life, pet, out.events)
-        if now - last_check >= player.every and player.present(now):
+        if now >= next_check and player.present(now):
             pet = care(pet, ctx)
-            last_check = now
+            gap = player.every * habits.uniform(0.5, 1.5)
+            next_check = now + max(TICK, gap)
     life.age = pet.age
     life.mistakes = pet.care_mistakes
     life.variant = pet.variant
@@ -132,6 +148,13 @@ def record(life: Life, pet: Pet, events: tuple[Event, ...]) -> None:
             life.sicknesses += 1
         if isinstance(event, Died):
             life.died_of = event.cause.value
+        if isinstance(event, Misbehaved):
+            life.misbehaved += 1
+        if isinstance(event, MisbehaviourIgnored):
+            life.ignored += 1
+        if isinstance(event, Evolved) and event.to_stage is LifeStage.ADULT:
+            life.discipline_at_adult = pet.stats.discipline
+            life.mistakes_at_adult = pet.care_mistakes
 
 
 def report(player: Player, lives: list[Life]) -> str:
@@ -139,6 +162,12 @@ def report(player: Player, lives: list[Life]) -> str:
     old_age = sum(life.died_of == "old_age" for life in lives)
     reached = Counter(life.reached.value for life in lives)
     days = mean(life.age / timedelta(days=1) for life in lives)
+    adults = [life for life in lives if life.discipline_at_adult is not None]
+    disciplined = sum(
+        life.discipline_at_adult is not None and life.discipline_at_adult >= 50 for life in adults
+    )
+    caught = mean(1 - life.ignored / life.misbehaved for life in lives if life.misbehaved)
+    good = sum(life.variant is Variant.GOOD for life in lives)
     return "\n".join(
         [
             f"{player.name}",
@@ -146,6 +175,13 @@ def report(player: Player, lives: list[Life]) -> str:
             f"  last stage: {dict(reached)}",
             f"  care mistakes: mean {mean(life.mistakes for life in lives):.1f}"
             f"   sicknesses: mean {mean(life.sicknesses for life in lives):.1f}",
+            f"  misbehaviour: mean {mean(life.misbehaved for life in lives):.1f} per life,"
+            f" {caught:.0%} disciplined in time",
+            f"  discipline at adulthood: mean"
+            f" {mean(life.discipline_at_adult or 0 for life in adults) if adults else 0:.0f},"
+            f" >= 50 in {disciplined}/{len(adults)}   mistakes by then:"
+            f" {mean(life.mistakes_at_adult or 0 for life in adults) if adults else 0:.1f}"
+            f"   good adults: {good}/{len(lives)}",
         ]
     )
 
