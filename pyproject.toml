@@ -63,6 +63,8 @@ ignore = [
     "S311",                          # `random` drives gameplay, not cryptography
 ]
 
+allowed-confusables = ["×"]  # used deliberately in "Pooped ×3"-style summaries
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "D", "ANN", "PLR0913", "FBT"]
 

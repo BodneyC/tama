@@ -4,7 +4,7 @@ This is the only module allowed to read the system clock; everything else receiv
 ``Clock`` so time can be faked in tests and scaled for debugging (``--speed``).
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Protocol, runtime_checkable
 
 from tama.errors import InvalidArgumentError
@@ -75,3 +75,8 @@ class ScaledClock:
         """Return the scaled current time."""
         elapsed: timedelta = self._base.now() - self._origin
         return self._origin + elapsed * self._speed
+
+
+def local_timezone() -> tzinfo:
+    """Return the system's current local time zone (used for the pet's day/night)."""
+    return datetime.now(UTC).astimezone().tzinfo or UTC

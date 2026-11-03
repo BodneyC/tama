@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from tama.errors import InvalidArgumentError, TamaError
-from tama.infra.clock import Clock, FakeClock, ScaledClock, SystemClock
+from tama.infra.clock import Clock, FakeClock, ScaledClock, SystemClock, local_timezone
 from tests.factories import FIXED_NOW
 
 
@@ -95,3 +95,10 @@ def test_invalid_argument_error_is_a_tama_error_and_value_error() -> None:
 )
 def test_all_clocks_satisfy_protocol(clock: Clock) -> None:
     assert isinstance(clock, Clock)
+
+
+def test_local_timezone_matches_system_offset() -> None:
+    zone = local_timezone()
+    now = datetime.now(UTC)
+
+    assert now.astimezone(zone).utcoffset() == now.astimezone().utcoffset()
