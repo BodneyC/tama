@@ -215,7 +215,7 @@ before several tamas, which makes it matter more.
 - [x] UI: `h` toggles holiday; header `⏸ on holiday since <date>`; dimmed sleep frame with a
       suitcase overlay sprite (generated with the other overlays); refusals explained; Help
       and footer updated
-- [ ] CLI: `tama --pause` / `--resume` (all pets, or `--pet NAME` once M6.7 lands); one line
+- [x] CLI: `tama --pause` / `--resume` (all pets, or `--pet NAME` once M6.7 lands); one line
       per pet; exit 2 if any pause was refused; `--status` shows paused pets
 - [x] Snapshots: a paused pet (dark, light, monochrome); the refusal toast
 
