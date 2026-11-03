@@ -49,6 +49,7 @@ uv run mypy                              # type-check (strict, config in pyproje
 uv run pytest                            # all tests + coverage
 uv run pytest tests/unit -q              # fast unit tests only
 uv run pytest --snapshot-update          # regenerate UI snapshots (review the diff!)
+uv run python tools/generate_sprites.py  # regenerate the pixel-art sprite set (see /add-sprite)
 ```
 
 **Definition of done for any change** — all of these must pass:

@@ -39,8 +39,11 @@
   Emoji may still render as boxes (a font limitation, not a bug); thin seams between cells
   are a rasteriser artefact.
 - Snapshot files are byte-exact: pre-commit's whitespace hooks skip `__snapshots__/`.
+- Sprite art: review whole animation sets as contact sheets rendered straight from the pixel
+  grids (every frame of every animation), not only snapshots, which show one frame.
 - Mark slow tests `@pytest.mark.slow`; CI runs everything, local default runs everything too
-  (they should stay fast — budget for whole suite: < 30 s).
+  (they should stay fast — budget for whole suite: < 45 s; consider pytest-xdist if it grows,
+  checking the snapshot plugin's report still works).
 
 ## Coverage
 

@@ -73,9 +73,12 @@ src/tama/
 │   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
 │   │   └── dialogs.py     # Help, Status, FeedMenu, MiniGame modals
-│   ├── widgets/           # pet_header (name/stats/attention), pet_stage (sprite + indicators)
+│   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
 │   └── sprites.py         # load, validate and render pixel sprites; cache frames as Content
-└── assets/sprites/        # <variant>/<stage>/<animation>.toml (pixel grid + palette, ADR 0003)
+└── assets/sprites/        # <variant>/<stage>/<animation>.toml + overlays/ (generated, ADR 0003)
+
+tools/
+└── generate_sprites.py    # builds the sprite set from base grids (dev only, not shipped)
 ```
 
 Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests/ui/...`,
@@ -111,8 +114,11 @@ knows nothing about how events are presented.
 ### Animation
 
 - `domain/animation.py` decides *which* animation should be playing (pure, unit-tested).
-- `ui/widgets/pet_view.py` (a `Static` subclass) owns *frame playback*: a `set_interval` timer
-  advances the frame index; a one-shot queue plays reaction animations before reverting.
+- `ui/widgets/pet_view.py` (a `Static` subclass) owns *frame playback*: a 0.1 s `set_interval`
+  timer calls `step()`, which advances frames at each sprite's `fps`; the latest reaction plays
+  once before reverting to the state's loop. Idle pets blink and wander using a UI-only RNG
+  (cosmetic, never game state). `ViewOptions` turns animation off (tests/snapshots) or to
+  static key frames (reduced motion), and selects monochrome.
 - Sprites are pixel grids rendered to block characters, two pixels per cell (ADR 0003).
 - `ui/sprites.py` parses sprite files once (`functools.cache`) into `tuple[Frame, ...]`, validating
   that all frames of an animation share dimensions (a test asserts this for every asset).

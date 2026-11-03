@@ -7,6 +7,19 @@ Create or update the pixel-art sprite animation described by: $ARGUMENTS
 Sprites are **colour pixel art**, not ASCII. You draw a grid of pixels; the renderer turns each
 pair of pixel rows into one terminal row of block characters (see ADR 0003).
 
+**The shipped art is generated.** `tools/generate_sprites.py` holds one hand-drawn base grid per
+stage (and adult/elder variant) plus the overlays, and derives every animation from it with named
+transformations (`eyes_closed`, `mouth_open`, `shift`, `sparkles`, `flash`, `sickly`...). So:
+
+- To change how a stage looks, edit its base grid (or palette) in the generator.
+- To change an animation for every stage, edit its transformation or its entry in `living()`.
+- To add a new animation, add it to `living()` (and to `REQUIRED` in `tests/unit/test_sprites.py`
+  if SPEC §5.2 requires it).
+- Then run `uv run python tools/generate_sprites.py`. Never hand-edit a generated `.toml`:
+  `test_generated_art_is_up_to_date` fails if the files and the generator disagree.
+- Hand-drawn files are fine for new variants the generator doesn't cover; remove them from the
+  generator's output first so they aren't overwritten.
+
 ## File format
 
 `src/tama/assets/sprites/<variant>/<stage>/<animation>.toml`:
@@ -57,10 +70,13 @@ A shaded entry that shares a cell with a different pixel is drawn as its plain c
 
 ## Rules
 
-- **Size:** at most 32 pixels wide × 16 pixels tall, i.e. at most 32 columns × 8 terminal rows
-  (around 24×16 pixels suits most stages). The pixel height must be **even**; pad with a row
-  of `.`.
-- **Consistency:** every frame in a file has the same width and height. Pad with `.`.
+- **Size:** at most 32 pixels wide × 20 pixels tall, i.e. at most 32 columns × 10 terminal rows.
+  The pixel height must be **even**; pad with a row of `.`.
+- **Consistency:** every frame in a file has the same width and height, and every animation of a
+  stage uses the same canvas (base grid plus 2 columns each side and 2 rows above, for bobbing
+  and sparkles), so switching animations never makes the pet jump. Pad with `.`.
+- **Timing:** looping animations (`idle`, `sleep`, `sick`, `wobble`) set `loop = true`; reactions
+  set `loop = false` and play once at their `fps`.
 - **Palette:** every character used in `pixels` must be in `[palette]` (or be `.`). Use hex
   colours only; keep a sprite to about 8 colours. Reuse the character's established palette
   across stages and animations so it stays recognisable.
@@ -74,9 +90,11 @@ A shaded entry that shares a cell with a different pixel is drawn as its plain c
 
 ## Workflow
 
-1. Edit the `.toml` file(s). Required animations per stage are listed in SPEC §5.2.
+1. Edit the generator (or a hand-drawn `.toml`), then run `uv run python tools/generate_sprites.py`.
+   Required animations per stage are listed in SPEC §5.2.
 2. Run `uv run pytest tests/unit/test_sprites.py`: it parses every sprite, checks the palette,
-   sizes and frame consistency, and that every required animation exists.
+   sizes, frame consistency and shared canvases, that every required animation exists, and that
+   the generated files are up to date.
 3. Look at the result. Snapshot it, then render to PNG and inspect it (see `docs/TESTING.md`,
    "Reviewing snapshots"):
    `uv run pytest tests/ui/snapshots --snapshot-update`.

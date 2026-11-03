@@ -154,9 +154,12 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 - One-shot animations (eat, refuse, …) play once, then return to the state-appropriate loop.
 - Frame timing is driven by Textual `set_interval`; the animation *selection* is a pure
   function of pet state (testable without a UI).
-- Theme: uses Textual themes; must look good on both dark and light terminals. Respect
-  `NO_COLOR`. A `--reduced-motion` flag (and config option) disables wandering and limits
-  animations to static key frames.
+- Status indicators (Zzz, sickness, poop) are small pixel sprites under the pet.
+- The egg on the name prompt wobbles; hatching cracks the egg and the baby pops out; evolving
+  flashes the new form.
+- Theme: uses Textual themes (config `theme`); must look good on both dark and light terminals.
+  Respect `NO_COLOR` (monochrome sprites). A `--reduced-motion` flag (and config option) shows
+  static key frames only: no reactions, blinking or wandering.
 
 ## 6. Persistence
 

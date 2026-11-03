@@ -28,6 +28,11 @@ think in half-cells and keep three grids in sync.
   show as holes in the shape, like an old LCD. Drawing every opaque pixel produced a featureless
   blob.
 
+- The shipped art is produced by `tools/generate_sprites.py` from one base grid per stage
+  and variant, so all animations stay consistent. All animations of a stage share one canvas
+  (2-column side margins, 2 rows of headroom), which raised the size limit to 32×20 pixels.
+- Status indicators (Zzz, sickness, poop) are small pixel sprites too (`sprites/overlays/`).
+
 ## Consequences
 
 - Sprites look like pixel art and share one consistent palette per character.
