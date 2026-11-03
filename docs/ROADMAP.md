@@ -155,7 +155,7 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
       preference, mistakes; property tests (random legal games always finish with exactly one
       result; the pet never makes an illegal move; with no mistakes it never misses a win or a
       block)
-- [ ] Services: `GameSession.pet_move(game)` and `finish_game(result)` using the session RNG
+- [x] Services: `GameSession.pet_move(game)` and `finish_game(result)` using the session RNG
 - [ ] UI colours `piece-player` and `piece-pet` in `assets/ui.toml` (dark/light, theme refs
       allowed) and the `/add-sprite` UI colour list; species may override them
 - [ ] UI: `GameSelectScreen` (`↑`/`↓` + `Enter`, `1`–`3`, `Esc`; remembers the last game this

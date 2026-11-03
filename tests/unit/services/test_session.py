@@ -11,7 +11,9 @@ from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.context import Context
 from tama.domain.events import Action, Ate, Evolved, Played, RefusalReason
 from tama.domain.minigames import GameResult
+from tama.domain.minigames.four_in_a_row import FourInARow
 from tama.domain.minigames.left_right import Direction, LeftRightGame
+from tama.domain.minigames.opponent import pet_move
 from tama.domain.pet import new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage
@@ -316,6 +318,20 @@ def test_guess_uses_and_persists_the_session_rng(clock: FakeClock) -> None:
     assert game == expected
     assert repo.game is not None
     assert repo.game.rng_state != Random(9).getstate()
+
+
+def test_pet_move_plays_for_the_pet_with_the_session_rng(clock: FakeClock) -> None:
+    repo = saved(seed=4)
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+    game = FourInARow().drop(0)
+
+    after = session.pet_move(game)
+    session.close()
+
+    column = pet_move(game, session.pet.stage, SETTINGS.balance, Random(4))
+    assert after == game.drop(column)
+    assert repo.game is not None
+    assert repo.game.rng_state != Random(4).getstate()
 
 
 def test_create_hatches_the_chosen_species(clock: FakeClock) -> None:

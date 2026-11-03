@@ -16,6 +16,7 @@ from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.minigames import GameResult
 from tama.domain.minigames.left_right import Direction, LeftRightGame
+from tama.domain.minigames.opponent import BoardGame, pet_move
 from tama.domain.pet import DEFAULT_SPECIES, ZERO, Pet, new_egg
 from tama.domain.simulation import advance, skip_to
 from tama.errors import SaveWriteError
@@ -204,6 +205,10 @@ class GameSession:
     def guess(self, game: LeftRightGame, direction: Direction) -> LeftRightGame:
         """Play a mini-game round using the session's RNG (so it is saved and reproducible)."""
         return game.guess(direction, self._ctx.rng)
+
+    def pet_move[G: BoardGame](self, game: G) -> G:
+        """Make the pet's move in a board game, using the session's RNG like ``guess``."""
+        return game.play(pet_move(game, self._pet.stage, self._ctx.balance, self._ctx.rng))
 
     def save(self) -> None:
         """Save now.
