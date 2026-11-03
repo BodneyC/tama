@@ -63,6 +63,8 @@ class MainScreen(Screen[None]):
         Binding("m", "act('medicine')", "Medicine"),
         Binding("l", "act('lights')", "Lights"),
         Binding("d", "act('discipline')", "Discipline"),
+        # Rarely needed, and the footer has no room for it at 60 columns: listed in Help.
+        Binding("w", "act('wake')", "Wake", show=False),
         Binding("h", "holiday", "Holiday"),
         Binding("t", "switch", "Pets"),
         Binding("s", "status", "Status"),

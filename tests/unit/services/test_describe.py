@@ -27,6 +27,7 @@ from tama.domain.events import (
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    Woken,
     WokeUp,
 )
 from tama.domain.minigames import GameResult
@@ -112,6 +113,13 @@ def test_format_age(age: timedelta, text: str) -> None:
         ),
         (Refused(AGE, Action.PLAY, RefusalReason.MISBEHAVING), "Sulked and wouldn't play"),
         (Refused(AGE, Action.MEAL, RefusalReason.ON_HOLIDAY), "Refused a meal: on holiday"),
+        (
+            Refused(AGE, Action.MEDICINE, RefusalReason.ASLEEP),
+            "Fast asleep: wake it up to give medicine",
+        ),
+        (Refused(AGE, Action.WAKE, RefusalReason.AWAKE), "Already awake"),
+        (Refused(AGE, Action.WAKE, RefusalReason.EGG), "Refused to be woken: egg"),
+        (Woken(AGE), "Was woken up and threw a tantrum"),
         (PausedForHoliday(AGE), "Went on holiday"),
         (ResumedFromHoliday(AGE, timedelta(days=3, hours=2)), "Was on holiday for 3d 2h"),
         (PauseRefused(AGE, ("hungry", "lights")), "Can't go on holiday: hungry, lights on"),

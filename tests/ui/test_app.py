@@ -436,6 +436,38 @@ async def test_failed_save_after_an_action_is_shown() -> None:
         assert "error" in notes.severities()
 
 
+async def test_a_sleeping_pet_must_be_woken_for_medicine() -> None:
+    night = FIXED_NOW.replace(hour=23)
+    repo = repo_with(is_asleep=True, lights_on=False, sickness_doses=1, updated_at=night)
+    app = make_app(repo, clock=FakeClock(night))
+    notes = Notes(app)
+    async with app.run_test() as pilot:
+        await pilot.press("m")
+
+        assert app.session is not None
+        asleep = app.session.pet
+        assert asleep.is_sick
+        assert "Fast asleep: wake it up to give medicine" in notes
+
+        await pilot.press("w", "m")
+
+        woken = app.session.pet
+        assert not woken.is_asleep
+        assert woken.misbehaving
+        assert not woken.is_sick
+        assert "Was woken up and threw a tantrum" in notes
+
+
+async def test_waking_an_awake_pet_is_refused() -> None:
+    app = make_app(repo_with())
+    notes = Notes(app)
+    async with app.run_test() as pilot:
+        await pilot.press("w")
+
+        assert "Already awake" in notes
+        assert "warning" in notes.severities()
+
+
 async def test_discipline() -> None:
     app = make_app(repo_with(misbehaving=True))
     async with app.run_test() as pilot:

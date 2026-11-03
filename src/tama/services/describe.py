@@ -34,6 +34,7 @@ from tama.domain.events import (
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    Woken,
     WokeUp,
 )
 from tama.domain.minigames import GameResult
@@ -71,6 +72,7 @@ _REFUSED_ACTIONS = {
     Action.MEDICINE: "medicine",
     Action.LIGHTS: "the lights",
     Action.DISCIPLINE: "discipline",
+    Action.WAKE: "to be woken",
 }
 
 
@@ -134,6 +136,12 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return f"Turned its nose up at {_REFUSED_ACTIONS[food]}: misbehaving"
         case Refused(action=Action.PLAY, reason=RefusalReason.MISBEHAVING):
             return "Sulked and wouldn't play"
+        case Refused(action=Action.MEDICINE, reason=RefusalReason.ASLEEP):
+            return "Fast asleep: wake it up to give medicine"
+        case Refused(action=Action.WAKE, reason=RefusalReason.AWAKE):
+            return "Already awake"
+        case Woken():
+            return "Was woken up and threw a tantrum"
         case PausedForHoliday():
             return "Went on holiday"
         case ResumedFromHoliday(length=length):
