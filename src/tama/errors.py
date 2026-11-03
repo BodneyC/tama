@@ -7,3 +7,7 @@ class TamaError(Exception):
 
 class InvalidArgumentError(TamaError, ValueError):
     """An argument had an invalid value (e.g. a naive datetime or non-positive speed)."""
+
+
+class GameOverError(TamaError):
+    """A move was made in a mini-game that has already finished."""
