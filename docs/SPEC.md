@@ -18,16 +18,24 @@ All stats are integers clamped to `0..100`.
 
 | Stat | Meaning | Natural drift (awake) | Natural drift (asleep) |
 | --- | --- | --- | --- |
-| `hunger` | 100 = full, 0 = starving | −1 per 3 min | −1 per 6 min |
-| `happiness` | 100 = elated | −1 per 4 min | −1 per 8 min |
+| `hunger` | 100 = full, 0 = starving | −1 per 3 min | −1 per 10 min |
+| `happiness` | 100 = elated | −1 per 4 min | −1 per 12 min |
 | `energy` | 100 = rested | −1 per 5 min | +1 per 1 min |
-| `hygiene` | 100 = clean | −1 per 6 min; −15 per uncleaned poop per hour | same |
+| `hygiene` | 100 = clean | −1 per 6 min; −15 per uncleaned poop per hour | −1 per 15 min; poop as awake |
 | `health` | 100 = healthy | see 2.3 | see 2.3 |
 | `discipline` | 0..100, affects obedience | no drift | no drift |
 
 Plus non-stat fields: `weight` (grams, int), `age` (`timedelta` of simulated life),
 `poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species_variant`,
 `born_at`, `last_updated_at`, `care_mistakes` (int).
+
+Awake decay is scaled by life stage (BABY ×1.5, ELDER ×0.75); asleep drift is not. Asleep
+rates are deliberately gentle so a well-fed pet survives a 9-hour night.
+
+The pet poops every 2 h awake (scaled by the stage multiplier), up to 4 poops.
+
+Time is simulated in fixed 1-minute steps; sub-minute remainders and fractional stat
+progress are carried on the pet, so the result never depends on how time was sliced.
 
 All rates live in **one** tunable `Balance` config object (frozen dataclass) with these as
 defaults, so balancing never requires touching logic. A `--speed N` CLI debug flag multiplies
@@ -41,8 +49,8 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
 | `BABY` | 1 min | Needs decay ×1.5 faster. |
 | `CHILD` | 1 h | |
 | `TEEN` | 1 day | |
-| `ADULT` | 3 days | Adult form chosen by `care_mistakes` + `discipline` (≥2 variants: "good" / "scruffy"). |
-| `ELDER` | 10 days | Slower decay; eventually passes away peacefully of old age (14–18 days, seeded). |
+| `ADULT` | 3 days | Adult form chosen by `care_mistakes` + `discipline`: "good" if ≤ 3 mistakes and discipline ≥ 50, else "scruffy". |
+| `ELDER` | 10 days | Slower decay (×0.75); eventually passes away peacefully of old age (14–18 days, seeded). |
 | `DEAD` | — | Terminal. Memorial screen with lifespan summary; option to start a new egg. |
 
 ### 2.3 Health, sickness, death
@@ -51,6 +59,7 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
   10% if hunger < 20. Rolled using the injected RNG.
 - While sick: health −1 per 2 min; happiness decays 2× faster. Cured by `medicine` (1–2 doses).
 - If any of hunger/happiness/hygiene is at 0, health −1 per min.
+- Otherwise (not sick, no need at 0), health regenerates +1 per 10 min.
 - Health 0 → `DEAD`.
 - A **care mistake** is recorded when a need sits at 0 for > 15 consecutive minutes (once per
   episode), or the pet is left with lights on while asleep for > 30 min.
@@ -59,8 +68,8 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
 
 - Pet gets sleepy when energy < 20 or during its "night" (22:00–07:00 local time, configurable).
 - Asleep: most actions are refused (pet stays asleep), stats drift per the asleep column.
-- Player should turn the lights off; it wakes when energy reaches 100 and it's day, or
-  when woken (costs happiness, may count as a care mistake if energy < 50).
+- Player should turn the lights off; it wakes when energy reaches 100 and it's day.
+  (v1 has no action to wake the pet early; it would just fall asleep again.)
 
 ### 2.5 Offline progression
 
@@ -87,7 +96,11 @@ elapsed time as zero and log a warning.
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
 
 Refused actions play a short "shake head" animation and show a toast explaining why.
-Discipline is lowered by not responding to misbehaviour (attention calls ignored > 5 min).
+A dead pet refuses everything; an egg refuses feeding, play, discipline and medicine.
+
+**Misbehaviour:** each simulated hour, an awake, healthy pet of CHILD stage or older has a 15%
+chance to start misbehaving (an attention call with no real need). Disciplining it then gives
+discipline +25. Ignoring it for > 5 min costs discipline −10 and the pet gives up.
 
 ### Mini-game: "Left or Right"
 

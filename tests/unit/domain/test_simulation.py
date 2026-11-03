@@ -1,0 +1,505 @@
+from dataclasses import replace
+from datetime import UTC, datetime, time, timedelta, timezone, tzinfo
+from typing import Any
+
+import pytest
+
+from tama.domain.balance import DEFAULT_BALANCE, Balance
+from tama.domain.events import (
+    CareMistake,
+    Died,
+    Evolved,
+    FellAsleep,
+    GotSick,
+    Misbehaved,
+    MisbehaviourIgnored,
+    MistakeReason,
+    NeedLow,
+    Outcome,
+    Pooped,
+    WokeUp,
+)
+from tama.domain.pet import Pet, Timers
+from tama.domain.simulation import advance, is_night, sickness_chance
+from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.stats import Stat, Stats
+from tama.errors import InvalidArgumentError
+from tests.factories import FIXED_NOW, make_ctx, make_pet
+
+NIGHT = datetime(2026, 1, 1, 23, 0, tzinfo=UTC)
+MIN = timedelta(minutes=1)
+HOUR = timedelta(hours=1)
+
+NO_RANDOM_EVENTS = Balance(sickness_base_chance=0, misbehave_chance=0)
+"""Balance for tests that must not be disturbed by hourly sickness/misbehaviour rolls."""
+
+
+def run(
+    pet: Pet,
+    elapsed: timedelta,
+    *,
+    balance: Balance = NO_RANDOM_EVENTS,
+    seed: int = 0,
+    tz: tzinfo = UTC,
+) -> Outcome:
+    return advance(pet, elapsed, make_ctx(seed, balance=balance, tz=tz))
+
+
+# --- Time bookkeeping ---------------------------------------------------------------------
+
+
+def test_negative_elapsed_is_rejected() -> None:
+    with pytest.raises(InvalidArgumentError, match="elapsed"):
+        run(make_pet(), timedelta(seconds=-1))
+
+
+def test_less_than_a_step_only_accumulates_carry() -> None:
+    pet = make_pet()
+
+    out = run(pet, timedelta(seconds=30))
+
+    assert out.events == ()
+    assert out.pet == replace(
+        pet, carry=timedelta(seconds=30), updated_at=FIXED_NOW + timedelta(seconds=30)
+    )
+
+
+def test_carry_completes_a_step_across_calls() -> None:
+    pet = make_pet()
+    half = timedelta(seconds=30)
+
+    out = run(run(pet, half).pet, half)
+
+    assert out.pet.age == pet.age + MIN
+    assert out.pet.carry == timedelta(0)
+    assert out.pet.updated_at == FIXED_NOW + MIN
+
+
+def test_zero_elapsed_is_a_no_op() -> None:
+    pet = make_pet()
+
+    assert run(pet, timedelta(0)).pet == pet
+
+
+# --- Egg ----------------------------------------------------------------------------------
+
+
+def test_egg_does_not_drift_before_hatching() -> None:
+    egg = make_pet(stage=LifeStage.EGG, stats=Stats(hunger=50))
+    balance = replace(NO_RANDOM_EVENTS, hatch_age=timedelta(minutes=10))
+
+    out = run(egg, timedelta(minutes=9), balance=balance)
+
+    assert out.pet.stats == egg.stats
+    assert out.pet.stage is LifeStage.EGG
+    assert out.pet.age == timedelta(minutes=9)
+
+
+def test_egg_hatches_after_one_minute() -> None:
+    egg = make_pet(stage=LifeStage.EGG)
+
+    out = run(egg, MIN)
+
+    assert out.pet.stage is LifeStage.BABY
+    assert out.events == (Evolved(MIN, LifeStage.EGG, LifeStage.BABY, Variant.DEFAULT),)
+
+
+# --- Drift --------------------------------------------------------------------------------
+
+
+def test_hunger_drops_one_per_three_minutes_when_awake() -> None:
+    out = run(make_pet(), timedelta(minutes=9))
+
+    assert out.pet.stats.hunger == 97
+
+
+def test_drift_remainder_is_kept_between_steps() -> None:
+    out = run(make_pet(), timedelta(minutes=4))
+
+    assert out.pet.stats.hunger == 99
+    assert out.pet.drift[Stat.HUNGER] == pytest.approx(-1 / 3)
+
+
+def test_hunger_drops_slower_when_asleep() -> None:
+    pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    out = run(pet, timedelta(minutes=30))
+
+    assert out.pet.stats.hunger == 97
+
+
+def test_babies_decay_one_and_a_half_times_faster() -> None:
+    pet = make_pet(stage=LifeStage.BABY)
+
+    assert run(pet, timedelta(minutes=6)).pet.stats.hunger == 97
+
+
+def test_elders_decay_slower() -> None:
+    pet = make_pet(stage=LifeStage.ELDER)
+
+    assert run(pet, timedelta(minutes=12)).pet.stats.hunger == 97
+
+
+def test_happiness_decays_twice_as_fast_when_sick() -> None:
+    pet = make_pet(sickness_doses=1)
+
+    assert run(pet, timedelta(minutes=8)).pet.stats.happiness == 96
+
+
+def test_energy_decays_awake_and_recovers_asleep() -> None:
+    awake = make_pet(stats=Stats(energy=50))
+    asleep = make_pet(stats=Stats(energy=50), is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    assert run(awake, timedelta(minutes=10)).pet.stats.energy == 48
+    assert run(asleep, timedelta(minutes=10)).pet.stats.energy == 60
+
+
+def test_uncleaned_poop_makes_pet_dirty_faster() -> None:
+    pet = make_pet(poop_count=2)
+
+    out = run(pet, HOUR)
+
+    assert out.pet.stats.hygiene == 100 - 10 - 2 * 15
+
+
+def test_hygiene_drops_slower_when_asleep() -> None:
+    pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    assert run(pet, timedelta(minutes=30)).pet.stats.hygiene == 98
+
+
+def test_need_low_event_when_crossing_attention_threshold() -> None:
+    pet = make_pet(stats=Stats(hunger=25))
+
+    out = run(pet, timedelta(minutes=3))
+
+    assert out.pet.stats.hunger == 24
+    assert NeedLow(pet.age + 3 * MIN, Stat.HUNGER) in out.events
+
+
+# --- Health & death -----------------------------------------------------------------------
+
+
+def test_sickness_damages_health() -> None:
+    pet = make_pet(sickness_doses=1)
+
+    assert run(pet, timedelta(minutes=10)).pet.stats.health == 95
+
+
+def test_a_need_at_zero_damages_health() -> None:
+    pet = make_pet(stats=Stats(hunger=0))
+
+    assert run(pet, timedelta(minutes=10)).pet.stats.health == 90
+
+
+def test_health_regenerates_when_well_cared_for() -> None:
+    pet = make_pet(stats=Stats(health=50))
+
+    assert run(pet, timedelta(minutes=20)).pet.stats.health == 52
+
+
+def test_pet_dies_when_health_reaches_zero() -> None:
+    pet = make_pet(stats=Stats(hunger=0, health=3))
+
+    out = run(pet, timedelta(minutes=10))
+
+    assert out.pet.stage is LifeStage.DEAD
+    assert out.pet.cause_of_death is DeathCause.POOR_HEALTH
+    assert out.pet.age == pet.age + 3 * MIN
+    assert out.events[-1] == Died(pet.age + 3 * MIN, DeathCause.POOR_HEALTH)
+
+
+def test_dead_pets_do_not_change() -> None:
+    pet = make_pet(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
+
+    out = run(pet, timedelta(days=2))
+
+    assert out.events == ()
+    assert replace(out.pet, updated_at=pet.updated_at) == pet
+
+
+def test_dying_wakes_the_pet() -> None:
+    pet = make_pet(stats=Stats(hunger=0, health=1), is_asleep=True, updated_at=NIGHT)
+
+    out = run(pet, MIN)
+
+    assert out.pet.stage is LifeStage.DEAD
+    assert not out.pet.is_asleep
+
+
+# --- Care mistakes ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("minutes", "mistakes"), [(15, 0), (16, 1), (60, 1)])
+def test_need_at_zero_too_long_is_one_care_mistake_per_episode(minutes: int, mistakes: int) -> None:
+    pet = make_pet(stats=Stats(hunger=0))
+
+    out = run(pet, timedelta(minutes=minutes))
+
+    assert out.pet.care_mistakes == mistakes
+    assert out.events.count(CareMistake(pet.age + 16 * MIN, MistakeReason.HUNGER)) == mistakes
+
+
+def test_neglect_timer_resets_when_need_recovers() -> None:
+    pet = make_pet(stats=Stats(hygiene=50), timers=Timers(hygiene=timedelta(minutes=10)))
+
+    assert run(pet, MIN).pet.timers.hygiene == timedelta(0)
+
+
+def test_lights_left_on_while_asleep_is_a_care_mistake() -> None:
+    pet = make_pet(is_asleep=True, lights_on=True, updated_at=NIGHT)
+
+    out = run(pet, timedelta(minutes=31))
+
+    assert out.pet.care_mistakes == 1
+    assert CareMistake(pet.age + 31 * MIN, MistakeReason.LIGHTS) in out.events
+
+
+def test_lights_off_while_asleep_is_fine() -> None:
+    pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    assert run(pet, HOUR).pet.care_mistakes == 0
+
+
+# --- Sleep --------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("hour", "night"),
+    [(21, False), (22, True), (3, True), (6, True), (7, False), (12, False)],
+)
+def test_is_night_with_window_wrapping_midnight(hour: int, night: bool) -> None:
+    when = datetime(2026, 1, 1, hour, tzinfo=UTC)
+
+    assert is_night(when, make_ctx()) is night
+
+
+@pytest.mark.parametrize(("hour", "night"), [(0, False), (1, True), (4, True), (5, False)])
+def test_is_night_with_window_within_a_day(hour: int, night: bool) -> None:
+    ctx = make_ctx(balance=Balance(night_start=time(1), night_end=time(5)))
+
+    assert is_night(datetime(2026, 1, 1, hour, tzinfo=UTC), ctx) is night
+
+
+def test_is_night_uses_local_time_zone() -> None:
+    plus_two = timezone(timedelta(hours=2))
+    utc_evening = datetime(2026, 1, 1, 20, 30, tzinfo=UTC)  # 22:30 at UTC+2
+
+    assert is_night(utc_evening, make_ctx(tz=plus_two))
+    assert not is_night(utc_evening, make_ctx(tz=UTC))
+
+
+def test_pet_falls_asleep_at_night() -> None:
+    pet = make_pet(updated_at=datetime(2026, 1, 1, 21, 59, tzinfo=UTC))
+
+    out = run(pet, MIN)
+
+    assert out.pet.is_asleep
+    assert out.events == (FellAsleep(pet.age + MIN),)
+
+
+def test_tired_pet_falls_asleep_during_the_day() -> None:
+    pet = make_pet(stats=Stats(energy=19))
+
+    out = run(pet, MIN)
+
+    assert out.pet.is_asleep
+    assert FellAsleep(pet.age + MIN) in out.events
+
+
+def test_rested_pet_wakes_during_the_day() -> None:
+    pet = make_pet(stats=Stats(energy=99), is_asleep=True, lights_on=False)
+
+    out = run(pet, 2 * MIN)
+
+    assert not out.pet.is_asleep
+    assert out.events == (WokeUp(pet.age + 2 * MIN),)
+
+
+def test_rested_pet_keeps_sleeping_at_night() -> None:
+    pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    assert run(pet, HOUR).pet.is_asleep
+
+
+# --- Poop ---------------------------------------------------------------------------------
+
+
+def test_pet_poops_every_two_hours_awake() -> None:
+    pet = make_pet()
+
+    out = run(pet, 2 * HOUR)
+
+    assert out.pet.poop_count == 1
+    assert Pooped(pet.age + 2 * HOUR, 1) in out.events
+
+
+def test_pet_does_not_poop_asleep() -> None:
+    pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    assert run(pet, 3 * HOUR).pet.poop_count == 0
+
+
+def test_poop_is_capped() -> None:
+    pet = make_pet(poop_count=DEFAULT_BALANCE.max_poops)
+
+    out = run(pet, 2 * HOUR)
+
+    assert out.pet.poop_count == DEFAULT_BALANCE.max_poops
+    assert not any(isinstance(e, Pooped) for e in out.events)
+
+
+# --- Hourly rolls -------------------------------------------------------------------------
+
+
+def test_sickness_chance_formula() -> None:
+    b = DEFAULT_BALANCE
+    healthy = make_pet()
+    worst = make_pet(stats=Stats(hunger=10, hygiene=10), poop_count=2)
+
+    assert sickness_chance(healthy, b) == pytest.approx(0.02)
+    assert sickness_chance(worst, b) == pytest.approx(0.02 + 2 * 0.05 + 0.10 + 0.10)
+
+
+def test_sickness_is_rolled_on_the_hour() -> None:
+    pet = make_pet()
+    certain = Balance(sickness_base_chance=1, misbehave_chance=0)
+
+    before_hour = run(pet, HOUR - MIN, balance=certain)
+    on_hour = run(pet, HOUR, balance=certain)
+
+    assert not before_hour.pet.is_sick
+    assert on_hour.pet.is_sick
+    assert 1 <= on_hour.pet.sickness_doses <= 2
+    assert GotSick(pet.age + HOUR, on_hour.pet.sickness_doses) in on_hour.events
+
+
+def test_sick_pet_is_not_rerolled() -> None:
+    pet = make_pet(sickness_doses=2)
+    certain = Balance(sickness_base_chance=1, misbehave_chance=0)
+
+    out = run(pet, HOUR, balance=certain)
+
+    assert out.pet.sickness_doses == 2
+    assert not any(isinstance(e, GotSick) for e in out.events)
+
+
+def test_pet_misbehaves_on_the_hour() -> None:
+    pet = make_pet()
+    certain = Balance(sickness_base_chance=0, misbehave_chance=1)
+
+    out = run(pet, HOUR, balance=certain)
+
+    assert out.pet.misbehaving
+    assert Misbehaved(pet.age + HOUR) in out.events
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"is_asleep": True, "lights_on": False, "updated_at": NIGHT},
+        {"sickness_doses": 1},
+    ],
+)
+def test_pet_does_not_start_misbehaving_when_ineligible(overrides: dict[str, Any]) -> None:
+    pet = make_pet(**overrides)
+    certain = Balance(sickness_base_chance=0, misbehave_chance=1)
+
+    out = run(pet, HOUR - pet.age % HOUR, balance=certain)
+
+    assert not any(isinstance(e, Misbehaved) for e in out.events)
+
+
+def test_already_misbehaving_pet_is_not_rerolled() -> None:
+    pet = make_pet(misbehaving=True, age=2 * HOUR - MIN)
+    certain = Balance(sickness_base_chance=0, misbehave_chance=1)
+
+    out = run(pet, MIN, balance=certain)
+
+    assert out.pet.misbehaving
+    assert out.events == ()
+
+
+def test_young_pets_do_not_misbehave() -> None:
+    pet = make_pet(stage=LifeStage.CHILD)
+    certain = Balance(
+        sickness_base_chance=0, misbehave_chance=1, misbehave_min_stage=LifeStage.TEEN
+    )
+
+    out = run(pet, HOUR, balance=certain)
+
+    assert not out.pet.misbehaving
+
+
+def test_ignored_misbehaviour_lowers_discipline() -> None:
+    pet = make_pet(stats=Stats(discipline=50), misbehaving=True)
+
+    out = run(pet, 6 * MIN)
+
+    assert not out.pet.misbehaving
+    assert out.pet.stats.discipline == 40
+    assert out.pet.timers.misbehaving == timedelta(0)
+    assert MisbehaviourIgnored(pet.age + 6 * MIN) in out.events
+
+
+def test_hourly_rolls_use_the_rng_deterministically() -> None:
+    pet = make_pet()
+
+    a = run(pet, 12 * HOUR, balance=DEFAULT_BALANCE, seed=42)
+    b = run(pet, 12 * HOUR, balance=DEFAULT_BALANCE, seed=42)
+
+    assert a == b
+
+
+# --- Life stages --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("stage", "next_stage"),
+    [
+        (LifeStage.BABY, LifeStage.CHILD),
+        (LifeStage.CHILD, LifeStage.TEEN),
+        (LifeStage.ADULT, LifeStage.ELDER),
+    ],
+)
+def test_pet_evolves_at_stage_age(stage: LifeStage, next_stage: LifeStage) -> None:
+    pet = make_pet(stage=stage, age=DEFAULT_BALANCE.stage_age(next_stage) - MIN)
+
+    out = run(pet, MIN)
+
+    assert out.pet.stage is next_stage
+    assert Evolved(out.pet.age, stage, next_stage, pet.variant) in out.events
+
+
+@pytest.mark.parametrize(
+    ("discipline", "mistakes", "variant"),
+    [
+        (60, 0, Variant.GOOD),
+        (50, 3, Variant.GOOD),
+        (60, 4, Variant.SCRUFFY),
+        (49, 0, Variant.SCRUFFY),
+    ],
+)
+def test_adult_variant_depends_on_care(discipline: int, mistakes: int, variant: Variant) -> None:
+    pet = make_pet(
+        stage=LifeStage.TEEN,
+        age=DEFAULT_BALANCE.adult_age - MIN,
+        stats=Stats(discipline=discipline),
+        care_mistakes=mistakes,
+    )
+
+    out = run(pet, MIN)
+
+    assert out.pet.stage is LifeStage.ADULT
+    assert out.pet.variant is variant
+
+
+def test_elder_dies_of_old_age_at_lifespan() -> None:
+    pet = make_pet(stage=LifeStage.ELDER, lifespan=timedelta(days=15), age=timedelta(days=15) - MIN)
+
+    out = run(pet, HOUR)
+
+    assert out.pet.stage is LifeStage.DEAD
+    assert out.pet.cause_of_death is DeathCause.OLD_AGE
+    assert out.pet.age == timedelta(days=15)
+    assert out.events[-1] == Died(timedelta(days=15), DeathCause.OLD_AGE)
