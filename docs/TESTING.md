@@ -28,9 +28,16 @@
   `tick_interval=None`, no signal handlers) and call `app.tick()` by hand. Capture toasts with
   `Notes(app)`. Use `await pilot.pause()` after key presses that push or pop screens.
 - Reviewing snapshots: Pilot tests can't see layout bugs (an empty dialog still "contains"
-  its text), so look at every new or changed snapshot. Render one to PNG with
-  `uvx --from cairosvg cairosvg snap.svg -o snap.png` (copy the `.raw` to `.svg` first; emoji
-  and box glyphs show as boxes there, which is a font limitation, not a bug).
+  its text), so look at every new or changed snapshot. Render one to PNG, swapping in a
+  locally installed monospace font that has the block glyphs (Textual's SVGs ask for Fira Code):
+
+  ```sh
+  sed -E 's/font-family: [^;"]*/font-family: "DejaVu Sans Mono"/g' snap.raw > /tmp/snap.svg
+  uvx --from cairosvg cairosvg /tmp/snap.svg -o /tmp/snap.png
+  ```
+
+  Emoji may still render as boxes (a font limitation, not a bug); thin seams between cells
+  are a rasteriser artefact.
 - Snapshot files are byte-exact: pre-commit's whitespace hooks skip `__snapshots__/`.
 - Mark slow tests `@pytest.mark.slow`; CI runs everything, local default runs everything too
   (they should stay fast — budget for whole suite: < 30 s).

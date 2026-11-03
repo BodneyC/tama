@@ -72,19 +72,21 @@ events match expectations; file on disk is valid.
 Sprites become colour pixel art drawn with block characters (`█ ▀ ▄ ░ ▒ ▓`); see
 [ADR 0003](adr/0003-pixel-art-sprites.md) and the `/add-sprite` command for the format.
 
-- [ ] Pixel sprite format: TOML pixel grid + palette (`.` transparent, optional `shade`),
+- [x] Pixel sprite format: TOML pixel grid + palette (`.` transparent, optional `shade`),
       `fps`/`loop`; Pydantic validation (palette coverage, even height, ≤ 32×16 px, equal
       frame sizes)
-- [ ] Pure renderer: pixel pairs → `▀`/`▄`/`█`/space with fg/bg colours, shaded entries →
+- [x] Pure renderer: pixel pairs → `▀`/`▄`/`█`/space with fg/bg colours, shaded entries →
       `░`/`▒`/`▓`; unit-tested cell by cell; frames cached as Textual `Content`
-- [ ] Monochrome fallback under `NO_COLOR` (opaque pixels in the default colour)
-- [ ] Replace the M4 ASCII `.txt` sprites and loader; update `test_sprites.py` to validate every
-      sprite file and that every required (stage, animation) exists for the default variant
+- [x] Monochrome fallback under `NO_COLOR` (light pixels drawn, dark pixels become gaps)
+- [x] Replace the M4 ASCII `.txt` sprites and loader with pixel-art idle frames for every
+      stage; `test_sprites.py` validates every sprite file and that each stage has an idle
+- [ ] Extend `test_sprites.py` to require every (stage, animation) from SPEC §5.2 once the full
+      art set exists
 - [ ] `PetView` widget: looped + one-shot playback at each file's `fps`, wandering, blink
 - [ ] Full pixel-art set for the default variant (all stages × animations in SPEC §5.2) with a
       consistent palette, plus distinct "good" and "scruffy" adults (and elders)
-- [ ] Hatch and evolve sequences; Zzz/sick/poop overlays as small pixel sprites too;
-      lights-off dimming
+- [ ] Hatch and evolve sequences; Zzz/sick/poop overlays as small pixel sprites too
+- [x] Lights-off dimming of the pixel sprite (tint)
 - [ ] `--reduced-motion`; looks good on light & dark themes (snapshot both)
 
 **Accept:** Snapshot tests for each life stage's idle key frame in colour, on a dark and a light

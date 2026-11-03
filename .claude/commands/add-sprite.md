@@ -68,8 +68,9 @@ A shaded entry that shares a cell with a different pixel is drawn as its plain c
   dark outline and avoid relying on pure black or pure white for anything that must be seen.
 - **Silhouette:** the outline should read clearly at a glance; keep idle frames subtle (1–2 pixel
   shifts, blinking eyes) and reactions bold.
-- **No colour (NO_COLOR):** sprites still need to read in monochrome, where every opaque pixel is
-  drawn in the default colour. Make sure the shape works without colour.
+- **No colour (NO_COLOR):** in monochrome, light pixels (relative luminance ≥ 0.45) are drawn
+  in the default colour and dark ones become gaps. Keep eyes, mouth and outline clearly darker
+  than the body (and the body clearly lighter), so features show as holes in the shape.
 
 ## Workflow
 

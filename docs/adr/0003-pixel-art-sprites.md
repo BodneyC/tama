@@ -23,8 +23,10 @@ think in half-cells and keep three grids in sync.
   same shaded entry is drawn with `░`/`▒`/`▓` for texture and dithering.
 - Parsing and validation use `tomllib` plus a Pydantic model in `tama.ui.sprites`; rendered
   frames are cached as Textual `Content` (styled strips) per (variant, stage, animation).
-- Under `NO_COLOR` (or a monochrome terminal), opaque pixels are drawn in the default colour, so
-  sprites must keep a readable silhouette without colour.
+- Under `NO_COLOR`, nothing is coloured: pixels lighter than a luminance threshold (0.45) are
+  drawn in the default colour and darker ones (outline, eyes, mouth) become gaps, so features
+  show as holes in the shape, like an old LCD. Drawing every opaque pixel produced a featureless
+  blob.
 
 ## Consequences
 
