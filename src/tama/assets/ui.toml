@@ -13,3 +13,5 @@ stat-bad = "$error"                 # below 25
 attention = "$warning"              # the "needs: ..." line
 accent = "$accent"                  # dialog borders and titles
 lights-off = { dark = "#000000", light = "#3a3a3a" }   # stage tint when the lights are off
+piece-player = { dark = "#ef5350", light = "#c62828" }  # the player's pieces in board games
+piece-pet = { dark = "#ffd54f", light = "#a66f00" }     # the pet's pieces in board games

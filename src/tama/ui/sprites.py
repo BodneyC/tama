@@ -126,6 +126,8 @@ UI_KEYS = frozenset(
         "attention",
         "accent",
         "lights-off",
+        "piece-player",
+        "piece-pet",
     }
 )
 """UI colours a species can override (each becomes the CSS variable ``$tama-<key>``)."""
