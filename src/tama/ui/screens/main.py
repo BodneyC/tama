@@ -9,6 +9,7 @@ from textual.binding import Binding, BindingType
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
+from tama.domain.attention import attention_reasons, new_attention_calls
 from tama.domain.events import (
     Action,
     CareMistake,
@@ -60,20 +61,25 @@ class MainScreen(Screen[None]):
         *,
         tick_interval: float | None = None,
         view: ViewOptions | None = None,
+        bell: bool = False,
     ) -> None:
         """Show ``session``'s pet, ticking it every ``tick_interval`` seconds (if given).
 
-        The screen owns the timer so ticking stops as soon as the screen goes away.
+        The screen owns the timer so ticking stops as soon as the screen goes away. With
+        ``bell``, each new attention call rings the terminal bell once.
         """
         super().__init__()
         self.session = session
         self._tick_interval = tick_interval
         self._view = view or ViewOptions()
+        self._bell = bell
+        # Needs that are already there when the screen opens don't ring: the player is here.
+        self._calls = attention_reasons(session.pet, session.balance)
 
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
-        yield PetHeader()
+        yield PetHeader(self._view)
         yield PetStage(self._view)
         yield Static(
             f"Terminal too small: tama needs at least {MIN_WIDTH}x{MIN_HEIGHT}.",
@@ -122,6 +128,10 @@ class MainScreen(Screen[None]):
         pet = self.session.pet
         self.query_one(PetHeader).show(pet, self.session.balance)
         self.query_one(PetStage).show(pet, events)
+        calls = attention_reasons(pet, self.session.balance)
+        if self._bell and new_attention_calls(self._calls, calls):
+            self.app.bell()
+        self._calls = calls
 
     # --- Actions --------------------------------------------------------------------------
 

@@ -38,3 +38,13 @@ def attention_reasons(pet: Pet, balance: Balance) -> frozenset[AttentionReason]:
         AttentionReason.LIGHTS: pet.is_asleep and pet.lights_on,
     }
     return frozenset(reason for reason, active in checks.items() if active)
+
+
+def new_attention_calls(
+    previous: frozenset[AttentionReason], current: frozenset[AttentionReason]
+) -> frozenset[AttentionReason]:
+    """The calls in ``current`` that weren't already raised in ``previous`` (ring once each).
+
+    A call that clears and comes back later counts as new again.
+    """
+    return current - previous

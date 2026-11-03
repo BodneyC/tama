@@ -11,6 +11,7 @@ from textual.content import Content
 from textual.widgets import Static
 
 from tama.domain.animation import AnimationKey
+from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.pet import DEFAULT_SPECIES
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
@@ -22,15 +23,16 @@ from tama.errors import (
 )
 from tama.infra.clock import FakeClock
 from tama.persistence.repository import LoadResult
-from tama.ui.app import EXIT_ERROR
+from tama.ui.app import EXIT_ERROR, TamaApp
 from tama.ui.colours import Look, Mode
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
 from tama.ui.sprites import load_sprite, overlay_content
-from tama.ui.widgets.pet_view import PetView
-from tests.factories import FIXED_NOW
+from tama.ui.widgets.pet_header import PetHeader
+from tama.ui.widgets.pet_view import PetView, ViewOptions
+from tests.factories import FIXED_NOW, make_pet
 from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, mono, repo_with, text
 
@@ -669,3 +671,57 @@ async def test_sigterm_handler_is_installed_and_removed() -> None:
     assert repo.save_count == 1
     loop = asyncio.get_running_loop()
     assert not loop.remove_signal_handler(signal.SIGTERM)
+
+
+# --- Attention calls ----------------------------------------------------------------------
+
+
+def count_bells(app: TamaApp) -> list[None]:
+    rung: list[None] = []
+    app.bell = lambda: rung.append(None)  # type: ignore[method-assign] # record, don't beep
+    return rung
+
+
+@pytest.mark.parametrize(("enabled", "rings"), [(True, 1), (False, 0)])
+async def test_a_new_attention_call_rings_the_bell_once(enabled: bool, rings: int) -> None:
+    clock = FakeClock(FIXED_NOW)
+    app = make_app(repo_with(poop_progress=0), clock=clock, bell=enabled)
+    rung = count_bells(app)
+    async with app.run_test():
+        clock.advance(timedelta(hours=2))
+        app.tick()
+        clock.advance(timedelta(seconds=1))
+        app.tick()
+
+        assert text(app, "#attention") == "⚠ poop"
+        assert len(rung) == rings
+
+
+async def test_needs_already_there_on_launch_dont_ring() -> None:
+    app = make_app(repo_with(poop_count=1), bell=True)
+    rung = count_bells(app)
+    async with app.run_test():
+        assert text(app, "#attention") == "⚠ poop"
+        assert rung == []
+
+
+async def test_attention_indicator_blinks_only_while_calling() -> None:
+    app = make_app(repo_with(poop_count=1))
+    async with app.run_test():
+        header = app.screen.query_one(PetHeader)
+        indicator = app.screen.query_one("#attention")
+        header.blink()
+        assert indicator.has_class("-blink-off")
+        header.blink()
+        assert not indicator.has_class("-blink-off")
+
+        app.screen.query_one(PetHeader).show(make_pet(), DEFAULT_BALANCE)
+        header.blink()
+        assert not indicator.has_class("-blink-off")
+
+
+@pytest.mark.parametrize(("reduced", "blinking"), [(False, True), (True, False)])
+async def test_blinking_follows_reduced_motion(reduced: bool, blinking: bool) -> None:
+    app = make_app(repo_with(poop_count=1), view=ViewOptions(animate=True, reduced_motion=reduced))
+    async with app.run_test():
+        assert app.screen.query_one(PetHeader).blinking is blinking

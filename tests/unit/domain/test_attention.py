@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from tama.domain.attention import AttentionReason, attention_reasons
+from tama.domain.attention import AttentionReason, attention_reasons, new_attention_calls
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import Stats
@@ -48,3 +48,23 @@ def test_multiple_reasons_combine() -> None:
 @pytest.mark.parametrize("stage", [LifeStage.EGG, LifeStage.DEAD])
 def test_eggs_and_dead_pets_never_call(stage: LifeStage) -> None:
     assert reasons(stage=stage, poop_count=3, cause_of_death=DeathCause.OLD_AGE) == frozenset()
+
+
+H, P, S = AttentionReason.HUNGRY, AttentionReason.POOP, AttentionReason.SICK
+
+
+@pytest.mark.parametrize(
+    ("before", "after", "new"),
+    [
+        (set(), {H}, {H}),
+        ({H}, {H}, set()),
+        ({H}, {H, P}, {P}),
+        ({H, P}, {P}, set()),
+        ({H}, set(), set()),
+        ({S}, {H}, {H}),
+    ],
+)
+def test_new_attention_calls_are_those_just_raised(
+    before: set[AttentionReason], after: set[AttentionReason], new: set[AttentionReason]
+) -> None:
+    assert new_attention_calls(frozenset(before), frozenset(after)) == new

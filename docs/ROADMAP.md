@@ -128,7 +128,7 @@ monochrome, and an old v1 save still loads as a `tama`.
 
 - [ ] `AwaySummaryScreen` (currently a toast), `MemorialScreen`, `ErrorScreen` (currently the app
       exits with a message); animate `FeedMenu` and `MiniGameScreen` (basic versions from M4)
-- [ ] Attention calls with blinking indicator + optional bell
+- [x] Attention calls with blinking indicator + optional bell
 - [ ] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only
       (known: an untreated sick child dies in ~2.5 h — sickness may need to be gentler)
 - [x] Logging to file; no stray terminal output (landed in M4)

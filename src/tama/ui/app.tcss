@@ -27,6 +27,10 @@ PetHeader {
   text-style: bold;
 }
 
+#attention.-blink-off {
+  visibility: hidden;
+}
+
 PetStage {
   height: 1fr;
   align: center middle;

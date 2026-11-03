@@ -119,7 +119,9 @@ player presses `←`/`→`. Win ≥ 3 rounds. Animated pet turn + result per rou
 
 When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 **attention call**: an icon in the header blinks and a terminal bell (`\a`) sounds once
-(bell configurable / off by default via `--quiet`). Calls clear when resolved.
+(bell configurable / off by default via `--quiet`). Calls clear when resolved; a call that
+comes back later rings again. Calls already active when tama opens don't ring (the player is
+there), and with reduced motion the icon is steady instead of blinking.
 
 ## 5. UI
 

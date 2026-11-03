@@ -40,7 +40,7 @@ class TamaApp(App[None]):
             pick another there.
         tick_interval: Seconds between ticks; ``None`` disables the timer (tests tick by hand).
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
-        bell: Ring the terminal bell on new attention calls (used from M6).
+        bell: Ring the terminal bell once for each new attention call.
         view: How the pet is drawn (colour, animation, reduced motion).
         theme: Textual theme name from the config (unknown names are ignored).
     """
@@ -200,7 +200,9 @@ class TamaApp(App[None]):
         if session.pet.species != self.species:
             self.species = session.pet.species
             self.refresh_css()  # the species may theme the UI colours
-        self.main = MainScreen(session, tick_interval=self._tick_interval, view=self.view)
+        self.main = MainScreen(
+            session, tick_interval=self._tick_interval, view=self.view, bell=self.bell_enabled
+        )
         self.push_screen(self.main)
 
     def _install_signal_handlers(self) -> None:

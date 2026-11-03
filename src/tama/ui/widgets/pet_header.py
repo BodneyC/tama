@@ -14,6 +14,9 @@ from tama.domain.pet import Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import Stat
 from tama.services.describe import format_age
+from tama.ui.widgets.pet_view import ViewOptions
+
+BLINK_SECONDS = 0.5
 
 STAT_ICONS: dict[Stat, str] = {
     Stat.HUNGER: "🍖",
@@ -58,7 +61,13 @@ def attention_text(pet: Pet, balance: Balance) -> str:
 
 
 class PetHeader(Widget):
-    """Name, stage and age; stat icons; attention indicator."""
+    """Name, stage and age; stat icons; a blinking attention indicator (SPEC §4)."""
+
+    def __init__(self, options: ViewOptions | None = None) -> None:
+        """Create the header; the indicator blinks only when ``options`` allow motion."""
+        super().__init__()
+        options = options or ViewOptions()
+        self.blinking = options.animate and not options.reduced_motion
 
     @override
     def compose(self) -> ComposeResult:
@@ -68,8 +77,23 @@ class PetHeader(Widget):
             yield Static(id="stats")
         yield Static(id="attention", markup=False)
 
+    def on_mount(self) -> None:
+        """Start blinking the attention indicator (it only shows while there is a call)."""
+        if self.blinking:
+            self.set_interval(BLINK_SECONDS, self.blink)
+
     def show(self, pet: Pet, balance: Balance) -> None:
         """Update the header for ``pet``."""
         self.query_one("#identity", Static).update(identity_text(pet))
         self.query_one("#stats", Static).update(stats_content(pet))
-        self.query_one("#attention", Static).update(attention_text(pet, balance))
+        attention = attention_text(pet, balance)
+        indicator = self.query_one("#attention", Static)
+        indicator.update(attention)
+        if not attention:
+            indicator.remove_class("-blink-off")
+
+    def blink(self) -> None:
+        """Flip the attention indicator between shown and hidden while the pet is calling."""
+        indicator = self.query_one("#attention", Static)
+        calling = bool(indicator.content)
+        indicator.set_class(calling and not indicator.has_class("-blink-off"), "-blink-off")
