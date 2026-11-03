@@ -377,6 +377,17 @@ async def test_dead_pet_shows_a_tombstone_and_refuses_care() -> None:
         assert "Refused to be cleaned: dead" in notes
 
 
+async def test_refreshing_before_the_screen_mounts_is_harmless() -> None:
+    app = make_app(repo_with())
+    async with app.run_test():
+        assert app.session is not None
+        unmounted = MainScreen(app.session)
+
+        unmounted.refresh_pet()
+
+        assert not unmounted.is_mounted
+
+
 async def test_timer_ticks_the_session() -> None:
     clock = FakeClock(FIXED_NOW)
     repo = repo_with()

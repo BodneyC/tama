@@ -72,7 +72,7 @@ class MainScreen(Screen[None]):
 
     def on_mount(self) -> None:
         """Draw the pet."""
-        self.refresh_pet()
+        self._draw()
 
     def on_resize(self, event: events.Resize) -> None:
         """Swap to the too-small notice when the terminal can't fit the layout."""
@@ -80,15 +80,25 @@ class MainScreen(Screen[None]):
         self.set_class(small, "-too-small")
 
     def refresh_pet(self, new_events: Iterable[Event] = ()) -> None:
-        """Redraw the pet and announce notable events that just happened."""
+        """Redraw the pet and announce notable events that just happened.
+
+        A tick can arrive before the screen has mounted (or while it is being removed); the
+        pet is drawn on mount anyway, so drawing is skipped until then.
+        """
+        if not self.is_mounted:
+            return
+        self._draw()
         pet = self.session.pet
-        self.query_one(PetHeader).show(pet, self.session.balance)
-        self.query_one(PetStage).show(pet)
         for event in new_events:
             if isinstance(event, NOTABLE_EVENTS):
                 urgent = isinstance(event, Died | GotSick | CareMistake)
                 severity: SeverityLevel = "warning" if urgent else "information"
                 self.notify(describe_event(event), title=pet.name, severity=severity)
+
+    def _draw(self) -> None:
+        pet = self.session.pet
+        self.query_one(PetHeader).show(pet, self.session.balance)
+        self.query_one(PetStage).show(pet)
 
     # --- Actions --------------------------------------------------------------------------
 
