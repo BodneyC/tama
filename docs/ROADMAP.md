@@ -129,8 +129,12 @@ monochrome, and an old v1 save still loads as a `tama`.
 - [x] `AwaySummaryScreen` (currently a toast), `MemorialScreen`, `ErrorScreen` (currently the app
       exits with a message); animate `FeedMenu` and `MiniGameScreen` (basic versions from M4)
 - [x] Attention calls with blinking indicator + optional bell
-- [ ] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only
-      (known: an untreated sick child dies in ~2.5 h — sickness may need to be gentler)
+- [x] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only
+      (known: an untreated sick child dies in ~2.5 h — sickness may need to be gentler).
+      Done headlessly with `tools/balance.py` (simulated players who sleep 23:00-07:00):
+      sickness and neglect now take ~13-17 h to kill, hunger/happiness drift slower and base
+      sickness is 1%/h. Diligent and casual players reach old age 30/30, a 2-hourly player
+      29/30 (scruffy). A whole day away is still fatal (open question for the design).
 - [x] Logging to file; no stray terminal output (landed in M4)
 
 **Accept:** A complete life can be played start to finish; every screen has a snapshot test.

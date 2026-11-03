@@ -132,7 +132,7 @@ def test_away_summary_is_human_readable(clock: FakeClock) -> None:
     away = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).away
 
     assert "Pooped ×2" in away.summary
-    assert "Got hungry" in away.summary
+    assert "Got dirty" in away.summary
 
 
 # --- Live play --------------------------------------------------------------------------------
@@ -142,12 +142,12 @@ def test_tick_advances_to_the_clock(clock: FakeClock) -> None:
     session = GameSession.load(repo=saved(), clock=clock, settings=SETTINGS).session
     before = session.pet
 
-    clock.advance(timedelta(minutes=9))
+    clock.advance(timedelta(minutes=10))
     tick = session.tick()
 
-    assert session.pet.age == before.age + timedelta(minutes=9)
-    assert session.pet.stats.hunger == before.stats.hunger - 3
-    assert tick.away_for == timedelta(minutes=9)
+    assert session.pet.age == before.age + timedelta(minutes=10)
+    assert session.pet.stats.hunger == before.stats.hunger - 2
+    assert tick.away_for == timedelta(minutes=10)
 
 
 def test_tick_with_no_time_passed_is_a_no_op(clock: FakeClock) -> None:

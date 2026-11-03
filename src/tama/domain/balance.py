@@ -36,18 +36,20 @@ class Balance:
     good_adult_min_discipline: int = 50
 
     # Natural drift: one point per period. Asleep drift ignores stage multipliers.
-    hunger_awake: timedelta = timedelta(minutes=3)
+    hunger_awake: timedelta = timedelta(minutes=5)
     hunger_asleep: timedelta = timedelta(minutes=10)
-    happiness_awake: timedelta = timedelta(minutes=4)
+    happiness_awake: timedelta = timedelta(minutes=6)
     happiness_asleep: timedelta = timedelta(minutes=12)
     energy_awake: timedelta = timedelta(minutes=5)
     energy_asleep_regen: timedelta = timedelta(minutes=1)
     hygiene_awake: timedelta = timedelta(minutes=6)
     hygiene_asleep: timedelta = timedelta(minutes=15)
     hygiene_per_poop: timedelta = timedelta(minutes=4)  # i.e. -15/hour for each uncleaned poop
-    sick_happiness_multiplier: Fraction = Fraction(2)
-    sick_health: timedelta = timedelta(minutes=2)
-    neglect_health: timedelta = timedelta(minutes=1)
+    sick_happiness_multiplier: Fraction = Fraction(3, 2)
+    # Gentle enough that a sickness or neglect that starts after bedtime is survivable by
+    # morning (tools/balance.py: players who check in every 2 h or more see old age).
+    sick_health: timedelta = timedelta(minutes=10)
+    neglect_health: timedelta = timedelta(minutes=8)
     health_regen: timedelta = timedelta(minutes=10)
 
     # Poop
@@ -55,7 +57,7 @@ class Balance:
     max_poops: int = 4
 
     # Sickness (rolled once per simulated hour)
-    sickness_base_chance: float = 0.02
+    sickness_base_chance: float = 0.01
     sickness_per_poop_chance: float = 0.05
     sickness_dirty_chance: float = 0.10
     sickness_hungry_chance: float = 0.10

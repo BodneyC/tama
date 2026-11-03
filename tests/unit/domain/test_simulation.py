@@ -107,17 +107,17 @@ def test_egg_hatches_after_one_minute() -> None:
 # --- Drift --------------------------------------------------------------------------------
 
 
-def test_hunger_drops_one_per_three_minutes_when_awake() -> None:
-    out = run(make_pet(), timedelta(minutes=9))
+def test_hunger_drops_one_per_five_minutes_when_awake() -> None:
+    out = run(make_pet(), timedelta(minutes=15))
 
     assert out.pet.stats.hunger == 97
 
 
 def test_drift_remainder_is_kept_between_steps() -> None:
-    out = run(make_pet(), timedelta(minutes=4))
+    out = run(make_pet(), timedelta(minutes=7))
 
     assert out.pet.stats.hunger == 99
-    assert out.pet.drift[Stat.HUNGER] == pytest.approx(-1 / 3)
+    assert out.pet.drift[Stat.HUNGER] == pytest.approx(-2 / 5)
 
 
 def test_hunger_drops_slower_when_asleep() -> None:
@@ -131,19 +131,19 @@ def test_hunger_drops_slower_when_asleep() -> None:
 def test_babies_decay_one_and_a_half_times_faster() -> None:
     pet = make_pet(stage=LifeStage.BABY)
 
-    assert run(pet, timedelta(minutes=6)).pet.stats.hunger == 97
+    assert run(pet, timedelta(minutes=10)).pet.stats.hunger == 97
 
 
 def test_elders_decay_slower() -> None:
     pet = make_pet(stage=LifeStage.ELDER)
 
-    assert run(pet, timedelta(minutes=12)).pet.stats.hunger == 97
+    assert run(pet, timedelta(minutes=20)).pet.stats.hunger == 97
 
 
-def test_happiness_decays_twice_as_fast_when_sick() -> None:
+def test_happiness_decays_one_and_a_half_times_as_fast_when_sick() -> None:
     pet = make_pet(sickness_doses=1)
 
-    assert run(pet, timedelta(minutes=8)).pet.stats.happiness == 96
+    assert run(pet, timedelta(minutes=12)).pet.stats.happiness == 97
 
 
 def test_energy_decays_awake_and_recovers_asleep() -> None:
@@ -171,10 +171,10 @@ def test_hygiene_drops_slower_when_asleep() -> None:
 def test_need_low_event_when_crossing_attention_threshold() -> None:
     pet = make_pet(stats=Stats(hunger=25))
 
-    out = run(pet, timedelta(minutes=3))
+    out = run(pet, timedelta(minutes=5))
 
     assert out.pet.stats.hunger == 24
-    assert NeedLow(pet.age + 3 * MIN, Stat.HUNGER) in out.events
+    assert NeedLow(pet.age + 5 * MIN, Stat.HUNGER) in out.events
 
 
 # --- Health & death -----------------------------------------------------------------------
@@ -183,13 +183,13 @@ def test_need_low_event_when_crossing_attention_threshold() -> None:
 def test_sickness_damages_health() -> None:
     pet = make_pet(sickness_doses=1)
 
-    assert run(pet, timedelta(minutes=10)).pet.stats.health == 95
+    assert run(pet, timedelta(minutes=50)).pet.stats.health == 95
 
 
 def test_a_need_at_zero_damages_health() -> None:
     pet = make_pet(stats=Stats(hunger=0))
 
-    assert run(pet, timedelta(minutes=10)).pet.stats.health == 90
+    assert run(pet, timedelta(minutes=40)).pet.stats.health == 95
 
 
 def test_health_regenerates_when_well_cared_for() -> None:
@@ -201,12 +201,12 @@ def test_health_regenerates_when_well_cared_for() -> None:
 def test_pet_dies_when_health_reaches_zero() -> None:
     pet = make_pet(stats=Stats(hunger=0, health=3))
 
-    out = run(pet, timedelta(minutes=10))
+    out = run(pet, timedelta(minutes=30))
 
     assert out.pet.stage is LifeStage.DEAD
     assert out.pet.cause_of_death is DeathCause.POOR_HEALTH
-    assert out.pet.age == pet.age + 3 * MIN
-    assert out.events[-1] == Died(pet.age + 3 * MIN, DeathCause.POOR_HEALTH)
+    assert out.pet.age == pet.age + 24 * MIN
+    assert out.events[-1] == Died(pet.age + 24 * MIN, DeathCause.POOR_HEALTH)
 
 
 def test_dead_pets_do_not_change() -> None:
@@ -221,7 +221,7 @@ def test_dead_pets_do_not_change() -> None:
 def test_dying_wakes_the_pet() -> None:
     pet = make_pet(stats=Stats(hunger=0, health=1), is_asleep=True, updated_at=NIGHT)
 
-    out = run(pet, MIN)
+    out = run(pet, timedelta(minutes=8))
 
     assert out.pet.stage is LifeStage.DEAD
     assert not out.pet.is_asleep
@@ -357,8 +357,8 @@ def test_sickness_chance_formula() -> None:
     healthy = make_pet()
     worst = make_pet(stats=Stats(hunger=10, hygiene=10), poop_count=2)
 
-    assert sickness_chance(healthy, b) == pytest.approx(0.02)
-    assert sickness_chance(worst, b) == pytest.approx(0.02 + 2 * 0.05 + 0.10 + 0.10)
+    assert sickness_chance(healthy, b) == pytest.approx(0.01)
+    assert sickness_chance(worst, b) == pytest.approx(0.01 + 2 * 0.05 + 0.10 + 0.10)
 
 
 def test_sickness_is_rolled_on_the_hour() -> None:

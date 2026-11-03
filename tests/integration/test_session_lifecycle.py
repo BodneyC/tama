@@ -42,11 +42,8 @@ def test_pet_lives_on_while_the_game_is_closed(tmp_path: Path) -> None:
         "Misbehaved",
         "Got away with misbehaving",
         "Pooped ×2",
-        "Got hungry",
         "Got dirty",
         "Was left filthy",
-        "Got unhappy",
-        "Was left starving",
     ]
     assert loaded.session.pet.stage is LifeStage.CHILD
     assert loaded.session.pet.is_alive

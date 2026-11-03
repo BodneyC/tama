@@ -18,8 +18,8 @@ All stats are integers clamped to `0..100`.
 
 | Stat | Meaning | Natural drift (awake) | Natural drift (asleep) |
 | --- | --- | --- | --- |
-| `hunger` | 100 = full, 0 = starving | −1 per 3 min | −1 per 10 min |
-| `happiness` | 100 = elated | −1 per 4 min | −1 per 12 min |
+| `hunger` | 100 = full, 0 = starving | −1 per 5 min | −1 per 10 min |
+| `happiness` | 100 = elated | −1 per 6 min | −1 per 12 min |
 | `energy` | 100 = rested | −1 per 5 min | +1 per 1 min |
 | `hygiene` | 100 = clean | −1 per 6 min; −15 per uncleaned poop per hour | −1 per 15 min; poop as awake |
 | `health` | 100 = healthy | see 2.3 | see 2.3 |
@@ -56,10 +56,10 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
 
 ### 2.3 Health, sickness, death
 
-- Each simulated hour: chance of becoming sick = base 2% + 5% per poop + 10% if hygiene < 20 +
+- Each simulated hour: chance of becoming sick = base 1% + 5% per poop + 10% if hygiene < 20 +
   10% if hunger < 20. Rolled using the injected RNG.
-- While sick: health −1 per 2 min; happiness decays 2× faster. Cured by `medicine` (1–2 doses).
-- If any of hunger/happiness/hygiene is at 0, health −1 per min.
+- While sick: health −1 per 10 min; happiness decays 1.5× faster. Cured by `medicine` (1–2 doses).
+- If any of hunger/happiness/hygiene is at 0, health −1 per 8 min.
 - Otherwise (not sick, no need at 0), health regenerates +1 per 10 min.
 - Health 0 → `DEAD`.
 - A **care mistake** is recorded when a need sits at 0 for > 15 consecutive minutes (once per
