@@ -9,7 +9,16 @@ import pytest
 
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.context import Context
-from tama.domain.events import Action, Ate, Evolved, Played, RefusalReason
+from tama.domain.events import (
+    Action,
+    Ate,
+    Evolved,
+    PausedForHoliday,
+    PauseRefused,
+    Played,
+    RefusalReason,
+    ResumedFromHoliday,
+)
 from tama.domain.minigames import GameResult
 from tama.domain.minigames.four_in_a_row import FourInARow
 from tama.domain.minigames.left_right import Direction, LeftRightGame
@@ -352,3 +361,66 @@ def test_discarding_an_unreadable_save_moves_it_aside(clock: FakeClock) -> None:
     assert repo.quarantined_at == clock.now()
     assert moved == [Path("save.json.corrupt-20260101T120000")]
     assert not repo.exists()
+
+
+# --- Holiday ----------------------------------------------------------------------------------
+
+
+def test_pausing_saves_at_once(clock: FakeClock) -> None:
+    repo = saved()
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    outcome = session.pause()
+
+    assert outcome.events == (PausedForHoliday(session.pet.age),)
+    assert session.pet.paused_since == FIXED_NOW
+    assert repo.save_count == 1
+    assert repo.game is not None
+    assert repo.game.pet.on_holiday
+
+
+def test_a_refused_pause_is_not_saved(clock: FakeClock) -> None:
+    repo = saved(stats=Stats(hunger=5))
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    outcome = session.pause()
+
+    assert isinstance(outcome.events[0], PauseRefused)
+    assert not session.pet.on_holiday
+    assert repo.save_count == 0
+
+
+def test_a_week_on_holiday_is_not_simulated_or_pet_sat(clock: FakeClock) -> None:
+    repo = saved(paused_since=FIXED_NOW)
+    assert repo.game is not None
+    before = repo.game.pet
+    clock.advance(timedelta(days=7))
+
+    loaded = GameSession.load(repo=repo, clock=clock, settings=SETTINGS)
+
+    assert loaded.away.events == ()
+    assert loaded.away.on_holiday
+    assert not loaded.away.pet_sitter
+    assert loaded.away.summary == []
+    assert loaded.session.pet == replace(before, updated_at=clock.now())
+
+
+def test_resuming_saves_and_reports_the_holiday(clock: FakeClock) -> None:
+    repo = saved(paused_since=FIXED_NOW)
+    clock.advance(timedelta(days=3, hours=2))
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    outcome = session.resume()
+
+    assert outcome.events == (ResumedFromHoliday(session.pet.age, timedelta(days=3, hours=2)),)
+    assert not session.pet.on_holiday
+    assert session.pet.updated_at == clock.now()
+    assert repo.save_count == 1
+
+
+def test_resuming_a_pet_that_is_not_on_holiday_changes_nothing(clock: FakeClock) -> None:
+    repo = saved()
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    assert session.resume().events == ()
+    assert repo.save_count == 0

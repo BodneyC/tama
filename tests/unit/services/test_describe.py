@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -20,16 +20,25 @@ from tama.domain.events import (
     MisbehaviourIgnored,
     MistakeReason,
     NeedLow,
+    PausedForHoliday,
+    PauseRefused,
     Played,
     Pooped,
     RefusalReason,
     Refused,
+    ResumedFromHoliday,
     WokeUp,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
-from tama.services.describe import describe_event, format_age, status_line, summarize
+from tama.services.describe import (
+    describe_event,
+    format_age,
+    holiday_since,
+    status_line,
+    summarize,
+)
 from tests.factories import make_pet
 
 AGE = timedelta(hours=1)
@@ -102,6 +111,11 @@ def test_format_age(age: timedelta, text: str) -> None:
             "Turned its nose up at a snack: misbehaving",
         ),
         (Refused(AGE, Action.PLAY, RefusalReason.MISBEHAVING), "Sulked and wouldn't play"),
+        (Refused(AGE, Action.MEAL, RefusalReason.ON_HOLIDAY), "Refused a meal: on holiday"),
+        (PausedForHoliday(AGE), "Went on holiday"),
+        (ResumedFromHoliday(AGE, timedelta(days=3, hours=2)), "Was on holiday for 3d 2h"),
+        (PauseRefused(AGE, ("hungry", "lights")), "Can't go on holiday: hungry, lights on"),
+        (PauseRefused(AGE, ("on_holiday",)), "Can't go on holiday: already on holiday"),
     ],
 )
 def test_describe_event(event: Event, text: str) -> None:
@@ -155,3 +169,18 @@ def test_status_line_names_the_species() -> None:
 
 def test_unknown_event_types_fall_back_to_class_name() -> None:
     assert describe_event(Event(AGE)) == "Event"
+
+
+def test_status_line_for_a_pet_on_holiday() -> None:
+    pet = make_pet(
+        stage=LifeStage.ADULT, species="owl", paused_since=datetime(2026, 11, 3, 23, tzinfo=UTC)
+    )
+
+    assert status_line(pet, DEFAULT_BALANCE) == "Mochi · adult owl · on holiday since 3 Nov"
+
+
+def test_holiday_dates_are_in_the_players_time_zone() -> None:
+    late = datetime(2026, 11, 3, 23, tzinfo=UTC)
+
+    assert holiday_since(late, timezone(timedelta(hours=2))) == "4 Nov"
+    assert holiday_since(late) == "3 Nov"

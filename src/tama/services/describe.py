@@ -6,7 +6,7 @@ so neither has to know the full event vocabulary.
 
 from collections import Counter
 from collections.abc import Iterable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta, tzinfo
 
 from tama.domain.attention import AttentionReason, attention_reasons
 from tama.domain.balance import Balance
@@ -27,10 +27,13 @@ from tama.domain.events import (
     MisbehaviourIgnored,
     MistakeReason,
     NeedLow,
+    PausedForHoliday,
+    PauseRefused,
     Played,
     Pooped,
     RefusalReason,
     Refused,
+    ResumedFromHoliday,
     WokeUp,
 )
 from tama.domain.minigames import GameResult
@@ -43,6 +46,12 @@ _PLAYED = {
     GameResult.WIN: "Won a game",
     GameResult.DRAW: "Drew a game",
     GameResult.LOSS: "Lost a game",
+}
+_BLOCKERS = {
+    "lights": "lights on",
+    "on_holiday": "already on holiday",
+    "egg": "still an egg",
+    "dead": "no longer alive",
 }
 _MISTAKES = {
     MistakeReason.HUNGER: "Was left starving",
@@ -125,6 +134,12 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return f"Turned its nose up at {_REFUSED_ACTIONS[food]}: misbehaving"
         case Refused(action=Action.PLAY, reason=RefusalReason.MISBEHAVING):
             return "Sulked and wouldn't play"
+        case PausedForHoliday():
+            return "Went on holiday"
+        case ResumedFromHoliday(length=length):
+            return f"Was on holiday for {format_age(length)}"
+        case PauseRefused(blockers=blockers):
+            return "Can't go on holiday: " + ", ".join(_BLOCKERS.get(b, b) for b in blockers)
         case Refused(action=action, reason=reason):
             return f"Refused {_REFUSED_ACTIONS[action]}: {reason.value.replace('_', ' ')}"
         case _:
@@ -137,13 +152,22 @@ def summarize(events: Iterable[Event]) -> list[str]:
     return [text if n == 1 else f"{text} ×{n}" for text, n in counts.items()]
 
 
-def status_line(pet: Pet, balance: Balance) -> str:
+def holiday_since(when: datetime, tz: tzinfo = UTC) -> str:
+    """The day a holiday started, like ``3 Nov``, in the player's time zone."""
+    local = when.astimezone(tz)
+    return f"{local.day} {local:%b}"
+
+
+def status_line(pet: Pet, balance: Balance, tz: tzinfo = UTC) -> str:
     """One line describing the pet, suitable for a shell prompt."""
     if pet.stage is LifeStage.DEAD:
         cause = str(pet.cause_of_death).replace("_", " ")
         return f"{pet.name} · {pet.species} · passed away ({cause}) at {format_age(pet.age)}"
     if pet.stage is LifeStage.EGG:
         return f"{pet.name} · {pet.species} egg · about to hatch"
+    if pet.paused_since is not None:
+        since = holiday_since(pet.paused_since, tz)
+        return f"{pet.name} · {pet.stage.value} {pet.species} · on holiday since {since}"
     s = pet.stats
     parts = [
         pet.name,

@@ -14,6 +14,7 @@ from tama.domain.actions import apply, apply_game_outcome
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
+from tama.domain.holiday import pause, resume
 from tama.domain.minigames import GameResult
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import BoardGame, pet_move
@@ -57,16 +58,18 @@ class CatchUp:
             went backwards).
         simulated: How much of that time was actually simulated (capped).
         events: What happened, in order.
+        on_holiday: Whether the pet was paused, so nothing was simulated at all.
     """
 
     away_for: timedelta
     simulated: timedelta
     events: tuple[Event, ...]
+    on_holiday: bool = False
 
     @property
     def pet_sitter(self) -> bool:
         """Whether some of the time away exceeded the cap and was skipped."""
-        return self.away_for > self.simulated
+        return not self.on_holiday and self.away_for > self.simulated
 
     @property
     def clock_went_backwards(self) -> bool:
@@ -202,6 +205,14 @@ class GameSession:
         """Apply a finished mini-game's result, saving if it was accepted."""
         return self._commit(apply_game_outcome(self._pet, result, ctx=self._ctx))
 
+    def pause(self) -> Outcome:
+        """Put the pet on holiday (SPEC §2.6), saving at once; refused if it isn't settled."""
+        return self._commit_change(pause(self._pet, self._ctx.balance))
+
+    def resume(self) -> Outcome:
+        """Bring the pet back from holiday as of now, saving at once (no-op if not paused)."""
+        return self._commit_change(resume(self._pet, self._clock.now()))
+
     def guess(self, game: LeftRightGame, direction: Direction) -> LeftRightGame:
         """Play a mini-game round using the session's RNG (so it is saved and reproducible)."""
         return game.guess(direction, self._ctx.rng)
@@ -228,6 +239,14 @@ class GameSession:
         """
         self.save()
 
+    def _commit_change(self, outcome: Outcome) -> Outcome:
+        """Take ``outcome``'s pet, saving only if anything changed."""
+        changed = outcome.pet != self._pet
+        self._pet = outcome.pet
+        if changed:
+            self._try_save()
+        return outcome
+
     def _commit(self, outcome: Outcome) -> Outcome:
         self._pet = outcome.pet
         if outcome.refusal is None:
@@ -248,6 +267,9 @@ class GameSession:
             logger.warning("System clock went backwards by %s; not rewinding the pet", -away_for)
             self._pet = skip_to(self._pet, now)
             return CatchUp(away_for, ZERO, ())
+        if self._pet.on_holiday:  # frozen: nothing to simulate and no pet sitter needed
+            self._pet = skip_to(self._pet, now)
+            return CatchUp(away_for, ZERO, (), on_holiday=True)
         simulated = min(away_for, self._settings.offline_cap)
         outcome = advance(self._pet, simulated, self._ctx)
         if simulated < away_for:

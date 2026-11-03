@@ -210,7 +210,7 @@ before several tamas, which makes it matter more.
       paused; lifespan counts living time only
 - [x] Persistence: save schema v3 with `paused_since` (v2 → v3 migration, a v3 fixture, the v1
       and v2 fixtures still loading)
-- [ ] Services: `GameSession.pause()` / `resume()` (saved immediately); catch-up and the away
+- [x] Services: `GameSession.pause()` / `resume()` (saved immediately); catch-up and the away
       summary skip paused time ("Was on holiday for 3d 2h")
 - [ ] UI: `h` toggles holiday; header `⏸ on holiday since <date>`; dimmed sleep frame with a
       suitcase overlay sprite (generated with the other overlays); refusals explained; Help
