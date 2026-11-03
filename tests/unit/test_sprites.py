@@ -44,7 +44,7 @@ CRIMSON = PaletteEntry(dark="#ff0000", light="#cc0000")  # same colours, differe
 FUZZ = PaletteEntry(dark="#00ff00", light="#008800", shade=Shade.MEDIUM)
 PAPER = PaletteEntry(dark="#f0f0f0", light="#f0f0f0")  # light in both modes
 PALETTE = {"k": INK, "r": RED, "c": CRIMSON, "f": FUZZ, "p": PAPER}
-OVERLAY_NAMES = ("zzz", "sick", "poop")
+OVERLAY_NAMES = ("zzz", "sick", "poop", "meal", "snack")
 
 
 @pytest.fixture(autouse=True)
@@ -298,6 +298,8 @@ LIVING = (
     AnimationKey.SLEEP,
     AnimationKey.SICK,
     AnimationKey.CLEAN,
+    AnimationKey.LOOK_LEFT,
+    AnimationKey.LOOK_RIGHT,
 )
 REQUIRED: dict[LifeStage, tuple[AnimationKey, ...]] = {
     LifeStage.EGG: (AnimationKey.IDLE, AnimationKey.WOBBLE),
@@ -309,7 +311,14 @@ REQUIRED: dict[LifeStage, tuple[AnimationKey, ...]] = {
     LifeStage.DEAD: (AnimationKey.IDLE,),
 }
 """Every animation SPEC §5.2 needs, per stage, for every species."""
-LOOPING = {AnimationKey.IDLE, AnimationKey.SLEEP, AnimationKey.SICK, AnimationKey.WOBBLE}
+LOOPING = {
+    AnimationKey.IDLE,
+    AnimationKey.SLEEP,
+    AnimationKey.SICK,
+    AnimationKey.WOBBLE,
+    AnimationKey.LOOK_LEFT,
+    AnimationKey.LOOK_RIGHT,
+}
 
 
 def species_dirs() -> list[str]:

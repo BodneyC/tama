@@ -4,16 +4,19 @@ from typing import ClassVar, override
 
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
+from tama.domain.animation import AnimationKey
 from tama.domain.events import Action
 from tama.domain.minigame import Direction, LeftRightGame
 from tama.domain.pet import Pet
 from tama.domain.stats import STAT_MAX, Stat
 from tama.services.describe import format_age
 from tama.services.session import GameSession
+from tama.ui.sprites import load_overlay, load_sprite, species_of
+from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 HELP_TEXT = """\
 f  Feed (meal or snack)      l  Lights on/off
@@ -97,7 +100,7 @@ class StatusScreen(ModalScreen[None]):
 
 
 class FeedMenu(ModalScreen[Action | None]):
-    """Choose a meal or a snack."""
+    """Choose a meal or a snack (each drawn as a little animated sprite)."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("m", "choose('meal')", "Meal"),
@@ -105,12 +108,29 @@ class FeedMenu(ModalScreen[Action | None]):
         Binding("escape", "dismiss", "Cancel"),
     ]
 
+    def __init__(self, view: ViewOptions | None = None) -> None:
+        """Create the menu, drawing the food with ``view`` options."""
+        super().__init__()
+        self._view = view or ViewOptions()
+
     @override
     def compose(self) -> ComposeResult:
         """Build the dialog."""
         with Vertical(classes="dialog"):
             yield Static("Feed", classes="dialog-title")
-            yield Static("m  Meal    (fills hunger)\ns  Snack   (cheers up)", markup=False)
+            with Horizontal(id="foods"):
+                for food, label in (
+                    ("meal", "m  Meal\nfills hunger"),
+                    ("snack", "s  Snack\ncheers up"),
+                ):
+                    with Vertical(classes="food"):
+                        yield PetView(self._view, id=food)
+                        yield Static(label, markup=False)
+
+    def on_mount(self) -> None:
+        """Start the food animations."""
+        for food in ("meal", "snack"):
+            self.query_one(f"#{food}", PetView).set_loop(load_overlay(food))
 
     def action_choose(self, food: str) -> None:
         """Close the menu with the chosen food."""
@@ -127,10 +147,11 @@ class MiniGameScreen(ModalScreen[bool | None]):
         Binding("escape", "dismiss", "Give up"),
     ]
 
-    def __init__(self, session: GameSession) -> None:
-        """Start a new game for ``session``'s pet."""
+    def __init__(self, session: GameSession, view: ViewOptions | None = None) -> None:
+        """Start a new game for ``session``'s pet, drawn with ``view`` options."""
         super().__init__()
         self._session = session
+        self._view = view or ViewOptions()
         self.game = LeftRightGame()
 
     @override
@@ -138,16 +159,24 @@ class MiniGameScreen(ModalScreen[bool | None]):
         """Build the dialog."""
         with Vertical(classes="dialog"):
             yield Static("Left or Right?", classes="dialog-title")
+            yield PetView(self._view, id="game-pet")
             yield Static(id="game-body", markup=False)
 
     def on_mount(self) -> None:
-        """Show the first round."""
+        """Show the pet and the first round."""
+        self.query_one(PetView).show(self._session.pet)
         self._render_game()
 
     def action_guess(self, direction: str) -> None:
-        """Play a round."""
+        """Play a round: the pet turns the way it looked."""
         if not self.game.is_over:
             self.game = self._session.guess(self.game, Direction(direction))
+            last = self.game.last_result
+            if last is not None:
+                pet = self._session.pet
+                key = AnimationKey(f"look_{last.pet_looked.value}")
+                pose = load_sprite(species_of(pet), pet.variant, pet.stage, key)
+                self.query_one(PetView).set_loop(pose, key)
             self._render_game()
 
     def action_finish(self) -> None:

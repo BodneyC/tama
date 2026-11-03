@@ -155,7 +155,8 @@ there), and with reduced motion the icon is steady instead of blinking.
   and may theme the UI's colours (ADR 0004). One file per `(species, variant, stage,
   animation)`; animations include at least
   `idle` (2–4 frames, ~2 fps), `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
-  `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`.
+  `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`, and the poses `look_left`/`look_right`
+  (the Left/Right game). The feed menu shows small animated meal and snack sprites.
 - Idle animation includes random blinks and small horizontal wandering across the stage.
 - One-shot animations (eat, refuse, …) play once, then return to the state-appropriate loop.
 - Frame timing is driven by Textual `set_interval`; the animation *selection* is a pure

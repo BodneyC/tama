@@ -14,7 +14,7 @@ species (ADR 0004).
 src/tama/assets/ui.toml                                   # default UI colours
 src/tama/assets/sprites/<species>/base.toml               # species palette (+ [ui] overrides)
 src/tama/assets/sprites/<species>/<variant>/<stage>/<animation>.toml   # frames (+ overrides)
-src/tama/assets/sprites/overlays/base.toml, <name>.toml   # Zzz / sick / poop indicators
+src/tama/assets/sprites/overlays/base.toml, <name>.toml   # Zzz / sick / poop; meal / snack
 tools/sprites/kit.py                                      # shared toolkit + pixel vocabulary
 tools/sprites/<species>.py                                # one generator per species
 tools/sprites/overlays.py, generate.py                    # overlays; the entry point

@@ -36,6 +36,8 @@ class AnimationKey(StrEnum):
     HATCH = "hatch"
     WOBBLE = "wobble"
     DEAD = "dead"
+    LOOK_LEFT = "look_left"
+    LOOK_RIGHT = "look_right"
 
 
 def looping_animation(pet: Pet) -> AnimationKey:

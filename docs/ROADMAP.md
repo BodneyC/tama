@@ -126,7 +126,7 @@ monochrome, and an old v1 save still loads as a `tama`.
 
 ## M6 — Remaining screens & polish
 
-- [ ] `AwaySummaryScreen` (currently a toast), `MemorialScreen`, `ErrorScreen` (currently the app
+- [x] `AwaySummaryScreen` (currently a toast), `MemorialScreen`, `ErrorScreen` (currently the app
       exits with a message); animate `FeedMenu` and `MiniGameScreen` (basic versions from M4)
 - [x] Attention calls with blinking indicator + optional bell
 - [ ] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only

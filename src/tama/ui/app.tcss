@@ -94,7 +94,22 @@ ModalScreen {
   margin-top: 1;
 }
 
-#grave {
+#foods {
+  width: auto;
+  height: auto;
+}
+
+.food {
+  width: 18;
+  height: auto;
+}
+
+.food > Static {
+  width: 100%;
+  content-align: center middle;
+}
+
+#grave, #game-pet {
   width: 100%;
   content-align: center middle;
   margin-bottom: 1;

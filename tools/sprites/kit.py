@@ -246,6 +246,9 @@ def living(stage: Stage, *, sick: Palette, hatch_from: Grid | None = None) -> di
             (*(shift(c(closed), dx=dx) for dx in (-1, 1, -1, 1)), c(base)), 8, o, loop=False
         ),
         "sleep": Anim(frames(closed), 1, o),
+        # Poses for the Left/Right game: eyes turned and leaning that way.
+        "look_left": Anim((shift(c(eyes_look(base, -1)), dx=-1),), 1, o),
+        "look_right": Anim((shift(c(eyes_look(base, 1)), dx=1),), 1, o),
         "sick": Anim(frames(base, closed), 1, {**o, **sick}),
         "clean": Anim(
             (sparkles(c(base), 0), sparkles(c(base), 1), sparkles(c(base), 0), c(base)),

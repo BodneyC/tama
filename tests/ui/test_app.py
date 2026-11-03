@@ -32,7 +32,7 @@ from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
-from tama.ui.sprites import load_sprite, overlay_content
+from tama.ui.sprites import load_overlay, load_sprite, overlay_content
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 from tests.factories import FIXED_NOW, make_pet
@@ -505,6 +505,34 @@ async def test_playing_the_mini_game() -> None:
         assert app.session is not None
         assert app.session.pet.stats.happiness == (70 if won else 55)
         assert app.session.pet.stats.energy == 40
+
+
+async def test_the_pet_turns_the_way_it_looked() -> None:
+    app = make_app(repo_with(species="owl"))
+    async with app.run_test() as pilot:
+        await pilot.press("p")
+        game_screen = app.screen
+        assert isinstance(game_screen, MiniGameScreen)
+        pet_view = game_screen.query_one(PetView)
+        idle = load_sprite("owl", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE)
+        assert pet_view.current == idle
+
+        await pilot.press("left")
+
+        last = game_screen.game.last_result
+        assert last is not None
+        key = AnimationKey(f"look_{last.pet_looked.value}")
+        assert pet_view.current == load_sprite("owl", Variant.DEFAULT, LifeStage.CHILD, key)
+
+
+async def test_feed_menu_shows_the_food() -> None:
+    app = make_app(repo_with())
+    async with app.run_test() as pilot:
+        await pilot.press("f")
+        menu = app.screen
+        assert isinstance(menu, FeedMenu)
+        assert menu.query_one("#meal", PetView).current == load_overlay("meal")
+        assert menu.query_one("#snack", PetView).current == load_overlay("snack")
 
 
 async def test_enter_does_nothing_until_the_game_is_over() -> None:

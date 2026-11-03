@@ -152,7 +152,7 @@ class MainScreen(Screen[None]):
             if food is not None:
                 self._report(self.session.act(food))
 
-        self.app.push_screen(FeedMenu(), fed)
+        self.app.push_screen(FeedMenu(self._view), fed)
 
     def action_play(self) -> None:
         """Start the mini-game if the pet is willing."""
@@ -165,7 +165,7 @@ class MainScreen(Screen[None]):
             if won is not None:
                 self._report(self.session.finish_game(won=won))
 
-        self.app.push_screen(MiniGameScreen(self.session), played)
+        self.app.push_screen(MiniGameScreen(self.session, self._view), played)
 
     def action_status(self) -> None:
         """Show detailed stats."""
