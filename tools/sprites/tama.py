@@ -4,26 +4,8 @@ Edit the grids or palettes here, then run ``uv run python -m tools.sprites.gener
 See ``kit.py`` for the shared pixel vocabulary.
 """
 
-from collections.abc import Callable
-from pathlib import Path
-
-from tools.sprites.kit import (
-    Anim,
-    Collection,
-    Colour,
-    Grid,
-    Palette,
-    Stage,
-    anim_toml,
-    base_toml,
-    canvas_for,
-    grid,
-    living,
-    paste,
-    place,
-    set_pixels,
-    wobble,
-)
+from tools.sprites.kit import Collection, Colour, Grid, Palette, grid, paste, set_pixels
+from tools.sprites.species import Look, Species, build_species
 
 NAME = "tama"
 MODULE = "tama"
@@ -211,38 +193,32 @@ def scruffy(g: Grid) -> Grid:
     return paste(g, 11, 7, grid("dd\ndd"))
 
 
-VARIANT_LOOKS: dict[str, Callable[[Grid], Grid]] = {
-    "default": lambda g: g,
+VARIANT_LOOKS: dict[str, Look] = {
     "good": crowned,
     "scruffy": scruffy,
 }
 
 # --- Assembly -----------------------------------------------------------------------------------
 
+SPECIES = Species(
+    name=NAME,
+    module=MODULE,
+    palette=PALETTE,
+    ui=UI,
+    sick=SICK,
+    egg=EGG,
+    baby=BABY,
+    child=CHILD,
+    teen=TEEN,
+    adult=ADULT,
+    elder=ELDER,
+    gravestone=GRAVESTONE,
+    adult_body=ADULT_BODY,
+    elder_body=ELDER_BODY,
+    looks=VARIANT_LOOKS,
+)
+
 
 def build() -> Collection:
     """Every file for this species, relative to ``sprites/tama/``."""
-    files: dict[Path, str] = {
-        Path("base.toml"): base_toml(MODULE, "tama: shared palette and UI colours", PALETTE, UI)
-    }
-
-    def add(variant: str, stage: str, anims: dict[str, Anim]) -> None:
-        for name, anim in anims.items():
-            title = f"tama {variant} {stage}: {name}"
-            files[Path(variant) / stage / f"{name}.toml"] = anim_toml(MODULE, title, anim)
-
-    baby_canvas = canvas_for(BABY, EGG)
-    add(
-        "default",
-        "egg",
-        {"idle": Anim((place(EGG, *baby_canvas),), 1), "wobble": wobble(EGG, baby_canvas)},
-    )
-    add("default", "baby", living(Stage(BABY, baby_canvas), sick=SICK, hatch_from=EGG))
-    for name, base in (("child", CHILD), ("teen", TEEN)):
-        add("default", name, living(Stage(base, canvas_for(base)), sick=SICK))
-    for variant, look in VARIANT_LOOKS.items():
-        for name, base, body in (("adult", ADULT, ADULT_BODY), ("elder", ELDER, ELDER_BODY)):
-            drawn = look(base)
-            add(variant, name, living(Stage(drawn, canvas_for(drawn), body[variant]), sick=SICK))
-    add("default", "dead", {"idle": Anim((place(GRAVESTONE, *canvas_for(GRAVESTONE)),), 1)})
-    return Collection(NAME, files)
+    return build_species(SPECIES)

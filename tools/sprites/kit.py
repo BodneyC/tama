@@ -7,7 +7,7 @@ use these characters for the same roles (palettes are per species, so colours ar
 =====  =====================================  =====  ===================================
 ``k``  outline (also closed eyes, frowns)     ``e``  eyes (pupils; moved, closed, squinted)
 ``b``  body (what eyes/mouth are drawn into)  ``m``  mouth (opened when eating)
-``h``  highlight                              ``c``  belly
+``h``  highlight (eyes may sit in it too)     ``c``  belly
 ``r``  cheeks                                 ``x``  sparkle / evolve flash
 ``o``  egg outline (and cracks)               ``l``  egg shell
 =====  =====================================  =====  ===================================
@@ -103,11 +103,17 @@ def eye_runs(g: Grid) -> list[list[tuple[int, int]]]:
     return runs
 
 
+def _around(g: Grid, y: int, x: int, side: int) -> str:
+    """What an eye pixel sits in (body ``b`` or, e.g. for an owl's iris, ``h``), from ``side``."""
+    pixel = g[y][x + side]
+    return pixel if pixel in "bh" else "b"
+
+
 def _eye_line(g: Grid, *, at_top: bool) -> Grid:
     """Replace each eye with a two-pixel horizontal line at its top or bottom pixel."""
     changes: list[tuple[int, int, str]] = []
     for run in eye_runs(g):
-        changes += [(y, x, "b") for y, x in run]
+        changes += [(y, x, _around(g, y, x, -1)) for y, x in run]
         y, x = run[0] if at_top else run[-1]
         changes.append((y, x, "k"))
         if g[y][x + 1] in "bh":
@@ -128,7 +134,8 @@ def eyes_happy(g: Grid) -> Grid:
 def eyes_look(g: Grid, dx: int) -> Grid:
     """Move the pupils sideways by ``dx`` where there is body to move into."""
     moves = [(y, x) for run in eye_runs(g) for y, x in run if g[y][x + dx] in "bh"]
-    return set_pixels(g, [(y, x, "b") for y, x in moves] + [(y, x + dx, "e") for y, x in moves])
+    vacated = [(y, x, _around(g, y, x, -dx)) for y, x in moves]
+    return set_pixels(g, vacated + [(y, x + dx, "e") for y, x in moves])
 
 
 def mouth_open(g: Grid) -> Grid:
