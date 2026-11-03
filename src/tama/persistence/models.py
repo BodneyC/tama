@@ -19,7 +19,7 @@ from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -102,6 +102,8 @@ class PetModel(_Model):
     recent_snacks: tuple[timedelta, ...]
     cause_of_death: DeathCause | None
     paused_since: AwareDatetime | None
+    stay_awake: timedelta
+    woken_tantrum: bool
 
 
 class RngStateModel(_Model):
@@ -112,10 +114,13 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV3(_Model):
-    """Version 3 of the save file (v1 + the pet's species in v2 + holiday in v3)."""
+class SaveFileV4(_Model):
+    """Version 4 of the save file.
 
-    schema_version: Literal[3] = 3
+    v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4.
+    """
+
+    schema_version: Literal[4] = 4
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel
@@ -150,6 +155,8 @@ class SaveFileV3(_Model):
                 recent_snacks=pet.recent_snacks,
                 cause_of_death=pet.cause_of_death,
                 paused_since=pet.paused_since,
+                stay_awake=pet.stay_awake,
+                woken_tantrum=pet.woken_tantrum,
             ),
             rng=RngStateModel(version=version, internal=internal, gauss_next=gauss_next),
         )
@@ -187,6 +194,8 @@ class SaveFileV3(_Model):
                 recent_snacks=p.recent_snacks,
                 cause_of_death=p.cause_of_death,
                 paused_since=p.paused_since,
+                stay_awake=p.stay_awake,
+                woken_tantrum=p.woken_tantrum,
             )
         except InvalidArgumentError as exc:
             raise CorruptSaveError(f"invalid pet data: {exc}") from exc

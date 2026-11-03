@@ -63,6 +63,23 @@ def test_v2_saves_are_not_on_holiday(pet: object, expected: object) -> None:
     assert out == {"schema_version": 3, "pet": expected}
 
 
+@pytest.mark.parametrize(
+    ("pet", "expected"),
+    [
+        ({"name": "Mochi"}, {"stay_awake": "PT0S", "woken_tantrum": False, "name": "Mochi"}),
+        (
+            {"stay_awake": "PT5M", "woken_tantrum": True},
+            {"stay_awake": "PT5M", "woken_tantrum": True},
+        ),
+        ("not a pet", "not a pet"),
+    ],
+)
+def test_v3_saves_were_never_woken(pet: object, expected: object) -> None:
+    out = migrate({"schema_version": 3, "pet": pet}, current=4)
+
+    assert out == {"schema_version": 4, "pet": expected}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})

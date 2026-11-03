@@ -69,6 +69,8 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
         is_asleep=draw(st.booleans()),
         lights_on=draw(st.booleans()),
         misbehaving=draw(st.booleans()),
+        woken_tantrum=draw(st.booleans()),
+        stay_awake=draw(minutes(30)),
         care_mistakes=draw(st.integers(min_value=0, max_value=10)),
         recent_snacks=tuple(draw(st.lists(minutes(age // timedelta(minutes=1)), max_size=4))),
         cause_of_death=draw(st.sampled_from(list(DeathCause))) if dead else None,

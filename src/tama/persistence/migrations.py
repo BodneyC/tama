@@ -33,7 +33,15 @@ def _v2_to_v3(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "pet": {**pet, "paused_since": pet.get("paused_since")}}
 
 
-MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3}
+def _v3_to_v4(raw: dict[str, Any]) -> dict[str, Any]:
+    """v4 lets the player wake the pet (SPEC §2.4); no pet before then had been woken."""
+    pet = raw.get("pet")
+    if not isinstance(pet, dict):
+        return raw  # malformed; validation will report it
+    return {**raw, "pet": {"stay_awake": "PT0S", "woken_tantrum": False, **pet}}
+
+
+MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
 """Key ``N`` upgrades a version-N save to version N+1."""
 
 

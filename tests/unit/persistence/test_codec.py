@@ -20,7 +20,7 @@ FIXTURES = Path(__file__).parents[2] / "fixtures" / "saves"
 def test_encode_is_indented_json_with_trailing_newline() -> None:
     text = encode(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert text.startswith('{\n  "schema_version": 3,')
+    assert text.startswith('{\n  "schema_version": 4,')
     assert text.endswith("}\n")
 
 
@@ -67,7 +67,7 @@ def test_v1_fixture_loads() -> None:
     assert restore_rng(game.rng_state).random() == 0.6715634814879851
 
 
-def test_v1_fixture_migrates_losslessly_to_v3() -> None:
+def test_v1_fixture_migrates_losslessly_to_v4() -> None:
     """Only the version and the new fields change when a v1 save is upgraded."""
     original: dict[str, Any] = json.loads((FIXTURES / "v1.json").read_text())
 
@@ -75,9 +75,11 @@ def test_v1_fixture_migrates_losslessly_to_v3() -> None:
 
     for raw in (original, upgraded):
         raw.pop("app_version")
-    assert upgraded["schema_version"] == 3
+    assert upgraded["schema_version"] == 4
     assert upgraded["pet"].pop("species") == "tama"
     assert upgraded["pet"].pop("paused_since") is None
+    assert upgraded["pet"].pop("stay_awake") == "PT0S"
+    assert upgraded["pet"].pop("woken_tantrum") is False
     assert {**upgraded, "schema_version": 1} == original
 
 
@@ -88,7 +90,7 @@ def test_v2_fixture_loads_its_species() -> None:
     assert game.pet.name == "Fixture"
 
 
-def test_v2_fixture_migrates_losslessly_to_v3() -> None:
+def test_v2_fixture_migrates_losslessly_to_v4() -> None:
     """Only the version and the new holiday field change when a v2 save is upgraded."""
     original: dict[str, Any] = json.loads((FIXTURES / "v2.json").read_text())
 
@@ -96,8 +98,10 @@ def test_v2_fixture_migrates_losslessly_to_v3() -> None:
 
     for raw in (original, upgraded):
         raw.pop("app_version")
-    assert upgraded["schema_version"] == 3
+    assert upgraded["schema_version"] == 4
     assert upgraded["pet"].pop("paused_since") is None
+    assert upgraded["pet"].pop("stay_awake") == "PT0S"
+    assert upgraded["pet"].pop("woken_tantrum") is False
     assert {**upgraded, "schema_version": 2} == original
 
 
@@ -108,9 +112,32 @@ def test_v3_fixture_loads_a_pet_on_holiday() -> None:
     assert game.pet.paused_since == datetime(2026, 1, 1, 14, 54, 32, tzinfo=UTC)
 
 
-def test_v3_fixture_reencodes_identically() -> None:
-    """Guards the v3 format against accidental changes (which would need a migration)."""
-    text = (FIXTURES / "v3.json").read_text()
+def test_v3_fixture_migrates_losslessly_to_v4() -> None:
+    """Only the version and the new waking fields change when a v3 save is upgraded."""
+    original: dict[str, Any] = json.loads((FIXTURES / "v3.json").read_text())
+
+    upgraded: dict[str, Any] = json.loads(encode(decode((FIXTURES / "v3.json").read_text())))
+
+    for raw in (original, upgraded):
+        raw.pop("app_version")
+    assert upgraded["schema_version"] == 4
+    assert upgraded["pet"].pop("stay_awake") == "PT0S"
+    assert upgraded["pet"].pop("woken_tantrum") is False
+    assert {**upgraded, "schema_version": 3} == original
+
+
+def test_v4_fixture_loads_a_woken_pet() -> None:
+    pet = decode((FIXTURES / "v4.json").read_text()).pet
+
+    assert pet.stay_awake == timedelta(minutes=17)
+    assert pet.woken_tantrum
+    assert pet.misbehaving
+    assert not pet.is_asleep
+
+
+def test_v4_fixture_reencodes_identically() -> None:
+    """Guards the v4 format against accidental changes (which would need a migration)."""
+    text = (FIXTURES / "v4.json").read_text()
     original: dict[str, Any] = json.loads(text)
 
     reencoded: dict[str, Any] = json.loads(encode(decode(text)))
