@@ -53,10 +53,14 @@ class MainScreen(Screen[None]):
         Binding("q", "app.quit_game", "Quit"),
     ]
 
-    def __init__(self, session: GameSession) -> None:
-        """Show ``session``'s pet."""
+    def __init__(self, session: GameSession, *, tick_interval: float | None = None) -> None:
+        """Show ``session``'s pet, ticking it every ``tick_interval`` seconds (if given).
+
+        The screen owns the timer so ticking stops as soon as the screen goes away.
+        """
         super().__init__()
         self.session = session
+        self._tick_interval = tick_interval
 
     @override
     def compose(self) -> ComposeResult:
@@ -71,8 +75,18 @@ class MainScreen(Screen[None]):
         yield Footer(compact=True)
 
     def on_mount(self) -> None:
-        """Draw the pet."""
+        """Draw the pet and start ticking."""
         self._draw()
+        if self._tick_interval is not None:
+            self.set_interval(self._tick_interval, self.tick)
+
+    def tick(self) -> None:
+        """Bring the pet up to date, redraw it, and report a newly failing autosave."""
+        had_error = self.session.save_error is not None
+        catch_up = self.session.tick()
+        self.refresh_pet(catch_up.events)
+        if self.session.save_error is not None and not had_error:
+            self.notify(f"Couldn't save: {self.session.save_error}", severity="error")
 
     def on_resize(self, event: events.Resize) -> None:
         """Swap to the too-small notice when the terminal can't fit the layout."""

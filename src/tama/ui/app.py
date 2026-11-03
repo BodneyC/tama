@@ -88,14 +88,9 @@ class TamaApp(App[None]):
             loop.remove_signal_handler(sig)
 
     def tick(self) -> None:
-        """Bring the pet up to date and redraw it."""
-        if self.session is None or self.main is None:
-            return
-        had_error = self.session.save_error is not None
-        catch_up = self.session.tick()
-        self.main.refresh_pet(catch_up.events)
-        if self.session.save_error is not None and not had_error:
-            self.notify(f"Couldn't save: {self.session.save_error}", severity="error")
+        """Bring the pet up to date and redraw it (the main screen's timer does this)."""
+        if self.main is not None:
+            self.main.tick()
 
     def action_quit_game(self) -> None:
         """Save and quit. If saving fails, warn once; quitting again exits without saving."""
@@ -156,10 +151,8 @@ class TamaApp(App[None]):
 
     def _start(self, session: GameSession) -> None:
         self.session = session
-        self.main = MainScreen(session)
+        self.main = MainScreen(session, tick_interval=self._tick_interval)
         self.push_screen(self.main)
-        if self._tick_interval is not None:
-            self.set_interval(self._tick_interval, self.tick)
 
     def _install_signal_handlers(self) -> None:
         loop = asyncio.get_running_loop()
