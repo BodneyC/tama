@@ -212,12 +212,12 @@ before several tamas, which makes it matter more.
       and v2 fixtures still loading)
 - [x] Services: `GameSession.pause()` / `resume()` (saved immediately); catch-up and the away
       summary skip paused time ("Was on holiday for 3d 2h")
-- [ ] UI: `h` toggles holiday; header `⏸ on holiday since <date>`; dimmed sleep frame with a
+- [x] UI: `h` toggles holiday; header `⏸ on holiday since <date>`; dimmed sleep frame with a
       suitcase overlay sprite (generated with the other overlays); refusals explained; Help
       and footer updated
 - [ ] CLI: `tama --pause` / `--resume` (all pets, or `--pet NAME` once M6.7 lands); one line
       per pet; exit 2 if any pause was refused; `--status` shows paused pets
-- [ ] Snapshots: a paused pet (dark, light, monochrome); the refusal toast
+- [x] Snapshots: a paused pet (dark, light, monochrome); the refusal toast
 
 **Accept:** a settled pet paused with `h` (or `tama --pause`) and left for a simulated week
 comes back exactly as it was, at the same age, when resumed; a hungry or sick pet can't be

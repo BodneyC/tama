@@ -1,4 +1,4 @@
-"""Shared sprites for every species: status indicators (Zzz, sickness, poop) and food."""
+"""Shared sprites for every species: status indicators (Zzz, sickness, poop, holiday) and food."""
 
 from pathlib import Path
 
@@ -22,6 +22,9 @@ PALETTE: Palette = {
     "c": Colour("#7fb3e0", "#3f78b0", note="cupcake case"),
     "m": Colour("#cfe3f5", "#a9c9e8", note="case stripes"),
     "x": Colour("#fff7c2", "#9a6a00", note="sparkle"),
+    "a": Colour("#c0823e", "#8f5a24", note="suitcase"),
+    "g": Colour("#6b4423", "#4a2c14", note="suitcase handle and straps"),
+    "l": Colour("#f2d16b", "#c99a1a", note="suitcase latches"),
 }
 
 BOWL = "\n.iiiiiiii.\nuuuuuuuuuu\n.uvvvvvvu.\n..uuuuuu..\n...uuuu..."
@@ -40,6 +43,7 @@ FOOD: dict[str, Anim] = {
 OVERLAYS: dict[str, Anim] = {
     "zzz": Anim((grid("zzzz....\n...z....\n..z.zzz.\n.z....z.\nzzzz.z..\n....zzz."),), 1),
     "sick": Anim((grid("..wwww..\n.wwwwww.\nwkkwwkkw\nwwwwwwww\n.wwkkww.\n..w.w.w."),), 1),
+    "suitcase": Anim((grid("..gggg..\n..g..g..\naaaaaaaa\nagaaaaga\nagallaga\naaaaaaaa"),), 1),
     "poop": Anim((grid("...pp...\n..pphp..\n..pppp..\n.pphppp.\npppppppp\n.pppppp."),), 1),
 }
 

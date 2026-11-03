@@ -21,6 +21,7 @@ from tama.domain.events import (
     GotSick,
     Misbehaved,
     Outcome,
+    PauseRefused,
     Refused,
     WokeUp,
 )
@@ -57,6 +58,7 @@ class MainScreen(Screen[None]):
         Binding("m", "act('medicine')", "Medicine"),
         Binding("l", "act('lights')", "Lights"),
         Binding("d", "act('discipline')", "Discipline"),
+        Binding("h", "holiday", "Holiday"),
         Binding("s", "status", "Status"),
         Binding("question_mark", "help", "Help", key_display="?"),
         Binding("q", "app.quit_game", "Quit"),
@@ -137,7 +139,7 @@ class MainScreen(Screen[None]):
 
     def _draw(self, events: Iterable[Event] = ()) -> None:
         pet = self.session.pet
-        self.query_one(PetHeader).show(pet, self.session.balance)
+        self.query_one(PetHeader).show(pet, self.session.balance, self.session.tz)
         self.query_one(PetStage).show(pet, events)
         calls = attention_reasons(pet, self.session.balance)
         if self._bell and new_attention_calls(self._calls, calls):
@@ -150,8 +152,16 @@ class MainScreen(Screen[None]):
         """Perform a simple care action."""
         self._report(self.session.act(Action(action)))
 
+    def action_holiday(self) -> None:
+        """Put the pet on holiday, or bring it back (SPEC §2.6)."""
+        pet = self.session.pet
+        self._report(self.session.resume() if pet.on_holiday else self.session.pause())
+
     def action_feed(self) -> None:
         """Ask meal or snack, then feed."""
+        if self.session.pet.on_holiday:  # say so straight away rather than after the menu
+            self._report(self.session.act(Action.MEAL))
+            return
 
         def fed(food: Action | None) -> None:
             if food is not None:
@@ -187,7 +197,8 @@ class MainScreen(Screen[None]):
 
     def _report(self, outcome: Outcome) -> None:
         for event in outcome.events:
-            severity: SeverityLevel = "warning" if isinstance(event, Refused) else "information"
+            refused = isinstance(event, Refused | PauseRefused)
+            severity: SeverityLevel = "warning" if refused else "information"
             self.notify(describe_event(event), title=self.session.pet.name, severity=severity)
         self._draw(outcome.events)
         if self.session.save_error is not None:

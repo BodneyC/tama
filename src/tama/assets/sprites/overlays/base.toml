@@ -16,3 +16,6 @@ r = { dark = "#d62d3a", light = "#c0202d" }                   # cherry
 c = { dark = "#7fb3e0", light = "#3f78b0" }                   # cupcake case
 m = { dark = "#cfe3f5", light = "#a9c9e8" }                   # case stripes
 x = { dark = "#fff7c2", light = "#9a6a00" }                   # sparkle
+a = { dark = "#c0823e", light = "#8f5a24" }                   # suitcase
+g = { dark = "#6b4423", light = "#4a2c14" }                   # suitcase handle and straps
+l = { dark = "#f2d16b", light = "#c99a1a" }                   # suitcase latches

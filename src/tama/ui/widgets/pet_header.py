@@ -1,5 +1,6 @@
 """The header: who the pet is, how it's doing, and whether it needs you."""
 
+from datetime import UTC, tzinfo
 from typing import override
 
 from textual.app import ComposeResult
@@ -13,7 +14,7 @@ from tama.domain.balance import Balance
 from tama.domain.pet import Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import Stat
-from tama.services.describe import format_age
+from tama.services.describe import format_age, holiday_since
 from tama.ui.widgets.pet_view import ViewOptions
 
 BLINK_SECONDS = 0.5
@@ -52,8 +53,10 @@ def stats_content(pet: Pet) -> Content:
     return Content("  ").join(parts)
 
 
-def attention_text(pet: Pet, balance: Balance) -> str:
-    """``⚠ hungry · poop`` when the pet needs something, else empty."""
+def attention_text(pet: Pet, balance: Balance, tz: tzinfo = UTC) -> str:
+    """``⚠ hungry · poop`` when the pet needs something, ``⏸ on holiday since 3 Nov``, or empty."""
+    if pet.paused_since is not None:
+        return f"⏸ on holiday since {holiday_since(pet.paused_since, tz)}"
     reasons = attention_reasons(pet, balance)
     if not reasons:
         return ""
@@ -82,18 +85,19 @@ class PetHeader(Widget):
         if self.blinking:
             self.set_interval(BLINK_SECONDS, self.blink)
 
-    def show(self, pet: Pet, balance: Balance) -> None:
-        """Update the header for ``pet``."""
+    def show(self, pet: Pet, balance: Balance, tz: tzinfo = UTC) -> None:
+        """Update the header for ``pet``, with dates in ``tz``."""
         self.query_one("#identity", Static).update(identity_text(pet))
         self.query_one("#stats", Static).update(stats_content(pet))
-        attention = attention_text(pet, balance)
+        attention = attention_text(pet, balance, tz)
         indicator = self.query_one("#attention", Static)
         indicator.update(attention)
-        if not attention:
+        indicator.set_class(pet.on_holiday, "-holiday")
+        if not attention or pet.on_holiday:
             indicator.remove_class("-blink-off")
 
     def blink(self) -> None:
         """Flip the attention indicator between shown and hidden while the pet is calling."""
         indicator = self.query_one("#attention", Static)
-        calling = bool(indicator.content)
+        calling = bool(indicator.content) and not indicator.has_class("-holiday")
         indicator.set_class(calling and not indicator.has_class("-blink-off"), "-blink-off")

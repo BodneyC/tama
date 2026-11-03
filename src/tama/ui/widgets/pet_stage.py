@@ -15,6 +15,8 @@ from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 def overlay_names(pet: Pet) -> list[str]:
     """Indicator sprites shown under the pet, in order."""
+    if pet.on_holiday:  # frozen: the suitcase says it all
+        return ["suitcase"]
     names: list[str] = []
     if pet.is_asleep:
         names.append("zzz")
@@ -25,7 +27,7 @@ def overlay_names(pet: Pet) -> list[str]:
 
 
 class PetStage(Container):
-    """Centred, animated pet and indicators; dimmed when the lights are off."""
+    """Centred, animated pet and indicators; dimmed when the lights are off or on holiday."""
 
     def __init__(self, options: ViewOptions | None = None) -> None:
         """Draw with the given view options."""
@@ -45,3 +47,4 @@ class PetStage(Container):
         view.react(events)
         self.query_one("#overlay", Static).update(overlay_content(overlay_names(pet), view.look))
         self.set_class(not pet.lights_on, "lights-off")
+        self.set_class(pet.on_holiday, "on-holiday")

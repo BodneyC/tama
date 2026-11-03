@@ -20,11 +20,12 @@ f  Feed (meal or snack)      l  Lights on/off
 p  Play a game               d  Discipline
 c  Clean up                  s  Status
 m  Medicine                  ?  This help
-                             q  Save and quit
+h  Holiday (pause/resume)    q  Save and quit
 
 Keep your pet fed, happy and clean. Turn the lights
 off when it sleeps, give medicine when it's sick, and
-discipline it only when it misbehaves."""
+discipline it only when it misbehaves. Going away?
+Put a settled pet on holiday and nothing happens to it."""
 
 BAR_WIDTH = 20
 _STAT_LABELS = {

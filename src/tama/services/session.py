@@ -180,6 +180,11 @@ class GameSession:
         return self._pet
 
     @property
+    def tz(self) -> tzinfo:
+        """The player's time zone, for showing dates."""
+        return self._settings.tz
+
+    @property
     def balance(self) -> Balance:
         """The game's tunable constants."""
         return self._settings.balance

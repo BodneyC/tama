@@ -197,6 +197,27 @@ def test_misbehaving_pet_refuses_a_meal(snap_compare: SnapCompare) -> None:
     assert snap_compare(app, press=["f", "m"])
 
 
+@pytest.mark.parametrize(
+    ("theme", "view"),
+    [(None, None), ("textual-light", None), (None, mono())],
+    ids=["dark", "light", "mono"],
+)
+def test_pet_on_holiday(
+    snap_compare: SnapCompare, theme: str | None, view: ViewOptions | None
+) -> None:
+    app = make_app(
+        repo_with(paused_since=FIXED_NOW),
+        view=view or ViewOptions(animate=False),
+        theme=theme,
+    )
+    assert snap_compare(app, terminal_size=(60, 20))
+
+
+def test_pause_refused(snap_compare: SnapCompare) -> None:
+    app = make_app(repo_with(stats=Stats(hunger=10), poop_count=1))
+    assert snap_compare(app, press=["h"])
+
+
 def test_sick_pet_with_overlays(snap_compare: SnapCompare) -> None:
     app = make_app(repo_with(sickness_doses=1, poop_count=2))
     assert snap_compare(app)

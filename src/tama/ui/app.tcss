@@ -27,6 +27,10 @@ PetHeader {
   text-style: bold;
 }
 
+#attention.-holiday {
+  color: $text-muted;
+}
+
 #attention.-blink-off {
   visibility: hidden;
 }
@@ -49,6 +53,11 @@ PetStage {
 
 PetStage.lights-off {
   background: $tama-lights-off;
+}
+
+/* Faded rather than tinted, so the sprite's empty cells don't show as a darker box. */
+PetStage.on-holiday > #sprite {
+  opacity: 50%;
 }
 
 /* Tint the children themselves: it dims the sprite's explicit pixel colours too. */
