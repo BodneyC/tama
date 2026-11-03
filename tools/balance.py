@@ -75,6 +75,8 @@ def care(pet: Pet, ctx: Context) -> Pet:
         nonlocal pet
         pet = apply(pet, action, ctx).pet  # refused actions just don't happen
 
+    if pet.is_sick and pet.is_asleep:  # medicine needs it awake; the tantrum is dealt with next
+        act(Action.WAKE)
     if pet.misbehaving:  # first: a tantrum refuses food and games
         act(Action.DISCIPLINE)
     if pet.is_sick:
