@@ -1,5 +1,6 @@
 """Holiday from the main screen: `h` pauses a settled pet and brings it back (SPEC §2.6)."""
 
+from dataclasses import replace
 from datetime import timedelta
 
 import pytest
@@ -88,3 +89,27 @@ def test_the_stage_shows_only_a_suitcase_on_holiday() -> None:
     pet = make_pet(paused_since=FIXED_NOW, poop_count=2, is_asleep=True)
 
     assert overlay_names(pet) == ["suitcase"]
+
+
+async def test_acceptance_paused_with_h_and_back_after_a_week_exactly_as_it_was() -> None:
+    clock = FakeClock(FIXED_NOW)
+    repo = repo_with(stats=Stats(hunger=60, happiness=55, energy=70, hygiene=80))
+    first = make_app(repo, clock=clock)
+    async with first.run_test() as pilot:
+        await pilot.press("h")
+        assert first.session is not None
+        before = first.session.pet
+        await pilot.press("q")
+    assert repo.game is not None
+    assert repo.game.pet.on_holiday
+
+    clock.advance(timedelta(days=7))
+    second = make_app(repo, clock=clock)
+    async with second.run_test() as pilot:
+        assert isinstance(second.screen, MainScreen)
+        await pilot.press("h")
+        assert second.session is not None
+        after = second.session.pet
+
+    assert after.age == before.age
+    assert after == replace(before, paused_since=None, updated_at=FIXED_NOW + timedelta(days=7))
