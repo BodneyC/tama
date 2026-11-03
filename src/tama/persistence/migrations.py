@@ -25,7 +25,15 @@ def _v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "pet": {"species": "tama", **pet}}
 
 
-MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2}
+def _v2_to_v3(raw: dict[str, Any]) -> dict[str, Any]:
+    """v3 can put a pet on holiday (ADR 0008); no pet before then was."""
+    pet = raw.get("pet")
+    if not isinstance(pet, dict):
+        return raw  # malformed; validation will report it
+    return {**raw, "pet": {**pet, "paused_since": pet.get("paused_since")}}
+
+
+MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3}
 """Key ``N`` upgrades a version-N save to version N+1."""
 
 
