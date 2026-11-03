@@ -1,6 +1,6 @@
 """SVG snapshots of key screens at 80x24, with a frozen clock and no tick timer.
 
-Regenerate with ``uv run pytest tests/ui/snapshots --snapshot-update`` and review the diff.
+Regenerate with ``uv run pytest -n0 tests/ui/snapshots --snapshot-update`` and review the diff.
 """
 
 from collections.abc import Callable

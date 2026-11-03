@@ -35,6 +35,7 @@ dev = [
     "import-linter>=2.1",
     "pre-commit>=4.0",
     "textual-dev>=1.6",
+    "pytest-xdist>=3.6",
 ]
 
 [build-system]
@@ -86,7 +87,16 @@ minversion = "8.0"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-addopts = ["-ra", "--strict-markers", "--strict-config", "--cov=tama", "--cov-report=term-missing"]
+# -n auto: run in parallel (pytest-xdist). Snapshot updates must run with -n0 (see TESTING.md).
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-n",
+    "auto",
+    "--cov=tama",
+    "--cov-report=term-missing",
+]
 markers = ["slow: slower tests (long simulations, many hypothesis examples)"]
 filterwarnings = [
     "error",

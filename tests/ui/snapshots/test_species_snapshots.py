@@ -2,7 +2,7 @@
 
 The line-ups render each stage (and the adult variants) side by side in one snapshot per
 species and look, which is far cheaper than a whole app per stage. Regenerate with
-``uv run pytest tests/ui/snapshots --snapshot-update`` and review the images.
+``uv run pytest -n0 tests/ui/snapshots --snapshot-update`` and review the images.
 """
 
 from collections.abc import Callable

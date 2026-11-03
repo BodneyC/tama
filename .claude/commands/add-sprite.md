@@ -138,4 +138,4 @@ and don't add it to the generator (which only rewrites collections it owns).
 2. `uv run pytest tests/unit/test_sprites.py tests/unit/test_theme.py`.
 3. Review: render a contact sheet of every frame from the pixel grids, in both modes, and the
    affected snapshots as images (`docs/TESTING.md`, "Reviewing snapshots"); then
-   `uv run pytest tests/ui/snapshots --snapshot-update` and accept only what you have looked at.
+   `uv run pytest -n0 tests/ui/snapshots --snapshot-update` and accept only what you have looked at.

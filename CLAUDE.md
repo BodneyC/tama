@@ -28,7 +28,7 @@ architecture, reproducible tooling, and a polished user experience.
 - **[Pydantic v2](https://docs.pydantic.dev/)** — save-file schema, validation, (de)serialisation
 - **[platformdirs](https://pypi.org/project/platformdirs/)** — OS-correct save/config locations
 - **[Typer](https://typer.tiangolo.com/)** — CLI entrypoint (`tama`, `tama --new`, `tama --save-path`, ...)
-- Dev: **pytest**, **pytest-asyncio**, **pytest-cov**, **hypothesis**, **pytest-textual-snapshot**,
+- Dev: **pytest**, **pytest-asyncio**, **pytest-cov**, **pytest-xdist**, **hypothesis**, **pytest-textual-snapshot**,
   **mypy** (strict), **ruff** (lint + format), **pre-commit**
 
 Do not add new runtime dependencies without recording the reason in a new ADR.
@@ -48,7 +48,7 @@ uv run ruff check . --fix                # lint
 uv run mypy                              # type-check (strict, config in pyproject.toml)
 uv run pytest                            # all tests + coverage
 uv run pytest tests/unit -q              # fast unit tests only
-uv run pytest --snapshot-update          # regenerate UI snapshots (review the diff!)
+uv run pytest -n0 --snapshot-update      # regenerate UI snapshots, single-process (review the diff!)
 uv run python -m tools.sprites.generate # regenerate the pixel-art sprite set (see /add-sprite)
 ```
 

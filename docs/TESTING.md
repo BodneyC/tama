@@ -42,8 +42,10 @@
 - Sprite art: review whole animation sets as contact sheets rendered straight from the pixel
   grids (every frame of every animation), not only snapshots, which show one frame.
 - Mark slow tests `@pytest.mark.slow`; CI runs everything, local default runs everything too
-  (they should stay fast — budget for whole suite: < 45 s; consider pytest-xdist if it grows,
-  checking the snapshot plugin's report still works).
+  (they should stay fast — budget for whole suite: < 45 s).
+- Tests run in parallel by default (`pytest-xdist`, `-n auto` in `pyproject.toml`); coverage
+  and the snapshot failure report still work. Use `-n0` to debug a single test with `pdb`, and
+  always for `--snapshot-update`: the snapshot plugin refuses concurrent snapshot writes.
 
 ## Coverage
 
