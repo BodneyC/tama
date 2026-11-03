@@ -400,10 +400,7 @@ def test_every_stage_renders_in_every_look(stage: LifeStage) -> None:
     assert {len(sprite.frames(look)) for look in LOOKS} == {len(sprite.frames(DARK))}
 
 
-@pytest.mark.parametrize(
-    "look", LOOKS, ids=lambda look: f"{look.mode}-{'colour' if look.color else 'mono'}"
-)
-def test_every_shipped_sprite_draws_something_in_every_look(look: Look) -> None:
+def test_every_shipped_sprite_draws_something_in_every_look() -> None:
     """Catches colours that vanish in monochrome (e.g. a dark sprite on a dark theme)."""
     for path in ROOT.rglob("*.toml"):
         if path.name == "base.toml":
@@ -416,8 +413,9 @@ def test_every_shipped_sprite_draws_something_in_every_look(look: Look) -> None:
                 parts[0], Variant(parts[1]), LifeStage(parts[2]), AnimationKey(path.stem)
             )
         )
-        for grid in sprite.cells(look):
-            assert any(c.glyph != " " for row in grid for c in row), (path, look)
+        for look in LOOKS:
+            for grid in sprite.cells(look):
+                assert any(c.glyph != " " for row in grid for c in row), (path, look)
 
 
 def test_sprite_cells_match_frames() -> None:
