@@ -4,7 +4,7 @@ import asyncio
 import os
 import signal
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 from textual.content import Content
@@ -13,7 +13,6 @@ from textual.widgets import Static
 from tama.domain.animation import AnimationKey
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.events import Died
-from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import (
@@ -28,7 +27,7 @@ from tama.services.session import CatchUp, SessionSettings
 from tama.ui.app import EXIT_ERROR, TamaApp
 from tama.ui.colours import Look, Mode
 from tama.ui.screens.away import AwaySummaryScreen, away_text
-from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
+from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialScreen
@@ -39,9 +38,6 @@ from tama.ui.widgets.pet_view import PetView, ViewOptions
 from tests.factories import FIXED_NOW, make_pet
 from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, mono, repo_with, text
-
-if TYPE_CHECKING:
-    from tama.domain.minigames.left_right import LeftRightGame
 
 # --- Starting up --------------------------------------------------------------------------
 
@@ -489,43 +485,6 @@ async def test_refused_action_is_explained() -> None:
         assert "warning" in notes.severities()
 
 
-async def test_playing_the_mini_game() -> None:
-    app = make_app(repo_with(stats=Stats(happiness=50, energy=50)))
-    async with app.run_test() as pilot:
-        await pilot.press("p")
-        assert isinstance(app.screen, MiniGameScreen)
-        game_screen = app.screen
-
-        await pilot.press("left", "right", "left", "right", "left")
-        assert game_screen.game.is_over
-        won = game_screen.game.result is GameResult.WIN
-        await pilot.press("enter")
-        await pilot.pause()
-
-        assert isinstance(app.screen, MainScreen)
-        assert app.session is not None
-        assert app.session.pet.stats.happiness == (70 if won else 55)
-        assert app.session.pet.stats.energy == 40
-
-
-async def test_the_pet_turns_the_way_it_looked() -> None:
-    app = make_app(repo_with(species="owl"))
-    async with app.run_test() as pilot:
-        await pilot.press("p")
-        game_screen = app.screen
-        assert isinstance(game_screen, MiniGameScreen)
-        pet_view = game_screen.query_one(PetView)
-        idle = load_sprite("owl", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE)
-        assert pet_view.current == idle
-
-        await pilot.press("left")
-
-        last = game_screen.game.last_result
-        assert last is not None
-        key = AnimationKey(f"look_{last.pet_looked.value}")
-        assert pet_view.current == load_sprite("owl", Variant.DEFAULT, LifeStage.CHILD, key)
-
-
 async def test_feed_menu_shows_the_food() -> None:
     app = make_app(repo_with())
     async with app.run_test() as pilot:
@@ -536,27 +495,6 @@ async def test_feed_menu_shows_the_food() -> None:
         assert menu.query_one("#snack", PetView).current == load_overlay("snack")
 
 
-async def test_enter_does_nothing_until_the_game_is_over() -> None:
-    app = make_app(repo_with())
-    async with app.run_test() as pilot:
-        await pilot.press("p", "left", "enter")
-
-        assert isinstance(app.screen, MiniGameScreen)
-        assert len(app.screen.game.results) == 1
-        assert "Round 2/5" in text(app, "#game-body")
-
-
-async def test_giving_up_the_game_changes_nothing() -> None:
-    app = make_app(repo_with(stats=Stats(happiness=50)))
-    async with app.run_test() as pilot:
-        await pilot.press("p", "left", "escape")
-        await pilot.pause()
-
-        assert isinstance(app.screen, MainScreen)
-        assert app.session is not None
-        assert app.session.pet.stats.happiness == 50
-
-
 async def test_too_tired_to_play() -> None:
     app = make_app(repo_with(stats=Stats(energy=5)))
     notes = Notes(app)
@@ -565,19 +503,6 @@ async def test_too_tired_to_play() -> None:
 
         assert isinstance(app.screen, MainScreen)
         assert "Refused to play: too tired" in notes
-
-
-async def test_guessing_after_game_over_is_ignored() -> None:
-    app = make_app(repo_with())
-    async with app.run_test() as pilot:
-        await pilot.press("p", *["left"] * 5)
-        screen = app.screen
-        assert isinstance(screen, MiniGameScreen)
-        finished: LeftRightGame = screen.game
-
-        await pilot.press("right")
-
-        assert screen.game is finished
 
 
 # --- Information screens ------------------------------------------------------------------

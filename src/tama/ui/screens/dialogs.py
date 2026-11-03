@@ -1,4 +1,4 @@
-"""Small modal dialogs: help, status, feeding and the Left/Right mini-game."""
+"""Small modal dialogs: help, status and feeding."""
 
 from typing import ClassVar, override
 
@@ -8,20 +8,16 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
-from tama.domain.animation import AnimationKey
 from tama.domain.events import Action
-from tama.domain.minigames import GameResult
-from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.pet import Pet
 from tama.domain.stats import STAT_MAX, Stat
 from tama.services.describe import format_age
-from tama.services.session import GameSession
-from tama.ui.sprites import load_overlay, load_sprite, species_of
+from tama.ui.sprites import load_overlay
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 HELP_TEXT = """\
 f  Feed (meal or snack)      l  Lights on/off
-p  Play Left or Right        d  Discipline
+p  Play a game               d  Discipline
 c  Clean up                  s  Status
 m  Medicine                  ?  This help
                              q  Save and quit
@@ -136,66 +132,3 @@ class FeedMenu(ModalScreen[Action | None]):
     def action_choose(self, food: str) -> None:
         """Close the menu with the chosen food."""
         self.dismiss(Action(food))
-
-
-class MiniGameScreen(ModalScreen[GameResult | None]):
-    """Left or Right: guess which way the pet will look. Dismisses with the result."""
-
-    BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("left", "guess('left')", "Left"),
-        Binding("right", "guess('right')", "Right"),
-        Binding("enter", "finish", "Done"),
-        Binding("escape", "dismiss", "Give up"),
-    ]
-
-    def __init__(self, session: GameSession, view: ViewOptions | None = None) -> None:
-        """Start a new game for ``session``'s pet, drawn with ``view`` options."""
-        super().__init__()
-        self._session = session
-        self._view = view or ViewOptions()
-        self.game = LeftRightGame()
-
-    @override
-    def compose(self) -> ComposeResult:
-        """Build the dialog."""
-        with Vertical(classes="dialog"):
-            yield Static("Left or Right?", classes="dialog-title")
-            yield PetView(self._view, id="game-pet")
-            yield Static(id="game-body", markup=False)
-
-    def on_mount(self) -> None:
-        """Show the pet and the first round."""
-        self.query_one(PetView).show(self._session.pet)
-        self._render_game()
-
-    def action_guess(self, direction: str) -> None:
-        """Play a round: the pet turns the way it looked."""
-        if not self.game.is_over:
-            self.game = self._session.guess(self.game, Direction(direction))
-            last = self.game.last_result
-            if last is not None:
-                pet = self._session.pet
-                key = AnimationKey(f"look_{last.pet_looked.value}")
-                pose = load_sprite(species_of(pet), pet.variant, pet.stage, key)
-                self.query_one(PetView).set_loop(pose, key)
-            self._render_game()
-
-    def action_finish(self) -> None:
-        """Close once the game is over."""
-        if self.game.result is not None:
-            self.dismiss(self.game.result)
-
-    def _render_game(self) -> None:
-        name = self._session.pet.name
-        game = self.game
-        lines = [f"Round {game.round_number}/{game.rounds} · {game.wins} right so far", ""]
-        last = game.last_result
-        if last is not None:
-            verdict = "Right!" if last.correct else "Wrong!"
-            lines.append(f"{name} looked {last.pet_looked.value}. {verdict}")
-        if game.result is not None:
-            outcome = "You won!" if game.result is GameResult.WIN else "You lost."
-            lines += ["", f"{outcome} Press Enter."]
-        else:
-            lines += ["", f"Which way will {name} look?  ←  →"]
-        self.query_one("#game-body", Static).update("\n".join(lines))

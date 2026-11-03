@@ -150,3 +150,26 @@ NewPetScreen, ErrorScreen, MemorialScreen {
   height: 1;
   color: $error;
 }
+
+#games {
+  width: 40;
+  height: auto;
+  border: none;
+  padding: 0;
+}
+
+#game-area {
+  width: auto;
+  height: auto;
+}
+
+#board-pet {
+  width: auto;
+  height: auto;
+  margin-right: 2;
+}
+
+#board {
+  width: auto;
+  height: auto;
+}

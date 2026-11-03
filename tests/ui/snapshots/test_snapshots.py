@@ -5,17 +5,24 @@ Regenerate with ``uv run pytest -n0 tests/ui/snapshots --snapshot-update`` and r
 
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from textual.pilot import Pilot
 
+from tama.domain.minigames import Side
+from tama.domain.minigames.four_in_a_row import FourInARow
+from tama.domain.minigames.tic_tac_toe import TicTacToe
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, SaveError, UnsupportedSaveVersionError
 from tama.infra.clock import FakeClock
 from tama.persistence.repository import LoadResult
 from tama.ui.app import TamaApp
+from tama.ui.screens.games.four_in_a_row import FourInARowScreen
+from tama.ui.screens.games.tic_tac_toe import TicTacToeScreen
 from tama.ui.widgets.pet_header import PetHeader
+from tama.ui.widgets.pet_view import ViewOptions
 from tests.factories import FIXED_NOW
 from tests.ui.helpers import make_app, mono, repo_with
 
@@ -52,7 +59,60 @@ def test_feed_menu(snap_compare: SnapCompare) -> None:
 
 
 def test_mini_game(snap_compare: SnapCompare) -> None:
-    assert snap_compare(child_app(), press=["p", "left"])
+    assert snap_compare(child_app(), press=["p", "1", "left"])
+
+
+GAME_SIZE = (60, 20)
+"""Games must fit the smallest supported terminal."""
+P, T = Side.PLAYER, Side.PET
+FOUR_WON = FourInARow(((P, T), (P, T, P), (P, T), (P,), (T,), (), ()))
+TIC_TAC_TOE_LOST = TicTacToe((T, P, P, None, T, None, P, None, T))
+
+
+def test_game_select(snap_compare: SnapCompare) -> None:
+    assert snap_compare(child_app(), press=["p"], terminal_size=GAME_SIZE)
+
+
+@pytest.mark.parametrize(
+    ("theme", "view"),
+    [(None, None), ("textual-light", None), (None, mono()), ("textual-light", mono())],
+    ids=["dark", "light", "mono", "mono-light"],
+)
+def test_four_in_a_row_mid_game(
+    snap_compare: SnapCompare, theme: str | None, view: ViewOptions | None
+) -> None:
+    options: dict[str, Any] = {"theme": theme} if theme else {}
+    if view:
+        options["view"] = view
+    app = make_app(repo_with(), **options)
+    keys = ["p", "2", "down", "left", "down", "right", "right", "down"]
+    assert snap_compare(app, press=keys, terminal_size=GAME_SIZE)
+
+
+@pytest.mark.parametrize("view", [None, mono()], ids=["colour", "mono"])
+def test_four_in_a_row_won(snap_compare: SnapCompare, view: ViewOptions | None) -> None:
+    async def finish(pilot: Pilot[None]) -> None:
+        await pilot.press("p", "2")
+        screen = pilot.app.screen
+        assert isinstance(screen, FourInARowScreen)
+        screen.show(FOUR_WON)
+
+    app = make_app(repo_with(), view=view or ViewOptions(animate=False))
+    assert snap_compare(app, run_before=finish, terminal_size=GAME_SIZE)
+
+
+def test_tic_tac_toe_mid_game(snap_compare: SnapCompare) -> None:
+    assert snap_compare(child_app(), press=["p", "3", "7", "right"], terminal_size=GAME_SIZE)
+
+
+def test_tic_tac_toe_lost(snap_compare: SnapCompare) -> None:
+    async def finish(pilot: Pilot[None]) -> None:
+        await pilot.press("p", "3")
+        screen = pilot.app.screen
+        assert isinstance(screen, TicTacToeScreen)
+        screen.show(TIC_TAC_TOE_LOST)
+
+    assert snap_compare(child_app(), run_before=finish, terminal_size=GAME_SIZE)
 
 
 def test_asleep_with_lights_off(snap_compare: SnapCompare) -> None:

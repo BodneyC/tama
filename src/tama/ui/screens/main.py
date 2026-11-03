@@ -24,10 +24,12 @@ from tama.domain.events import (
     Refused,
     WokeUp,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.services.describe import describe_event
 from tama.services.session import GameSession
-from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
+from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen
+from tama.ui.screens.games import game_screen
+from tama.ui.screens.games.select import GameSelectScreen
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_stage import PetStage
 from tama.ui.widgets.pet_view import ViewOptions
@@ -78,6 +80,8 @@ class MainScreen(Screen[None]):
         self._tick_interval = tick_interval
         self._view = view or ViewOptions()
         self._bell = bell
+        self.last_game: GameKind | None = None
+        """The game chosen last time, pre-selected next time."""
         # Needs that are already there when the screen opens don't ring: the player is here.
         self._calls = attention_reasons(session.pet, session.balance)
 
@@ -156,7 +160,7 @@ class MainScreen(Screen[None]):
         self.app.push_screen(FeedMenu(self._view), fed)
 
     def action_play(self) -> None:
-        """Start the mini-game if the pet is willing."""
+        """If the pet is willing to play, choose a game and play it."""
         outcome = self.session.act(Action.PLAY)
         if outcome.refusal is not None:
             self._report(outcome)
@@ -166,7 +170,12 @@ class MainScreen(Screen[None]):
             if result is not None:
                 self._report(self.session.finish_game(result))
 
-        self.app.push_screen(MiniGameScreen(self.session, self._view), played)
+        def chosen(kind: GameKind | None) -> None:
+            if kind is not None:
+                self.last_game = kind
+                self.app.push_screen(game_screen(kind, self.session, self._view), played)
+
+        self.app.push_screen(GameSelectScreen(self.last_game), chosen)
 
     def action_status(self) -> None:
         """Show detailed stats."""

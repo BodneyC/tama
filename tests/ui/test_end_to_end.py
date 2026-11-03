@@ -32,7 +32,7 @@ async def test_hatch_care_quit_and_come_back(tmp_path: Path) -> None:
         assert text(app, "#identity") == "Mochi · child · 2h 0m"
 
         hunger_before = app.session.pet.stats.hunger if app.session else 0
-        await pilot.press("f", "m", "c", "p", *["left"] * 5, "enter")
+        await pilot.press("f", "m", "c", "p", "1", *["left"] * 5, "enter")
         assert app.session is not None
         at_quit = app.session.pet
         await pilot.press("q")
@@ -80,7 +80,7 @@ async def play_by_keyboard(pilot: Pilot[None], pet: Pet) -> None:
     if not pet.is_asleep and pet.stats.hunger < 95:
         await pilot.press("f", "m")
     if not pet.is_asleep and pet.stats.energy > 20:
-        await pilot.press("p", *["left"] * 5, "enter")
+        await pilot.press("p", "1", *["left"] * 5, "enter")
 
 
 CHECK_INS = tuple(time(hour) for hour in range(7, 24, 2))

@@ -158,14 +158,14 @@ Two board games against the pet, chosen from a game select dialog (SPEC §3.1, A
 - [x] Services: `GameSession.pet_move(game)` and `finish_game(result)` using the session RNG
 - [x] UI colours `piece-player` and `piece-pet` in `assets/ui.toml` (dark/light, theme refs
       allowed) and the `/add-sprite` UI colour list; species may override them
-- [ ] UI: `GameSelectScreen` (`↑`/`↓` + `Enter`, `1`–`3`, `Esc`; remembers the last game this
+- [x] UI: `GameSelectScreen` (`↑`/`↓` + `Enter`, `1`–`3`, `Esc`; remembers the last game this
       session); `p` opens it after the play refusals; Help text updated
-- [ ] UI: `FourInARowScreen` (column marker, `←`/`→` wrap and skip full columns, `↓`/`Enter`
+- [x] UI: `FourInARowScreen` (column marker, `←`/`→` wrap and skip full columns, `↓`/`Enter`
       drop, falling pieces, pet "thinking", winning four highlighted, `●`/`○` in monochrome)
-- [ ] UI: `TicTacToeScreen` (cursor, `Enter`/`Space`, keypad-layout `1`–`9`, winning line
+- [x] UI: `TicTacToeScreen` (cursor, `Enter`/`Space`, keypad-layout `1`–`9`, winning line
       highlighted)
-- [ ] Reduced motion: no thinking pause or falling pieces
-- [ ] Snapshots: game select; each board game mid-game and finished; monochrome and light
+- [x] Reduced motion: no thinking pause or falling pieces
+- [x] Snapshots: game select; each board game mid-game and finished; monochrome and light
       variants of Four in a Row; all fit 60×20
 - [ ] Balance check: extend `tools/balance.py` (or a sibling) to play many games with a simple
       scripted player and confirm young pets are easy and adults challenging
