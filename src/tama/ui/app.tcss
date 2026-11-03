@@ -192,3 +192,46 @@ NewPetScreen, ErrorScreen, MemorialScreen {
   width: auto;
   height: auto;
 }
+
+PetSelectScreen {
+  align: center middle;
+}
+
+/* 2 border + 29 list + 1 gap + 26 preview (the widest sprite) = 58, inside 60x20. */
+#pet-select {
+  width: auto;
+  max-width: 60;
+  height: auto;
+  padding: 0;
+  border: round $tama-accent;
+  background: $surface;
+}
+
+#pet-select-body {
+  width: auto;
+  height: auto;
+}
+
+#pets {
+  width: 29;
+  height: auto;
+  max-height: 11;
+  border: none;
+  padding: 0;
+}
+
+#pet-preview {
+  width: 26;
+  height: auto;
+  margin-left: 1;
+}
+
+#preview-sprite {
+  width: 100%;
+  content-align: center middle;
+}
+
+#preview-detail {
+  width: 100%;
+  color: $text-muted;
+}

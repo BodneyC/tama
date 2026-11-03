@@ -274,11 +274,12 @@ the exception: they stay frozen until resumed.
 - **Launching:** with no pets, `tama` shows the name prompt. With exactly one pet, it opens
   it. With several, it shows the **pet select** screen with the last-played pet pre-selected,
   so `Enter` continues where you left off. `tama --pet NAME` skips the screen.
-- **Pet select screen:** one row per pet, each simulated up to now in memory (not saved): its
-  idle sprite (small), name, species, stage, age, and the attention indicator `⚠` with
-  reasons if it needs care, or `⏸ on holiday since <date>`; dead pets show a gravestone and
-  "passed away (…) at <age>";
-  unreadable files show "can't be read". Keys: `↑`/`↓` or `1`–`9` select, `Enter` plays,
+- **Pet select screen:** one row per pet, each simulated up to now in memory (not saved):
+  name (cut short with `…` past 11 characters), stage, age and a mark: `⚠` needs care, `⏸`
+  on holiday, `✝` passed away, `?` can't be read. Beside the list, the highlighted pet's
+  sprite (idle, asleep, or its gravestone) and details: full name, stage and species, and
+  the `⚠` reasons, `⏸ on holiday since <date>`, "passed away (…) at <age>" or "can't be
+  read". (One sprite beside the list, rather than one per row, fits nine pets in 60×20.) Keys: `↑`/`↓` or `1`–`9` select, `Enter` plays,
   `n` hatches a new egg (name prompt; refused at 9 pets, saying so), `a` archives the
   selected pet (dead pets only, after a `y`/`n` confirmation), `Esc`/`q` quit. An unreadable
   pet opens the `ErrorScreen` for that file only; the other pets are unaffected.
@@ -293,6 +294,7 @@ the exception: they stay frozen until resumed.
 - **One window per pet:** opening a pet takes a lock (`pets/<file>.lock` holding the process
   id); a second tama asked for the same pet says it's already open elsewhere. Stale locks
   (process gone) are taken over. `--status` never takes locks.
+- **Where:** the user data directory, or `TAMA_DATA_DIR` if set.
 - **Upgrading:** on first run with the new layout, an existing `save.json` (+ `.bak`) in the
   data directory is moved into `pets/` and becomes the last-played pet; nothing is lost.
 
@@ -332,7 +334,8 @@ tama --pause               # put every living pet on holiday without opening the
                            # with --pet, just that pet. Prints one line per pet: paused, already
                            # paused, or refused with the reasons (exit 2 if any was refused or
                            # is open in another tama)
-tama --resume              # bring every pet back from holiday (or just --pet NAME)
+tama --resume              # bring every pet on holiday back (or just --pet NAME); one line
+                           # per pet resumed, or "No pets are on holiday."
 tama --save-path PATH      # play exactly this one save file, outside the pet list
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)

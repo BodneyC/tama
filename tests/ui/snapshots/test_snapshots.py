@@ -4,7 +4,9 @@ Regenerate with ``uv run pytest -n0 tests/ui/snapshots --snapshot-update`` and r
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -23,8 +25,8 @@ from tama.ui.screens.games.four_in_a_row import FourInARowScreen
 from tama.ui.screens.games.tic_tac_toe import TicTacToeScreen
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_view import ViewOptions
-from tests.factories import FIXED_NOW
-from tests.ui.helpers import make_app, mono, repo_with
+from tests.factories import FIXED_NOW, make_pet
+from tests.ui.helpers import library_with, make_app, make_library_app, mono, repo_with
 
 SnapCompare = Callable[..., bool]
 NIGHT = datetime(2026, 1, 1, 23, tzinfo=UTC)
@@ -234,6 +236,45 @@ def test_main_screen_monochrome_light_theme(snap_compare: SnapCompare) -> None:
 
 def test_terminal_too_small(snap_compare: SnapCompare) -> None:
     assert snap_compare(child_app(), terminal_size=(50, 15))
+
+
+def pet_list(tmp_path: Path, **kwargs: Any) -> TamaApp:
+    """Four pets: content, needing care, on holiday, passed away, plus an unreadable file."""
+    library, files = library_with(
+        tmp_path,
+        replace(make_pet(stage=LifeStage.ADULT, species="owl"), name="Mochi"),
+        replace(make_pet(stats=Stats(hunger=10), poop_count=1), name="Bao"),
+        replace(make_pet(paused_since=FIXED_NOW, species="bear"), name="Bruno"),
+        replace(
+            make_pet(
+                stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE, age=timedelta(days=15)
+            ),
+            name="Old Pip",
+        ),
+    )
+    (library.roster.directory / "smudge-abcdef.json").write_text("{ nope", encoding="utf-8")
+    library.roster.set_last(files[0])
+    return make_library_app(library, **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("theme", "view"),
+    [(None, None), ("textual-light", None), (None, mono())],
+    ids=["dark", "light", "mono"],
+)
+def test_pet_select(
+    snap_compare: SnapCompare, tmp_path: Path, theme: str | None, view: ViewOptions | None
+) -> None:
+    app = pet_list(tmp_path, theme=theme, view=view or ViewOptions(animate=False))
+    assert snap_compare(app, terminal_size=GAME_SIZE)
+
+
+def test_pet_select_on_a_pet_needing_care(snap_compare: SnapCompare, tmp_path: Path) -> None:
+    assert snap_compare(pet_list(tmp_path), press=["down"], terminal_size=GAME_SIZE)
+
+
+def test_header_counts_other_pets_needing_care(snap_compare: SnapCompare, tmp_path: Path) -> None:
+    assert snap_compare(pet_list(tmp_path), press=["1"], terminal_size=GAME_SIZE)
 
 
 def test_snapshots_use_the_fixed_clock() -> None:

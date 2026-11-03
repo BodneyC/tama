@@ -251,9 +251,9 @@ Keep up to nine pets, pick which to play, and see them all from the shell (SPEC 
       bell; paused pets never count); Help text and footer updated
 - [x] `--pause`/`--resume` accept `--pet NAME` and skip pets open in another tama (locks)
 - [x] Unreadable pets open the per-file `ErrorScreen` without affecting the others
-- [ ] Snapshots: pet select (several pets incl. one dead, one needing care, one unreadable;
+- [x] Snapshots: pet select (several pets incl. one dead, one needing care, one unreadable;
       light theme; monochrome); header with `⚠ +N`; all fit 60×20
-- [ ] Docs: README/`--help` explain several pets and the changed `--new`
+- [x] Docs: README/`--help` explain several pets and the changed `--new`
 
 **Accept:** with three pets saved (one dead), `tama` offers all three, plays the chosen one,
 switches to another with `t`, and `tama --status` prints each pet's state as of now without

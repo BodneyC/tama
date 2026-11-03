@@ -35,7 +35,11 @@ tamas at once, to pick which to play and to see how all of them are doing from t
 ## Consequences
 
 - The domain, the save schema, `JsonSaveRepository` and `GameSession` are unchanged; the new
-  code is a roster in persistence, read-only summaries in services, and a pet select screen.
+  code is a roster and a lock in persistence, read-only summaries plus a `PetLibrary` (the
+  UI's one entry point to several pets, holding the open pet's lock) in services, and a pet
+  select screen whose flow lives in `ui/library_flow.py`.
+- The data directory can be moved with `TAMA_DATA_DIR`, which the test suite always sets so
+  no test can touch a player's real pets.
 - Startup with several pets loads and simulates each of them once (up to 9 × the offline cap
   of 1-minute steps); this must stay fast enough not to be noticed, and is measured in tests.
 - `--new` changes meaning (adds a pet instead of replacing the only one); the CLI help and

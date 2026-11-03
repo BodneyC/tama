@@ -37,7 +37,8 @@ Import rules (enforced by `import-linter`, see `pyproject.toml`):
 src/tama/
 ├── __init__.py            # __version__
 ├── __main__.py            # python -m tama
-├── cli.py                 # Typer app; builds dependencies, launches TamaApp
+├── cli.py                 # Typer app: parses options, picks one file or the pet list, launches
+├── cli_pets.py            # what --status and --pause/--resume print, per pet
 ├── errors.py              # TamaError hierarchy
 ├── domain/
 │   ├── stats.py           # Stat enum, Stats value object, clamp helper
@@ -61,7 +62,9 @@ src/tama/
 ├── services/
 │   ├── session.py         # GameSession: create/load (+ offline catch-up), tick, act, save
 │   ├── autosave.py        # AutosavePolicy: interval + immediate save on milestones
-│   ├── roster.py          # PetSummary per pet "as of now" (read-only catch-up), last played
+│   ├── roster.py          # PetSummary per pet "as of now" (read-only catch-up), find_pet
+│   ├── library.py         # PetLibrary: the UI's entry point to several pets (open + lock,
+│   │                      # hatch, archive, borrow for --pause, others needing care)
 │   └── describe.py        # plain-text status line and event summaries (CLI + TUI)
 ├── persistence/
 │   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
@@ -78,6 +81,7 @@ src/tama/
 │   └── logging.py         # rotating file log (never the terminal)
 ├── ui/
 │   ├── app.py             # TamaApp(App): load/hatch, tick timer, quit + signal saves
+│   ├── library_flow.py    # several pets: launch into the right pet, pet list, archive
 │   ├── app.tcss           # Textual CSS (theme variables only)
 │   ├── screens/
 │   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action

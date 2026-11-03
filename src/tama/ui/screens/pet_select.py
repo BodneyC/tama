@@ -24,7 +24,8 @@ from tama.services.describe import format_age, holiday_since
 from tama.services.roster import PetSummary
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
-NAME_WIDTH = 16
+NAME_WIDTH = 11
+"""Longer names are cut short in the list; the preview shows them in full."""
 
 
 class PetAction(StrEnum):
@@ -55,7 +56,7 @@ def mark(row: PetSummary) -> str:
 
 
 def row_text(number: int, row: PetSummary) -> str:
-    """``1 Mochi            child   1d 2h ⚠``."""
+    """``1 Mochi       child   1d 2h ⚠``."""
     name = row.name if len(row.name) <= NAME_WIDTH else row.name[: NAME_WIDTH - 1] + "…"
     if row.pet is None:
         return f"{number} {name:<{NAME_WIDTH}} {'':<6} {'':>6} {mark(row)}"
