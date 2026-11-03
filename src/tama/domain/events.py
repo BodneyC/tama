@@ -37,6 +37,7 @@ class RefusalReason(StrEnum):
     TOO_TIRED = "too_tired"
     NOT_SICK = "not_sick"
     MISBEHAVING = "misbehaving"
+    ON_HOLIDAY = "on_holiday"
 
 
 class MistakeReason(StrEnum):
@@ -165,6 +166,25 @@ class Disciplined(Event):
     """The pet was disciplined; ``effective`` if it was actually misbehaving."""
 
     effective: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PausedForHoliday(Event):
+    """The pet went on holiday: frozen in time until resumed."""
+
+
+@dataclass(frozen=True, slots=True)
+class ResumedFromHoliday(Event):
+    """The pet came back from a holiday of ``length``."""
+
+    length: timedelta
+
+
+@dataclass(frozen=True, slots=True)
+class PauseRefused(Event):
+    """The pet couldn't go on holiday, for every reason in ``blockers`` (sorted)."""
+
+    blockers: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

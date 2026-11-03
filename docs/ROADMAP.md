@@ -200,13 +200,13 @@ Asked for after M6.5: measure discipline, and make misbehaviour visible.
 Freeze a settled pet while you're away and bring it back later (SPEC §2.6, ADR 0008). Comes
 before several tamas, which makes it matter more.
 
-- [ ] Domain: `Pet.paused_since`; `advance` on a paused pet only re-anchors `updated_at` (no
+- [x] Domain: `Pet.paused_since`; `advance` on a paused pet only re-anchors `updated_at` (no
       steps, events or RNG use) — test-first, plus a property test that any paused duration
       leaves everything else unchanged
-- [ ] Domain: `holiday.py` — `pause(pet, now)` refused unless hatched, alive and without
+- [x] Domain: `holiday.py` — `pause(pet, balance)` (as of the pet's last update) refused unless hatched, alive and without
       attention calls (refusal lists the reasons); `resume(pet, now)`; `PausedForHoliday` /
       `ResumedFromHoliday(length)` events
-- [ ] Domain: care actions refused with `RefusalReason.ON_HOLIDAY`; no attention calls while
+- [x] Domain: care actions refused with `RefusalReason.ON_HOLIDAY`; no attention calls while
       paused; lifespan counts living time only
 - [ ] Persistence: save schema v3 with `paused_since` (v2 → v3 migration, a v3 fixture, the v1
       and v2 fixtures still loading)

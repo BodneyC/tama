@@ -48,7 +48,7 @@ def looping_animation(pet: Pet) -> AnimationKey:
         return AnimationKey.DEAD
     if pet.stage is LifeStage.EGG:
         return AnimationKey.WOBBLE
-    if pet.is_asleep:
+    if pet.is_asleep or pet.on_holiday:
         return AnimationKey.SLEEP
     if pet.is_sick:
         return AnimationKey.SICK

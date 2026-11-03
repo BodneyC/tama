@@ -52,6 +52,8 @@ def advance(pet: Pet, elapsed: timedelta, ctx: Context) -> Outcome:
     """
     if elapsed < ZERO:
         raise InvalidArgumentError(f"elapsed must not be negative, got {elapsed}")
+    if pet.on_holiday:  # frozen in time: only the clock moves (ADR 0008)
+        return Outcome(replace(pet, updated_at=pet.updated_at + elapsed))
     step = ctx.balance.step
     steps, carry = divmod(pet.carry + elapsed, step)
     last_step_at = pet.updated_at - pet.carry

@@ -25,7 +25,7 @@ def attention_reasons(pet: Pet, balance: Balance) -> frozenset[AttentionReason]:
     The UI shows an indicator while this is non-empty and can diff successive results to
     decide when to ring the bell.
     """
-    if pet.stage in (LifeStage.EGG, LifeStage.DEAD):
+    if pet.stage in (LifeStage.EGG, LifeStage.DEAD) or pet.on_holiday:
         return frozenset()
     threshold = balance.attention_threshold
     checks = {

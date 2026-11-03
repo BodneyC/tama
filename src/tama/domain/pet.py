@@ -83,6 +83,7 @@ class Pet:
         sickness_doses: Medicine doses still needed; 0 means healthy.
         recent_snacks: Ages at which snacks were eaten within the last hour.
         poop_progress: Fraction of the way to the next poop.
+        paused_since: When the pet went on holiday (frozen in time), or ``None``.
     """
 
     name: str
@@ -107,11 +108,14 @@ class Pet:
     timers: Timers = field(default_factory=Timers)
     recent_snacks: tuple[timedelta, ...] = ()
     cause_of_death: DeathCause | None = None
+    paused_since: datetime | None = None
 
     def __post_init__(self) -> None:
         """Validate invariants."""
         _require_aware(self.born_at)
         _require_aware(self.updated_at)
+        if self.paused_since is not None:
+            _require_aware(self.paused_since)
         validate_species(self.species)
         for name in ("poop_count", "sickness_doses", "care_mistakes"):
             if getattr(self, name) < 0:
@@ -123,6 +127,11 @@ class Pet:
     def is_alive(self) -> bool:
         """Whether the pet is alive."""
         return self.stage is not LifeStage.DEAD
+
+    @property
+    def on_holiday(self) -> bool:
+        """Whether the pet is paused: nothing happens to it until it is resumed."""
+        return self.paused_since is not None
 
     @property
     def is_sick(self) -> bool:

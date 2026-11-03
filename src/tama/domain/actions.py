@@ -41,6 +41,8 @@ def refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReason | None:
     """Return why ``pet`` would refuse ``action``, or ``None`` if it would accept it."""
     if not pet.is_alive:
         return RefusalReason.DEAD
+    if pet.on_holiday:
+        return RefusalReason.ON_HOLIDAY
     if pet.stage is LifeStage.EGG and action in _REFUSED_BY_EGG:
         return RefusalReason.EGG
     if pet.is_asleep and action in _REFUSED_WHEN_ASLEEP:
@@ -74,8 +76,9 @@ def apply_game_outcome(pet: Pet, result: GameResult, *, ctx: Context) -> Outcome
     Only death refuses this: the game was already accepted, so a pet that dozed off
     mid-game still gets the result.
     """
-    if not pet.is_alive:
-        return Outcome(pet, (Refused(pet.age, Action.PLAY, RefusalReason.DEAD),))
+    if not pet.is_alive or pet.on_holiday:
+        reason = RefusalReason.DEAD if not pet.is_alive else RefusalReason.ON_HOLIDAY
+        return Outcome(pet, (Refused(pet.age, Action.PLAY, reason),))
     b = ctx.balance
     happiness = {
         GameResult.WIN: b.play_win_happiness,
