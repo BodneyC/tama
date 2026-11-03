@@ -229,7 +229,7 @@ def settled(screen: FourInARowScreen) -> bool:
 
 
 async def test_four_in_a_row_thinks_and_drops_with_motion(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(board, "THINK_SECONDS", 0.5)
+    monkeypatch.setattr(board, "THINK_SECONDS", 2.0)  # generous: CI machines can be slow
     monkeypatch.setattr(four_screen, "FALL_SECONDS", 0.01)
     app = make_app(repo_with(), view=ViewOptions(animate=True))
     async with app.run_test() as pilot:
@@ -238,17 +238,21 @@ async def test_four_in_a_row_thinks_and_drops_with_motion(monkeypatch: pytest.Mo
         assert isinstance(screen, FourInARowScreen)
         assert screen.busy
         assert "is thinking" in text(app, "#game-status")
+        look_left = load_sprite("tama", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.LOOK_LEFT)
+        assert screen.query_one(PetView).current == look_left
         await pilot.press("left", "down")  # ignored while busy
         assert screen.cursor == 3
         assert sum(len(column) for column in screen.game.columns) == 1
 
-        for _ in range(100):
+        for _ in range(400):
             await pilot.pause(0.02)
             if settled(screen):
                 break
 
         assert sum(len(column) for column in screen.game.columns) == 2
         assert screen.ghost is None
+        idle = load_sprite("tama", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE)
+        assert screen.query_one(PetView).current == idle
 
 
 async def test_reduced_motion_answers_at_once() -> None:

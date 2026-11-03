@@ -22,6 +22,8 @@ from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 THINK_SECONDS = 0.6
 """How long the pet "thinks" before its move (skipped with reduced motion)."""
+GLANCE_SECONDS = 0.2
+"""How often the thinking pet looks the other way."""
 
 
 def piece_markup(side: Side, *, mono: bool) -> str:
@@ -52,6 +54,7 @@ class BoardGameScreen[G: BoardGame](ModalScreen[GameResult | None]):
         self.game = game
         self.busy = False
         """Whether a move is being shown or the pet is thinking (keys are ignored)."""
+        self._looking = AnimationKey.IDLE
         self._session = session
         self._view = view or ViewOptions()
 
@@ -146,7 +149,29 @@ class BoardGameScreen[G: BoardGame](ModalScreen[GameResult | None]):
         if self.game.result is not None:
             self._finish()
             return
-        self.after(THINK_SECONDS, self._pet_moves)
+        if self.animated:
+            self._glance(AnimationKey.LOOK_LEFT)
+            glancing = self.set_interval(GLANCE_SECONDS, self._glance_other_way)
+
+            def move() -> None:
+                glancing.stop()
+                self.query_one(PetView).show(self._session.pet)
+                self._pet_moves()
+
+            self.set_timer(THINK_SECONDS, move)
+        else:
+            self._pet_moves()
+
+    def _glance(self, key: AnimationKey) -> None:
+        pet = self._session.pet
+        self._looking = key
+        self.query_one(PetView).set_loop(
+            load_sprite(species_of(pet), pet.variant, pet.stage, key), key
+        )
+
+    def _glance_other_way(self) -> None:
+        left = self._looking is AnimationKey.LOOK_LEFT
+        self._glance(AnimationKey.LOOK_RIGHT if left else AnimationKey.LOOK_LEFT)
 
     def _pet_moves(self) -> None:
         self.animate_move(self._session.pet_move(self.game), self._player_turn)
