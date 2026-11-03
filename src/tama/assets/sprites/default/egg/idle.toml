@@ -1,0 +1,28 @@
+# Default egg, idle. Pixel art: see ADR 0003 and /add-sprite.
+fps = 2
+loop = true
+
+[palette]
+k = "#5b4a3a"            # outline
+w = "#f4efe3"            # shell
+s = { color = "#7fc8b8", shade = "medium" }   # speckles
+
+[[frames]]
+pixels = """
+.....kkkk.....
+...kkwwwwkk...
+..kwwwwwwwwk..
+..kwwwwwwwwk..
+.kwwwsswwwwwk.
+.kwwwsswwwwwk.
+.kwwwwwwwsswk.
+.kwwwwwwwsswk.
+kwsswwwwwwwwwk
+kwsswwwwwwwwwk
+kwwwwwwsswwwwk
+kwwwwwwsswwwwk
+.kwwwwwwwwwwk.
+.kwwwwwwwwwwk.
+..kkwwwwwwkk..
+....kkkkkk....
+"""

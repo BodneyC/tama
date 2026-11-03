@@ -44,7 +44,11 @@ PetStage {
 
 PetStage.lights-off {
   background: $background-darken-3;
-  color: $text-muted;
+}
+
+/* Tint the children themselves: it dims the sprite's explicit pixel colours too. */
+PetStage.lights-off > Static {
+  tint: $background-darken-3 55%;
 }
 
 #too-small {

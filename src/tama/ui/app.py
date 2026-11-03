@@ -34,6 +34,7 @@ class TamaApp(App[None]):
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
         bell: Ring the terminal bell on new attention calls (used from M6).
         reduced_motion: Limit animation to key frames (used from M5).
+        monochrome: Draw sprites without colour (``NO_COLOR``).
     """
 
     CSS_PATH = "app.tcss"
@@ -55,6 +56,7 @@ class TamaApp(App[None]):
         handle_signals: bool = True,
         bell: bool = False,
         reduced_motion: bool = False,
+        monochrome: bool = False,
     ) -> None:
         """Wire the app to its dependencies."""
         super().__init__()
@@ -67,6 +69,7 @@ class TamaApp(App[None]):
         self._handle_signals = handle_signals
         self.bell_enabled = bell
         self.reduced_motion = reduced_motion
+        self.monochrome = monochrome
         self._quit_failed = False
         self._installed_signals: list[signal.Signals] = []
         self.session: GameSession | None = None
@@ -79,7 +82,7 @@ class TamaApp(App[None]):
         if self._repo.exists() and not self._start_new:
             self._load()
         else:
-            self.push_screen(NewPetScreen(), self._hatch)
+            self.push_screen(NewPetScreen(monochrome=self.monochrome), self._hatch)
 
     def on_unmount(self) -> None:
         """Remove signal handlers."""
@@ -151,7 +154,9 @@ class TamaApp(App[None]):
 
     def _start(self, session: GameSession) -> None:
         self.session = session
-        self.main = MainScreen(session, tick_interval=self._tick_interval)
+        self.main = MainScreen(
+            session, tick_interval=self._tick_interval, monochrome=self.monochrome
+        )
         self.push_screen(self.main)
 
     def _install_signal_handlers(self) -> None:

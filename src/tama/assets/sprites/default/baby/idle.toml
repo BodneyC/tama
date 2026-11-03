@@ -1,0 +1,24 @@
+# Default baby, idle. Pixel art: see ADR 0003 and /add-sprite.
+fps = 2
+loop = true
+
+[palette]
+k = "#3b2a20"            # outline
+b = "#f6b26b"            # body
+h = "#ffe2b8"            # highlight
+r = "#ef8a8a"            # cheeks
+e = "#2b1d14"            # eyes
+
+[[frames]]
+pixels = """
+....kkkk....
+..kkbbbbkk..
+.kbbhhbbbbk.
+.kbhhbbbbbk.
+kbbebbbbebbk
+kbbebbbbebbk
+kbrbbbbbbrbk
+kbbbbkkbbbbk
+.kbbbbbbbbk.
+..kkkkkkkk..
+"""

@@ -1,0 +1,32 @@
+# Default elder, idle. Pixel art: see ADR 0003 and /add-sprite.
+fps = 2
+loop = true
+
+[palette]
+k = "#3b2a20"            # outline
+b = "#dcb68c"            # faded body
+h = "#ffe2b8"            # highlight
+c = "#fff1dc"            # belly
+r = "#ef8a8a"            # cheeks
+e = "#2b1d14"            # eyes
+w = "#f2f2f2"            # white tufts and brows
+
+[[frames]]
+pixels = """
+..kk..............kk..
+.kwwk............kwwk.
+.kwwbkkkkkkkkkkkkbwwk.
+..kbbbbbbbbbbbbbbbbk..
+.kbbhhbbbbbbbbbbbbbbk.
+.kbhhbbbbbbbbbbbbbbbk.
+kbbbbwwbbbbbbbbwwbbbbk
+kbbbbbebbbbbbbbebbbbbk
+kbbbrrbbbbbbbbbbrrbbbk
+kbbbbbbbbkkkkbbbbbbbbk
+kkbbbbbbbbbbbbbbbbbbkk
+kbkbbbccccccccccbbbkbk
+.k.kbbccccccccccbbk.k.
+...kkkkkkkkkkkkkkkk...
+....kbbk......kbbk....
+....kkkk......kkkk....
+"""

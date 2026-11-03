@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from tama.errors import ConfigError
-from tama.infra.config import Config, load_config
+from tama.infra.config import Config, load_config, no_color_requested
 
 
 def write(tmp_path: Path, text: str) -> Path:
@@ -88,3 +88,10 @@ def test_unset_cli_overrides_keep_config_values() -> None:
     config = Config(bell=True, reduced_motion=True)
 
     assert config.with_overrides() == config
+
+
+@pytest.mark.parametrize(
+    ("env", "expected"), [({}, False), ({"NO_COLOR": ""}, False), ({"NO_COLOR": "1"}, True)]
+)
+def test_no_color_requested(env: dict[str, str], expected: bool) -> None:
+    assert no_color_requested(env) is expected

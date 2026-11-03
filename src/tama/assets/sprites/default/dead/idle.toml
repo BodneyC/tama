@@ -1,0 +1,28 @@
+# Default dead, idle. Pixel art: see ADR 0003 and /add-sprite.
+fps = 2
+loop = true
+
+[palette]
+k = "#4a4a4a"            # outline
+g = "#a9a9a9"            # stone
+s = { color = "#a9a9a9", shade = "light" }    # weathered stone
+d = "#6b6b6b"            # carved cross
+f = "#6aa84f"            # grass
+
+[[frames]]
+pixels = """
+.....kkkkkk.....
+...kkggggggkk...
+..kggggddggggk..
+..kggggddggggk..
+..kggddddddggk..
+..kggddddddggk..
+..kggggddggggk..
+..kggggddggggk..
+..kssggggggssk..
+..kssggggggssk..
+..kggggggggggk..
+..kkkkkkkkkkkk..
+.ffffffffffffff.
+ffffffffffffffff
+"""

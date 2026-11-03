@@ -3,7 +3,9 @@
 Precedence: CLI flags (``Config.with_overrides``) > config file (``load_config``) > defaults.
 """
 
+import os
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import time, timedelta
 from pathlib import Path
@@ -91,6 +93,11 @@ def load_config(path: Path) -> Config:
         ),
         theme=_pick(parsed.theme, defaults.theme),
     )
+
+
+def no_color_requested(env: Mapping[str, str] = os.environ) -> bool:
+    """Whether the user asked for no colour (https://no-color.org: set and non-empty)."""
+    return bool(env.get("NO_COLOR"))
 
 
 def _pick[T](value: T | None, default: T) -> T:

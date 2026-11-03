@@ -7,8 +7,11 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import pytest
+from textual.content import Content
+from textual.widgets import Static
 
-from tama.domain.stage import DeathCause, LifeStage
+from tama.domain.animation import AnimationKey
+from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError
 from tama.infra.clock import FakeClock
@@ -17,6 +20,7 @@ from tama.ui.app import EXIT_ERROR
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
+from tama.ui.sprites import load_sprite
 from tests.factories import FIXED_NOW
 from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, repo_with, text
@@ -155,6 +159,26 @@ async def test_lights_toggle_and_dim_the_stage() -> None:
         assert app.session is not None
         assert not app.session.pet.lights_on
         assert app.screen.query_one("PetStage").has_class("lights-off")
+
+
+async def test_sprite_is_drawn_in_colour_by_default() -> None:
+    app = make_app(repo_with())
+    async with app.run_test():
+        sprite = app.screen.query_one("#sprite", Static).render()
+
+        assert isinstance(sprite, Content)
+        assert sprite.spans
+        assert "█" in sprite.plain or "▀" in sprite.plain
+
+
+async def test_monochrome_sprite_has_no_colours() -> None:
+    app = make_app(repo_with(), monochrome=True)
+    async with app.run_test():
+        sprite = app.screen.query_one("#sprite", Static).render()
+
+        assert isinstance(sprite, Content)
+        assert sprite.plain.strip()
+        assert all(not span.style for span in sprite.spans)
 
 
 async def test_sleeping_pet_shows_zzz() -> None:
@@ -370,7 +394,8 @@ async def test_dead_pet_shows_a_tombstone_and_refuses_care() -> None:
     app = make_app(repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE))
     notes = Notes(app)
     async with app.run_test() as pilot:
-        assert "RIP" in text(app, "#sprite")
+        tombstone = load_sprite(Variant.DEFAULT, LifeStage.DEAD, AnimationKey.IDLE)
+        assert text(app, "#sprite") == tombstone.frames(color=True)[0].plain
 
         await pilot.press("c")
 

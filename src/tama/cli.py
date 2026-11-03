@@ -9,7 +9,7 @@ import typer
 from tama import __version__
 from tama.errors import ConfigError, InvalidArgumentError, SaveError, SaveNotFoundError
 from tama.infra.clock import Clock, ScaledClock, SystemClock, local_timezone
-from tama.infra.config import Config, load_config
+from tama.infra.config import Config, load_config, no_color_requested
 from tama.infra.logging import configure_logging
 from tama.infra.paths import log_dir, resolve_config_path, resolve_save_path
 from tama.persistence.repository import JsonSaveRepository
@@ -105,6 +105,7 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
         start_new=new,
         bell=config.bell,
         reduced_motion=config.reduced_motion,
+        monochrome=no_color_requested(),
     )
     tui.run()
     raise typer.Exit(code=tui.return_code or 0)

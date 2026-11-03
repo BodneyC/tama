@@ -6,6 +6,7 @@ Regenerate with ``uv run pytest tests/ui/snapshots --snapshot-update`` and revie
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+import pytest
 from textual.pilot import Pilot
 
 from tama.domain.stage import DeathCause, LifeStage
@@ -61,6 +62,19 @@ def test_asleep_with_lights_off(snap_compare: SnapCompare) -> None:
 def test_dead_pet(snap_compare: SnapCompare) -> None:
     app = make_app(repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE))
     assert snap_compare(app)
+
+
+def test_main_screen_monochrome(snap_compare: SnapCompare) -> None:
+    app = make_app(
+        repo_with(stats=Stats(hunger=20, happiness=45, energy=70), poop_count=1), monochrome=True
+    )
+    assert snap_compare(app)
+
+
+@pytest.mark.parametrize("stage", [s for s in LifeStage if s is not LifeStage.DEAD])
+def test_idle_sprite_per_stage(snap_compare: SnapCompare, stage: LifeStage) -> None:
+    app = make_app(repo_with(stage=stage))
+    assert snap_compare(app, terminal_size=(60, 20))
 
 
 def test_terminal_too_small(snap_compare: SnapCompare) -> None:

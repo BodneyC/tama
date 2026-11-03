@@ -14,7 +14,7 @@ from tama.domain.animation import AnimationKey
 from tama.domain.pet import MAX_NAME_LENGTH, validate_name
 from tama.domain.stage import LifeStage, Variant
 from tama.errors import InvalidArgumentError
-from tama.ui.sprites import load_frames
+from tama.ui.sprites import load_sprite
 
 NAME_RULE = f"Names are 1-{MAX_NAME_LENGTH} printable characters."
 
@@ -40,10 +40,17 @@ class NewPetScreen(Screen[str]):
 
     BINDINGS: ClassVar[list[BindingType]] = [Binding("escape", "dismiss", "Quit")]
 
+    def __init__(self, *, monochrome: bool = False) -> None:
+        """Draw the egg without colour if ``monochrome``."""
+        super().__init__()
+        self._color = not monochrome
+
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
-        egg = load_frames(Variant.DEFAULT, LifeStage.EGG, AnimationKey.IDLE)[0]
+        egg = load_sprite(Variant.DEFAULT, LifeStage.EGG, AnimationKey.IDLE).frames(
+            color=self._color
+        )[0]
         with Vertical(id="new-pet"):
             yield Static("A new egg has appeared!", classes="dialog-title")
             yield Static(egg, id="egg", markup=False)

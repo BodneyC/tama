@@ -63,6 +63,15 @@ def test_plain_tama_launches_the_app_with_defaults() -> None:
     assert kwargs["start_new"] is False
     assert kwargs["bell"] is False
     assert kwargs["reduced_motion"] is False
+    assert kwargs["monochrome"] is False
+
+
+def test_no_color_environment_draws_monochrome(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NO_COLOR", "1")
+
+    runner.invoke(app, [])
+
+    assert launched().kwargs["monochrome"] is True
 
 
 def test_save_path_option(tmp_path: Path) -> None:

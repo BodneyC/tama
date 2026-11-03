@@ -53,20 +53,24 @@ class MainScreen(Screen[None]):
         Binding("q", "app.quit_game", "Quit"),
     ]
 
-    def __init__(self, session: GameSession, *, tick_interval: float | None = None) -> None:
+    def __init__(
+        self, session: GameSession, *, tick_interval: float | None = None, monochrome: bool = False
+    ) -> None:
         """Show ``session``'s pet, ticking it every ``tick_interval`` seconds (if given).
 
         The screen owns the timer so ticking stops as soon as the screen goes away.
+        ``monochrome`` draws sprites without colour (``NO_COLOR``).
         """
         super().__init__()
         self.session = session
         self._tick_interval = tick_interval
+        self._monochrome = monochrome
 
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
         yield PetHeader()
-        yield PetStage()
+        yield PetStage(monochrome=self._monochrome)
         yield Static(
             f"Terminal too small: tama needs at least {MIN_WIDTH}x{MIN_HEIGHT}.",
             id="too-small",
