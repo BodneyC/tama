@@ -84,7 +84,8 @@ src/tama/
 
 tools/sprites/             # dev only, not shipped
 ├── kit.py                 # grid ops, transformations, animation recipes, pixel vocabulary
-├── tama.py                # one module per species: base grids + dark/light palette
+├── species.py             # Species (grids + palettes) → every animation file
+├── tama.py, owl.py, bear.py  # one module per species: base grids + dark/light palette
 ├── overlays.py
 └── generate.py            # python -m tools.sprites.generate
 ```

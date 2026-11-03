@@ -28,5 +28,5 @@ species between launches. A pet's look also depends on its species' palette and 
 - Adding a species is purely an art change (ADR 0004). It becomes selectable as soon as its
   directory exists.
 - Old saves keep working: they load as tamas.
-- Choosing a species on the name prompt (not just the CLI) is a possible later addition and
-  would need no domain or persistence change.
+- The name prompt also lets the player choose the species (`↑`/`↓`), starting from
+  `--species`. This needed no domain or persistence change.

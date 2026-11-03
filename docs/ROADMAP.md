@@ -111,13 +111,15 @@ Different-shaped pets (owl, bear, ...) using the per-species layout from ADR 000
       fixture, and the v1 fixture still loading
 - [x] `tama.ui.sprites.species_of(pet)` returns the pet's species; `TamaApp.species` follows the
       loaded pet (and `refresh_css()` on change) so species UI colours apply
-- [ ] `tools/sprites/owl.py`: base grids for every stage (pixel vocabulary), dark/light palette,
-      optional `[ui]` accent; registered in `generate.py`
-- [ ] `tools/sprites/bear.py`: likewise
-- [ ] Snapshots: each species' stages on dark and light themes, reviewed as images
+- [x] `tools/sprites/owl.py`: base grids for every stage (pixel vocabulary), dark/light palette,
+      optional `[ui]` accent; registered in `generate.py` (shared assembly in `species.py`)
+- [x] `tools/sprites/bear.py`: likewise
+- [x] Snapshots: each species' stages on dark and light themes, reviewed as images
+      (`test_species_snapshots.py`: a line-up per species × theme × colour/monochrome, plus
+      each species' themed status dialog)
 - [x] Species shown in the status dialog
-- [ ] Species shown in `tama status` output
-- [ ] Optional: choose the species on the name prompt too (not only via the CLI)
+- [x] Species shown in `tama status` output
+- [x] Optional: choose the species on the name prompt too (`↑`/`↓`, not only via the CLI)
 
 **Accept:** a new pet can hatch as an owl or a bear, renders correctly in both theme modes and
 monochrome, and an old v1 save still loads as a `tama`.

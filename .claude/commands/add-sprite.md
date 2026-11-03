@@ -102,6 +102,10 @@ The kit's transformations assume these roles; keep them when drawing a new speci
 `k` outline (closed eyes, frowns), `b` body, `e` eyes, `m` mouth, `h` highlight, `c` belly,
 `r` cheeks, `x` sparkle/flash, `o` egg outline/cracks, `l` egg shell. Any other character is
 free for species-specific details (crowns, feathers, stripes...). Colours are per species.
+Eyes (`e`) must be one pixel wide and sit in `b` or `h`: blinking and glancing fill the eye's
+old spot with whatever it sat in, so an owl's golden `h` irises stay intact. The mouth (`m`)
+opens downwards into `b`, `c` or `r`, so keep one of those below it (the bear's bow tie sits
+lower for this reason).
 
 ## Workflows
 
@@ -112,13 +116,18 @@ free for species-specific details (crowns, feathers, stripes...). Colours are pe
 or a recipe in `kit.py` (`living()`, `hatch()`, `wobble()`, transformations), then regenerate.
 
 **Add a species (owl, bear, ...):**
-1. Copy `tools/sprites/tama.py` to `tools/sprites/<species>.py`; set `NAME`, draw base grids
-   for every stage (egg → dead) using the pixel vocabulary, and give it a `PALETTE` with dark
-   and light values (plus `UI` overrides if it should theme the app).
+1. Copy `tools/sprites/owl.py` or `bear.py` to `tools/sprites/<species>.py`; set `NAME`, draw
+   base grids for every stage (egg → dead) using the pixel vocabulary, and give it a `PALETTE`
+   with dark and light values (plus `UI` overrides if it should theme the app). Describe it as
+   a `Species` (`tools/sprites/species.py`): sick and per-variant palette overrides, and
+   `looks` that redraw good/scruffy adults (owl: scholar's cap; bear: bow tie).
 2. Add its `build` to `COLLECTIONS` in `tools/sprites/generate.py`.
-3. Regenerate. The tests require every SPEC §5.2 animation for every species directory.
-4. Play it: `tama --new --species <species>` (it appears in `tama --list-species` as soon as
-   `sprites/<species>/base.toml` exists).
+3. Regenerate. The tests require every SPEC §5.2 animation for every species directory; update
+   `test_shipped_species` in `tests/unit/test_sprites.py`.
+4. Snapshot it: `test_species_lineup` picks up every species automatically (dark/light ×
+   colour/monochrome); add it to nothing, but review the new snapshots as images.
+5. Play it: `tama --new --species <species>`, or `↑`/`↓` on the name prompt (it appears in
+   `tama --list-species` as soon as `sprites/<species>/base.toml` exists).
 
 Hand-drawn species are fine too: create `sprites/<species>/` with `base.toml` and files by hand,
 and don't add it to the generator (which only rewrites collections it owns).

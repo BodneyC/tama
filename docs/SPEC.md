@@ -100,7 +100,8 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 
 Dialog keys: Feed menu `m` meal / `s` snack / `Esc` cancel. Mini-game `←`/`→` guess, `Enter`
 when finished, `Esc` gives up (no effect on the pet). Status/Help close with `Esc` (or their own
-key). On the name prompt, `Esc` quits without creating a pet.
+key). On the name prompt, `↑`/`↓` choose the animal (starting from `--species`, else `tama`;
+the egg changes to match) and `Esc` quits without creating a pet.
 
 Refused actions play a short "shake head" animation and show a toast explaining why.
 A dead pet refuses everything; an egg refuses feeding, play, discipline and medicine.
@@ -201,14 +202,15 @@ config, which overrides defaults.
 ```
 tama                       # play (load or create)
 tama --new                 # start over (confirmation prompt if a live pet exists)
-tama --species owl         # which animal hatches from a new egg (with --new to replace a pet);
+tama --species owl         # which animal the name prompt starts on (with --new to replace a pet);
                            # an existing pet can't change species. Default: tama
 tama --list-species        # the animals that have art
 tama --save-path PATH
 tama --speed 60            # debug time multiplier (hidden in --help)
 tama --seed 1234           # deterministic RNG for new pets (debug)
 tama --reduced-motion / --quiet
-tama status                # print one-line pet status without the TUI (good for shell prompts);
+tama status                # print one-line pet status without the TUI (good for shell prompts),
+                           # e.g. "Mochi · child owl · 1h 0m · hunger 80 · ...";
                            # read-only. Exit 0 ok, 1 no pet yet, 2 unreadable save / bad config
 tama --version
 ```
