@@ -40,7 +40,8 @@ If `uv` is missing: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 ```sh
 uv sync                                  # install deps (incl. dev group) into .venv
 uv run tama                              # run the game
-uv run textual run --dev src/tama/ui/app.py # run with Textual devtools (pair with `uv run textual console`)
+TEXTUAL=devtools uv run tama           # run with Textual devtools (pair with `uv run textual console`)
+uv run tama --save-path /tmp/t.json --speed 600   # quick manual play-through on a throwaway save
 
 uv run ruff format .                     # format
 uv run ruff check . --fix                # lint
@@ -104,4 +105,5 @@ See `docs/ARCHITECTURE.md` for detail. Summary:
 - When a decision deviates from or extends these docs, update the docs in the same change and
   add an ADR for anything architectural.
 - If a UI snapshot changes, inspect the SVG diff before accepting with `--snapshot-update`.
-- Do not commit `.venv/`, save files, logs, or `__snapshots__` reports other than the `.svg`s.
+- Do not commit `.venv/`, save files, logs, or `snapshot_report.html`; do commit the snapshot
+  files under `__snapshots__/` (SVG content, `.raw` extension).

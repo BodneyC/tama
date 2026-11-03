@@ -65,12 +65,15 @@ src/tama/
 │   ├── clock.py           # Clock protocol, SystemClock, FakeClock (tests), ScaledClock(--speed)
 │   ├── paths.py           # save/config/log paths (platformdirs + CLI/env overrides)
 │   ├── config.py          # Config dataclass, TOML loader, precedence merge
-│   └── logging.py         # file logging setup
+│   └── logging.py         # rotating file log (never the terminal)
 ├── ui/
-│   ├── app.py             # TamaApp(App): bindings, screen stack, tick timer
-│   ├── app.tcss           # Textual CSS
-│   ├── screens/           # main, status, feed_menu, minigame, away_summary, memorial, help, error, new_pet
-│   ├── widgets/           # pet_view (animated sprite), stat_bar, header, poop_layer, toast helpers
+│   ├── app.py             # TamaApp(App): load/hatch, tick timer, quit + signal saves
+│   ├── app.tcss           # Textual CSS (theme variables only)
+│   ├── screens/
+│   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action
+│   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
+│   │   └── dialogs.py     # Help, Status, FeedMenu, MiniGame modals
+│   ├── widgets/           # pet_header (name/stats/attention), pet_stage (sprite + indicators)
 │   └── sprites.py         # load + cache frames from assets via importlib.resources
 └── assets/sprites/        # <variant>/<stage>/<animation>.txt (frames separated by a line "---")
 ```

@@ -97,6 +97,10 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
 
+Dialog keys: Feed menu `m` meal / `s` snack / `Esc` cancel. Mini-game `←`/`→` guess, `Enter`
+when finished, `Esc` gives up (no effect on the pet). Status/Help close with `Esc` (or their own
+key). On the name prompt, `Esc` quits without creating a pet.
+
 Refused actions play a short "shake head" animation and show a toast explaining why.
 A dead pet refuses everything; an egg refuses feeding, play, discipline and medicine.
 

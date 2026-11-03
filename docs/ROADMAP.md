@@ -57,12 +57,13 @@ events match expectations; file on disk is valid.
 
 ## M4 — TUI foundation
 
-- [ ] `TamaApp` with screen stack, bindings, 1 s tick timer, `app.tcss`
-- [ ] `MainScreen` with header (name/stage/age/stat icons), stage area, footer
-- [ ] `NewPetScreen` (name input with validation), `HelpScreen`, `StatusScreen` (stat bars)
-- [ ] All actions wired; refusal toasts; quit saves
-- [ ] Terminal-too-small notice; SIGTERM/SIGHUP save
-- [ ] Pilot tests for each binding; first snapshot tests
+- [x] `TamaApp` with screen stack, bindings, 1 s tick timer, `app.tcss`
+- [x] `MainScreen` with header (name/stage/age/stat icons), stage area, footer
+- [x] `NewPetScreen` (name input with validation), `HelpScreen`, `StatusScreen` (stat bars)
+- [x] All actions wired (incl. basic `FeedMenu` and `MiniGameScreen`); refusal toasts; quit saves
+- [x] Terminal-too-small notice; SIGTERM/SIGHUP save
+- [x] Pilot tests for each binding; first snapshot tests
+- [x] `tama` launches the TUI (`--new`, `--reduced-motion`, `--quiet`, hidden `--speed`/`--seed`)
 
 **Accept:** Playable end-to-end with a static (single-frame) sprite.
 
@@ -79,11 +80,12 @@ events match expectations; file on disk is valid.
 
 ## M6 — Remaining screens & polish
 
-- [ ] `FeedMenu`, `MiniGameScreen`, `AwaySummaryScreen`, `MemorialScreen`, `ErrorScreen`
+- [ ] `AwaySummaryScreen` (currently a toast), `MemorialScreen`, `ErrorScreen` (currently the app
+      exits with a message); animate `FeedMenu` and `MiniGameScreen` (basic versions from M4)
 - [ ] Attention calls with blinking indicator + optional bell
 - [ ] Balancing pass: play at `--speed 60` for a full life; adjust `Balance` only
       (known: an untreated sick child dies in ~2.5 h — sickness may need to be gentler)
-- [ ] Logging to file; no stray terminal output
+- [x] Logging to file; no stray terminal output (landed in M4)
 
 **Accept:** A complete life can be played start to finish; every screen has a snapshot test.
 

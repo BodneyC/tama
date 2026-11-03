@@ -8,7 +8,7 @@
 | Persistence | `tests/unit/persistence/` | pytest, `tmp_path` | Round-trip, atomicity, `.bak` fallback, corrupt files, every migration. |
 | Services | `tests/unit/services/` | pytest, `FakeClock`, in-memory repo | Session ticking, autosave policy, offline catch-up. |
 | UI behaviour | `tests/ui/` | `App.run_test()` + `Pilot`, pytest-asyncio | Press keys, assert on screen/widget state and session state. |
-| UI snapshots | `tests/ui/snapshots/` | pytest-textual-snapshot | SVG snapshots of key screens at fixed size (80×24) with fixed clock/seed and animation timers paused. |
+| UI snapshots | `tests/ui/snapshots/` | pytest-textual-snapshot | SVG snapshots (stored as `__snapshots__/**/*.raw`) of key screens at 80×24 with a `FakeClock`, fixed seed and no tick timer. |
 | Integration | `tests/integration/` | pytest, Typer `CliRunner` | CLI flags, `tama status`, full load→play→save→reload cycle. |
 | Assets | `tests/unit/test_sprites.py` | pytest (parametrised) | Every sprite file parses; frames are rectangular & consistent; every (stage, animation) required by `domain.animation` exists for the default variant. |
 
@@ -24,8 +24,14 @@
   platformdirs env to `tmp_path`.
 - Hypothesis: use `@settings(deadline=None)` for simulation tests; register a `ci` profile with
   more examples, selected via `HYPOTHESIS_PROFILE=ci`.
-- UI tests: give the app a `FakeClock` and an `animations_enabled=False` (or a manual frame-step
-  hook) so snapshots are deterministic. Use `await pilot.pause()` after key presses.
+- UI tests: build the app with `tests/ui/helpers.make_app` (in-memory save, `FakeClock`,
+  `tick_interval=None`, no signal handlers) and call `app.tick()` by hand. Capture toasts with
+  `Notes(app)`. Use `await pilot.pause()` after key presses that push or pop screens.
+- Reviewing snapshots: Pilot tests can't see layout bugs (an empty dialog still "contains"
+  its text), so look at every new or changed snapshot. Render one to PNG with
+  `uvx --from cairosvg cairosvg snap.svg -o snap.png` (copy the `.raw` to `.svg` first; emoji
+  and box glyphs show as boxes there, which is a font limitation, not a bug).
+- Snapshot files are byte-exact: pre-commit's whitespace hooks skip `__snapshots__/`.
 - Mark slow tests `@pytest.mark.slow`; CI runs everything, local default runs everything too
   (they should stay fast — budget for whole suite: < 30 s).
 
