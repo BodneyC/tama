@@ -109,6 +109,13 @@ NewPetScreen {
   margin-bottom: 1;
 }
 
+#species {
+  width: 100%;
+  content-align: center middle;
+  color: $text-muted;
+  margin-bottom: 1;
+}
+
 #name-error {
   height: 1;
   color: $error;

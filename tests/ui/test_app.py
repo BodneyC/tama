@@ -93,6 +93,33 @@ async def test_new_pet_hatches_as_the_chosen_species() -> None:
         assert repo.game.pet.species == "owl"
 
 
+@pytest.mark.parametrize(("keys", "species"), [(["up"], "owl"), (["down"], "bear"), ([], "tama")])
+async def test_species_can_be_chosen_on_the_name_prompt(keys: list[str], species: str) -> None:
+    # Shipped species in order: bear, owl, tama; the prompt starts on tama and wraps around.
+    repo = InMemorySaveRepository()
+    app = make_app(repo)
+    async with app.run_test() as pilot:
+        await pilot.press(*keys, *"Mo")
+        assert text(app, "#species").startswith(f"Species: {species}")
+        egg = load_sprite(species, Variant.DEFAULT, LifeStage.EGG, AnimationKey.WOBBLE)
+        assert app.screen.query_one(PetView).current == egg
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert repo.game is not None
+        assert repo.game.pet.name == "Mo"
+        assert repo.game.pet.species == species
+        assert app.species == species
+
+
+async def test_species_choice_starts_from_the_command_line() -> None:
+    app = make_app(new_pet_species="owl")
+    async with app.run_test() as pilot:
+        await pilot.press("down")
+        assert text(app, "#species").startswith("Species: tama")
+
+
 async def test_loaded_pet_sets_the_ui_species() -> None:
     app = make_app(repo_with(species="owl"))
     async with app.run_test():

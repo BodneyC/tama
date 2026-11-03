@@ -15,7 +15,7 @@ from tama.persistence.repository import SaveRepository
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.colours import Mode
 from tama.ui.screens.main import MainScreen
-from tama.ui.screens.new_pet import NewPetScreen
+from tama.ui.screens.new_pet import NewPet, NewPetScreen
 from tama.ui.theme import css_variables, ui_palette
 from tama.ui.widgets.pet_view import ViewOptions
 
@@ -34,7 +34,8 @@ class TamaApp(App[None]):
         settings: Balance, time zone, offline cap and autosave policy.
         seed: RNG seed for a newly created pet (``None`` for a random one).
         start_new: Hatch a new pet even if a save exists (``--new``).
-        new_pet_species: The species a newly hatched pet will be (``--species``).
+        new_pet_species: The animal the name prompt starts on (``--species``); the player may
+            pick another there.
         tick_interval: Seconds between ticks; ``None`` disables the timer (tests tick by hand).
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
         bell: Ring the terminal bell on new attention calls (used from M6).
@@ -163,18 +164,18 @@ class TamaApp(App[None]):
                 timeout=15,
             )
 
-    def _hatch(self, name: str | None) -> None:
-        if name is None:
+    def _hatch(self, chosen: NewPet | None) -> None:
+        if chosen is None:
             self.exit()
             return
         try:
             session = GameSession.create(
-                name,
+                chosen.name,
                 repo=self._repo,
                 clock=self._clock,
                 settings=self._settings,
                 seed=self._seed,
-                species=self.species,
+                species=chosen.species,
             )
         except SaveWriteError as exc:
             self.exit(return_code=EXIT_ERROR, message=f"tama: could not save your new pet: {exc}")
