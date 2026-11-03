@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.ui import sprites
 from tama.ui.colours import Mode
-from tama.ui.sprites import DEFAULT_SPECIES, UI_KEYS, UiColour, clear_caches
+from tama.ui.sprites import UI_KEYS, UiColour, clear_caches
 from tama.ui.theme import (
     CSS_PREFIX,
     FALLBACK_COLOUR,

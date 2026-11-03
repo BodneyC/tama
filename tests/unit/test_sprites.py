@@ -6,11 +6,11 @@ from pydantic import ValidationError
 from tools.sprites import generate
 
 from tama.domain.animation import AnimationKey
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.domain.stage import LifeStage, Variant
 from tama.ui import sprites
 from tama.ui.colours import LOOKS, Look, Mode
 from tama.ui.sprites import (
-    DEFAULT_SPECIES,
     MAX_HEIGHT,
     MAX_WIDTH,
     PLACEHOLDER,
@@ -425,10 +425,6 @@ def test_sprite_cells_match_frames() -> None:
         assert to_content(sprite.cells(look)[0]) == sprite.frames(look)[0]
 
 
-def test_every_pet_is_the_default_species_for_now() -> None:
-    assert species_of(make_pet()) == DEFAULT_SPECIES
-
-
 # --- Loading & fallbacks (against a temporary sprite root) --------------------------------------
 
 TINY = '[[frames]]\npixels = "kk\\nkk"\n'
@@ -559,3 +555,20 @@ def test_overlay_content_places_overlays_side_by_side() -> None:
 
     one_width = len(one.plain.split("\n")[0])
     assert len(two.plain.split("\n")[0]) == 2 * one_width + 2
+
+
+def test_available_species_lists_directories_with_a_palette(art: Path) -> None:
+    (art / "overlays").mkdir()
+    (art / "overlays" / "base.toml").write_text('[palette]\nk = "#000000"\n', encoding="utf-8")
+    (art / "sketch").mkdir()  # no base.toml: not a usable species
+    (art / "notes.txt").write_text("", encoding="utf-8")
+
+    assert sprites.available_species() == ("critter",)
+
+
+def test_shipped_species() -> None:
+    assert sprites.available_species() == (DEFAULT_SPECIES,)
+
+
+def test_pets_are_drawn_as_their_own_species() -> None:
+    assert species_of(make_pet(species="owl")) == "owl"

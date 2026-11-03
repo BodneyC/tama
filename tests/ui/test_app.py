@@ -11,6 +11,7 @@ from textual.content import Content
 from textual.widgets import Static
 
 from tama.domain.animation import AnimationKey
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError
@@ -21,7 +22,7 @@ from tama.ui.colours import Look, Mode
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, MiniGameScreen, StatusScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
-from tama.ui.sprites import DEFAULT_SPECIES, load_sprite, overlay_content
+from tama.ui.sprites import load_sprite, overlay_content
 from tama.ui.widgets.pet_view import PetView
 from tests.factories import FIXED_NOW
 from tests.fakes import InMemorySaveRepository
@@ -77,6 +78,33 @@ async def test_failing_to_save_a_new_pet_exits_with_an_error() -> None:
         await pilot.press(*"Mochi", "enter")
 
     assert app.return_code == EXIT_ERROR
+
+
+async def test_new_pet_hatches_as_the_chosen_species() -> None:
+    repo = InMemorySaveRepository()
+    app = make_app(repo, new_pet_species="owl")
+    async with app.run_test() as pilot:
+        await pilot.press(*"Hoot", "enter")
+        await pilot.pause()
+
+        assert app.session is not None
+        assert app.session.pet.species == "owl"
+        assert repo.game is not None
+        assert repo.game.pet.species == "owl"
+
+
+async def test_loaded_pet_sets_the_ui_species() -> None:
+    app = make_app(repo_with(species="owl"))
+    async with app.run_test():
+        assert app.species == "owl"
+
+
+async def test_status_shows_the_species() -> None:
+    app = make_app(repo_with())
+    async with app.run_test() as pilot:
+        await pilot.press("s")
+
+        assert "Species    tama" in text(app, "#status-body")
 
 
 async def test_start_new_hatches_even_when_a_save_exists() -> None:

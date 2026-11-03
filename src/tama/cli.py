@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from tama import __version__
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.errors import ConfigError, InvalidArgumentError, SaveError, SaveNotFoundError
 from tama.infra.clock import Clock, ScaledClock, SystemClock, local_timezone
 from tama.infra.config import Config, load_config, no_color_requested
@@ -16,6 +17,7 @@ from tama.persistence.repository import JsonSaveRepository
 from tama.services.describe import status_line
 from tama.services.session import GameSession, SessionSettings
 from tama.ui.app import TamaApp
+from tama.ui.sprites import available_species
 from tama.ui.widgets.pet_view import ViewOptions
 
 app = typer.Typer(add_completion=False, no_args_is_help=False)
@@ -56,6 +58,17 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
     new: Annotated[
         bool, typer.Option("--new", help="Start over with a new egg (asks first).")
     ] = False,
+    species: Annotated[
+        str | None,
+        typer.Option(
+            "--species",
+            metavar="ANIMAL",
+            help="Which animal hatches from a new egg (default: tama). See --list-species.",
+        ),
+    ] = None,
+    list_species: Annotated[
+        bool, typer.Option("--list-species", help="List the animals you can hatch and exit.")
+    ] = False,
     reduced_motion: Annotated[
         bool, typer.Option("--reduced-motion", help="Keep animation to a minimum.")
     ] = False,
@@ -81,6 +94,14 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
     ctx.obj = _Options(save_path=save_path)
     if ctx.invoked_subcommand is not None:
         return
+    if list_species:
+        typer.echo("\n".join(available_species()))
+        raise typer.Exit
+    if species is not None and species not in available_species():
+        choices = ", ".join(available_species())
+        raise typer.BadParameter(
+            f"unknown animal {species!r}; choose from: {choices}", param_hint="--species"
+        )
     try:
         clock: Clock = SystemClock() if speed == 1 else ScaledClock(SystemClock(), speed=speed)
     except InvalidArgumentError as exc:
@@ -90,6 +111,8 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
         bell=False if quiet else None, reduced_motion=True if reduced_motion else None
     )
     repo = JsonSaveRepository(resolve_save_path(save_path))
+    if species is not None and not new:
+        _refuse_to_change_species(repo, species)
     if new and repo.exists():
         replace = typer.confirm(
             "Start over? Your current pet will be replaced (the old save is kept as a backup).",
@@ -104,12 +127,30 @@ def root(  # noqa: PLR0913 - one parameter per CLI option
         settings=SessionSettings.from_config(config, local_timezone()),
         seed=seed,
         start_new=new,
+        new_pet_species=species or DEFAULT_SPECIES,
         bell=config.bell,
         view=ViewOptions(monochrome=no_color_requested(), reduced_motion=config.reduced_motion),
         theme=config.theme,
     )
     tui.run()
     raise typer.Exit(code=tui.return_code or 0)
+
+
+def _refuse_to_change_species(repo: JsonSaveRepository, species: str) -> None:
+    """A pet's species is fixed at hatching: stop if the saved pet is a different animal."""
+    if not repo.exists():
+        return
+    try:
+        pet = repo.load().game.pet
+    except SaveError:
+        return  # the TUI explains unreadable saves
+    if pet.species != species:
+        typer.echo(
+            f"{pet.name} is a {pet.species}; an animal can't change species.\n"
+            f"To start over with a new {species} egg: tama --new --species {species}",
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_ERROR)
 
 
 @app.command()

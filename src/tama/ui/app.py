@@ -8,6 +8,7 @@ from typing import ClassVar, override
 from textual.app import App
 from textual.binding import Binding, BindingType
 
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.errors import SaveError, SaveWriteError
 from tama.infra.clock import Clock
 from tama.persistence.repository import SaveRepository
@@ -15,7 +16,6 @@ from tama.services.session import GameSession, SessionSettings
 from tama.ui.colours import Mode
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.new_pet import NewPetScreen
-from tama.ui.sprites import DEFAULT_SPECIES
 from tama.ui.theme import css_variables, ui_palette
 from tama.ui.widgets.pet_view import ViewOptions
 
@@ -34,6 +34,7 @@ class TamaApp(App[None]):
         settings: Balance, time zone, offline cap and autosave policy.
         seed: RNG seed for a newly created pet (``None`` for a random one).
         start_new: Hatch a new pet even if a save exists (``--new``).
+        new_pet_species: The species a newly hatched pet will be (``--species``).
         tick_interval: Seconds between ticks; ``None`` disables the timer (tests tick by hand).
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
         bell: Ring the terminal bell on new attention calls (used from M6).
@@ -56,6 +57,7 @@ class TamaApp(App[None]):
         settings: SessionSettings,
         seed: int | None = None,
         start_new: bool = False,
+        new_pet_species: str = DEFAULT_SPECIES,
         tick_interval: float | None = 1.0,
         handle_signals: bool = True,
         bell: bool = False,
@@ -69,6 +71,7 @@ class TamaApp(App[None]):
         self._settings = settings
         self._seed = seed
         self._start_new = start_new
+        self.species = new_pet_species
         self._tick_interval = tick_interval
         self._handle_signals = handle_signals
         self.bell_enabled = bell
@@ -84,7 +87,7 @@ class TamaApp(App[None]):
         self.main: MainScreen | None = None
 
     species: str = DEFAULT_SPECIES
-    """Whose UI colours (``base.toml`` ``[ui]``) to use; set before CSS is built."""
+    """Whose UI colours (``base.toml`` ``[ui]``) to use: the new pet's, then the loaded pet's."""
 
     @override
     def get_theme_variable_defaults(self) -> dict[str, str]:
@@ -103,7 +106,7 @@ class TamaApp(App[None]):
         if self._repo.exists() and not self._start_new:
             self._load()
         else:
-            self.push_screen(NewPetScreen(self.view), self._hatch)
+            self.push_screen(NewPetScreen(self.view, self.species), self._hatch)
 
     def on_unmount(self) -> None:
         """Remove signal handlers."""
@@ -166,7 +169,12 @@ class TamaApp(App[None]):
             return
         try:
             session = GameSession.create(
-                name, repo=self._repo, clock=self._clock, settings=self._settings, seed=self._seed
+                name,
+                repo=self._repo,
+                clock=self._clock,
+                settings=self._settings,
+                seed=self._seed,
+                species=self.species,
             )
         except SaveWriteError as exc:
             self.exit(return_code=EXIT_ERROR, message=f"tama: could not save your new pet: {exc}")
@@ -175,6 +183,9 @@ class TamaApp(App[None]):
 
     def _start(self, session: GameSession) -> None:
         self.session = session
+        if session.pet.species != self.species:
+            self.species = session.pet.species
+            self.refresh_css()  # the species may theme the UI colours
         self.main = MainScreen(session, tick_interval=self._tick_interval, view=self.view)
         self.push_screen(self.main)
 

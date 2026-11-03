@@ -11,10 +11,10 @@ from textual.validation import ValidationResult, Validator
 from textual.widgets import Input, Static
 
 from tama.domain.animation import AnimationKey
-from tama.domain.pet import MAX_NAME_LENGTH, validate_name
+from tama.domain.pet import DEFAULT_SPECIES, MAX_NAME_LENGTH, validate_name
 from tama.domain.stage import LifeStage, Variant
 from tama.errors import InvalidArgumentError
-from tama.ui.sprites import DEFAULT_SPECIES, load_sprite
+from tama.ui.sprites import load_sprite
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 NAME_RULE = f"Names are 1-{MAX_NAME_LENGTH} printable characters."
@@ -41,10 +41,11 @@ class NewPetScreen(Screen[str]):
 
     BINDINGS: ClassVar[list[BindingType]] = [Binding("escape", "dismiss", "Quit")]
 
-    def __init__(self, view: ViewOptions | None = None) -> None:
-        """Show a wobbling egg, drawn with ``view`` options."""
+    def __init__(self, view: ViewOptions | None = None, species: str = DEFAULT_SPECIES) -> None:
+        """Show a wobbling ``species`` egg, drawn with ``view`` options."""
         super().__init__()
         self._view = view or ViewOptions()
+        self._species = species
 
     @override
     def compose(self) -> ComposeResult:
@@ -63,7 +64,7 @@ class NewPetScreen(Screen[str]):
 
     def on_mount(self) -> None:
         """Start the egg wobbling."""
-        wobble = load_sprite(DEFAULT_SPECIES, Variant.DEFAULT, LifeStage.EGG, AnimationKey.WOBBLE)
+        wobble = load_sprite(self._species, Variant.DEFAULT, LifeStage.EGG, AnimationKey.WOBBLE)
         self.query_one(PetView).set_loop(wobble)
 
     @on(Input.Submitted, "#name")

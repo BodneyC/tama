@@ -14,7 +14,7 @@ from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.minigame import Direction, LeftRightGame
-from tama.domain.pet import ZERO, Pet, new_egg
+from tama.domain.pet import DEFAULT_SPECIES, ZERO, Pet, new_egg
 from tama.domain.simulation import advance, skip_to
 from tama.errors import SaveWriteError
 from tama.infra.clock import Clock
@@ -111,7 +111,7 @@ class GameSession:
         self.save_error: SaveWriteError | None = None
 
     @classmethod
-    def create(
+    def create(  # noqa: PLR0913 - explicit dependencies, all keyword-only
         cls,
         name: str,
         *,
@@ -119,15 +119,16 @@ class GameSession:
         clock: Clock,
         settings: SessionSettings,
         seed: int | None = None,
+        species: str = DEFAULT_SPECIES,
     ) -> Self:
-        """Start a new game with a fresh egg and save it immediately.
+        """Start a new game with a fresh ``species`` egg and save it immediately.
 
         Raises:
             InvalidArgumentError: If ``name`` is not a valid pet name.
             SaveWriteError: If the new game could not be saved.
         """
         rng = Random(seed)
-        pet = new_egg(name, clock.now(), rng, settings.balance)
+        pet = new_egg(name, clock.now(), rng, settings.balance, species=species)
         session = cls(pet=pet, rng=rng, repo=repo, clock=clock, settings=settings)
         session.save()
         return session

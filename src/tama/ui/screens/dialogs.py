@@ -50,6 +50,7 @@ def status_text(pet: Pet) -> str:
         for stat, label in _STAT_LABELS.items()
     ]
     details = [
+        f"{'Species':<11}{pet.species}",
         f"{'Stage':<11}{pet.stage.value}",
         f"{'Age':<11}{format_age(pet.age)}",
         f"{'Weight':<11}{pet.weight} g",

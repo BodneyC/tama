@@ -314,3 +314,13 @@ def test_guess_uses_and_persists_the_session_rng(clock: FakeClock) -> None:
     assert game == expected
     assert repo.game is not None
     assert repo.game.rng_state != Random(9).getstate()
+
+
+def test_create_hatches_the_chosen_species(clock: FakeClock) -> None:
+    repo = InMemorySaveRepository()
+
+    session = GameSession.create("Hoot", repo=repo, clock=clock, settings=SETTINGS, species="owl")
+
+    assert session.pet.species == "owl"
+    assert repo.game is not None
+    assert repo.game.pet.species == "owl"

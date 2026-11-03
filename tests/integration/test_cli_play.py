@@ -63,6 +63,7 @@ def test_plain_tama_launches_the_app_with_defaults() -> None:
     assert isinstance(kwargs["settings"], SessionSettings)
     assert kwargs["seed"] is None
     assert kwargs["start_new"] is False
+    assert kwargs["new_pet_species"] == "tama"
     assert kwargs["bell"] is False
     assert kwargs["view"] == ViewOptions()
     assert kwargs["theme"] is None
@@ -168,3 +169,83 @@ def test_app_exit_code_is_propagated() -> None:
     result = runner.invoke(app, [])
 
     assert result.exit_code == EXIT_ERROR
+
+
+# --- Species ------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def owls_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "available_species", lambda: ("owl", "tama"))
+
+
+def test_list_species() -> None:
+    result = runner.invoke(app, ["--list-species"])
+
+    assert result.exit_code == 0
+    assert result.stdout == "tama\n"
+    assert FakeApp.instances == []
+
+
+def test_unknown_species_is_a_usage_error() -> None:
+    result = runner.invoke(app, ["--species", "dragon"])
+
+    assert result.exit_code == 2
+    assert "choose from: tama" in click.unstyle(result.stderr)
+    assert FakeApp.instances == []
+
+
+@pytest.mark.usefixtures("owls_too")
+def test_species_for_a_first_pet() -> None:
+    result = runner.invoke(app, ["--species", "owl"])
+
+    assert result.exit_code == 0
+    assert launched().kwargs["new_pet_species"] == "owl"
+
+
+@pytest.mark.usefixtures("owls_too")
+def test_an_existing_pet_cannot_change_species(tmp_path: Path) -> None:
+    path = tmp_path / "save.json"
+    existing_pet(path)
+
+    result = runner.invoke(app, ["--save-path", str(path), "--species", "owl"])
+
+    assert result.exit_code == EXIT_ERROR
+    assert "Old is a tama" in result.stderr
+    assert "tama --new --species owl" in result.stderr
+    assert FakeApp.instances == []
+
+
+def test_naming_the_existing_species_is_fine(tmp_path: Path) -> None:
+    path = tmp_path / "save.json"
+    existing_pet(path)
+
+    result = runner.invoke(app, ["--save-path", str(path), "--species", "tama"])
+
+    assert result.exit_code == 0
+    assert launched().ran
+
+
+@pytest.mark.usefixtures("owls_too")
+def test_starting_over_with_another_species(tmp_path: Path) -> None:
+    path = tmp_path / "save.json"
+    existing_pet(path)
+
+    result = runner.invoke(
+        app, ["--save-path", str(path), "--new", "--species", "owl"], input="y\n"
+    )
+
+    assert result.exit_code == 0
+    assert launched().kwargs["new_pet_species"] == "owl"
+    assert launched().kwargs["start_new"] is True
+
+
+@pytest.mark.usefixtures("owls_too")
+def test_unreadable_save_is_left_for_the_app_to_explain(tmp_path: Path) -> None:
+    path = tmp_path / "save.json"
+    path.write_text("{ broken", encoding="utf-8")
+
+    result = runner.invoke(app, ["--save-path", str(path), "--species", "owl"])
+
+    assert result.exit_code == 0
+    assert launched().ran

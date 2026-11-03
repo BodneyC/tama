@@ -11,8 +11,9 @@ from textual.containers import Container
 
 from tama.domain.animation import AnimationKey
 from tama.domain.events import Action, Ate, Event, Evolved, FellAsleep, RefusalReason, Refused
+from tama.domain.pet import DEFAULT_SPECIES
 from tama.domain.stage import LifeStage, Variant
-from tama.ui.sprites import DEFAULT_SPECIES, Sprite, load_sprite
+from tama.ui.sprites import Sprite, load_sprite
 from tama.ui.widgets.pet_view import PetView, ViewOptions, steps_per_frame
 from tests.factories import make_pet
 

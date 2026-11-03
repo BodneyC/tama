@@ -49,7 +49,6 @@ from tama.ui.colours import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SPECIES = "tama"
 OVERLAYS = "overlays"
 TRANSPARENT = "."
 MONO_INK_THRESHOLD = 0.45
@@ -449,13 +448,20 @@ def overlay_content(names: Sequence[str], look: Look) -> Content:
 
 
 def species_of(pet: Pet) -> str:
-    """Which species' art to draw ``pet`` with.
+    """Which species' art to draw ``pet`` with."""
+    return pet.species
 
-    Every pet is a ``tama`` until the domain tracks species (see the roadmap); this is the one
-    place to change when it does.
-    """
-    del pet
-    return DEFAULT_SPECIES
+
+def available_species() -> tuple[str, ...]:
+    """Species that have art (a directory with a ``base.toml``), sorted."""
+    root = sprite_root()
+    return tuple(
+        sorted(
+            entry.name
+            for entry in root.iterdir()
+            if entry.is_dir() and entry.name != OVERLAYS and (entry / "base.toml").is_file()
+        )
+    )
 
 
 def clear_caches() -> None:

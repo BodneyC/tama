@@ -19,9 +19,9 @@ from textual.widgets import Static
 
 from tama.domain.animation import AnimationKey, looping_animation, reaction_animation
 from tama.domain.events import Event
-from tama.domain.pet import Pet
+from tama.domain.pet import DEFAULT_SPECIES, Pet
 from tama.ui.colours import Look, Mode
-from tama.ui.sprites import DEFAULT_SPECIES, PLACEHOLDER, Sprite, load_sprite, species_of
+from tama.ui.sprites import PLACEHOLDER, Sprite, load_sprite, species_of
 
 STEP_SECONDS = 0.1
 BLINK_EVERY = (30, 70)
