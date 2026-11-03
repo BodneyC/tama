@@ -118,7 +118,7 @@ def test_status_line_for_a_content_pet() -> None:
     pet = make_pet(stats=Stats(hunger=80, happiness=70, energy=60, hygiene=90, health=100))
 
     assert status_line(pet, DEFAULT_BALANCE) == (
-        "Mochi · child · 1h 0m · hunger 80 · happy 70 · energy 60 · clean 90 · health 100"
+        "Mochi · child tama · 1h 0m · hunger 80 · happy 70 · energy 60 · clean 90 · health 100"
     )
 
 
@@ -132,8 +132,14 @@ def test_status_line_for_egg_and_dead_pets() -> None:
     egg = make_pet(stage=LifeStage.EGG)
     dead = make_pet(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
 
-    assert status_line(egg, DEFAULT_BALANCE) == "Mochi · egg · about to hatch"
-    assert status_line(dead, DEFAULT_BALANCE) == "Mochi · passed away (old age) at 15d 0h"
+    assert status_line(egg, DEFAULT_BALANCE) == "Mochi · tama egg · about to hatch"
+    assert status_line(dead, DEFAULT_BALANCE) == "Mochi · tama · passed away (old age) at 15d 0h"
+
+
+def test_status_line_names_the_species() -> None:
+    assert status_line(make_pet(species="owl"), DEFAULT_BALANCE).startswith("Mochi · child owl · ")
+    egg = make_pet(species="bear", stage=LifeStage.EGG)
+    assert status_line(egg, DEFAULT_BALANCE) == "Mochi · bear egg · about to hatch"
 
 
 def test_unknown_event_types_fall_back_to_class_name() -> None:

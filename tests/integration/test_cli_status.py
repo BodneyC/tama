@@ -31,7 +31,7 @@ def test_status_prints_one_line(tmp_path: Path) -> None:
     result = runner.invoke(app, ["--save-path", str(path), "status"])
 
     assert result.exit_code == 0
-    assert result.stdout == "Mochi · egg · about to hatch\n"
+    assert result.stdout == "Mochi · tama egg · about to hatch\n"
 
 
 def test_status_uses_save_path_from_environment() -> None:

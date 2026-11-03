@@ -130,13 +130,13 @@ def status_line(pet: Pet, balance: Balance) -> str:
     """One line describing the pet, suitable for a shell prompt."""
     if pet.stage is LifeStage.DEAD:
         cause = str(pet.cause_of_death).replace("_", " ")
-        return f"{pet.name} · passed away ({cause}) at {format_age(pet.age)}"
+        return f"{pet.name} · {pet.species} · passed away ({cause}) at {format_age(pet.age)}"
     if pet.stage is LifeStage.EGG:
-        return f"{pet.name} · egg · about to hatch"
+        return f"{pet.name} · {pet.species} egg · about to hatch"
     s = pet.stats
     parts = [
         pet.name,
-        pet.stage.value,
+        f"{pet.stage.value} {pet.species}",
         format_age(pet.age),
         f"hunger {s.hunger}",
         f"happy {s.happiness}",
