@@ -9,6 +9,7 @@ import pytest
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.context import Context
 from tama.domain.events import Action, Ate, Evolved, Played, RefusalReason
+from tama.domain.minigame import Direction, LeftRightGame
 from tama.domain.pet import new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage
@@ -297,3 +298,19 @@ def test_default_settings() -> None:
     assert SETTINGS.balance == DEFAULT_BALANCE
     assert SETTINGS.tz is UTC
     assert SETTINGS.offline_cap == timedelta(hours=72)
+
+
+# --- Mini-game --------------------------------------------------------------------------------
+
+
+def test_guess_uses_and_persists_the_session_rng(clock: FakeClock) -> None:
+    repo = saved(seed=9)
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    game = session.guess(LeftRightGame(), Direction.LEFT)
+    session.close()
+
+    expected = LeftRightGame().guess(Direction.LEFT, Random(9))
+    assert game == expected
+    assert repo.game is not None
+    assert repo.game.rng_state != Random(9).getstate()
