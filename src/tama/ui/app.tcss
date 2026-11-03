@@ -76,6 +76,10 @@ ModalScreen {
   background: $surface;
 }
 
+.dialog > Static {
+  width: auto;
+}
+
 .dialog-title {
   text-style: bold;
   color: $accent;

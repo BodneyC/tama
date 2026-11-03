@@ -68,7 +68,7 @@ class MainScreen(Screen[None]):
             id="too-small",
             markup=False,
         )
-        yield Footer()
+        yield Footer(compact=True)
 
     def on_mount(self) -> None:
         """Draw the pet."""

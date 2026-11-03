@@ -38,6 +38,7 @@ class TamaApp(App[None]):
 
     CSS_PATH = "app.tcss"
     TITLE = "tama"
+    ENABLE_COMMAND_PALETTE = False
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+c", "quit_game", "Quit", show=False, priority=True)
     ]
