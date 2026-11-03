@@ -39,6 +39,16 @@ def test_migration_does_not_mutate_input() -> None:
     assert raw == {"schema_version": 1, "x": 1}
 
 
+@pytest.mark.parametrize(
+    ("pet", "expected"),
+    [({"name": "Mochi"}, {"species": "tama", "name": "Mochi"}), ("not a pet", "not a pet")],
+)
+def test_v1_saves_become_tamas(pet: object, expected: object) -> None:
+    out = migrate({"schema_version": 1, "pet": pet}, current=2)
+
+    assert out == {"schema_version": 2, "pet": expected}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})

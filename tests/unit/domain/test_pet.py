@@ -5,7 +5,16 @@ from random import Random
 import pytest
 
 from tama.domain.balance import DEFAULT_BALANCE
-from tama.domain.pet import MAX_NAME_LENGTH, Drift, Pet, Timers, new_egg, validate_name
+from tama.domain.pet import (
+    DEFAULT_SPECIES,
+    MAX_NAME_LENGTH,
+    Drift,
+    Pet,
+    Timers,
+    new_egg,
+    validate_name,
+    validate_species,
+)
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.errors import InvalidArgumentError
@@ -102,3 +111,27 @@ def test_pet_is_frozen() -> None:
 
 def test_pet_type_is_exported() -> None:
     assert isinstance(make_pet(), Pet)
+
+
+# --- Species ------------------------------------------------------------------------------
+
+
+def test_new_egg_is_the_default_species() -> None:
+    assert new_egg("Mochi", FIXED_NOW, Random(0)).species == DEFAULT_SPECIES == "tama"
+
+
+def test_new_egg_can_be_another_species() -> None:
+    assert new_egg("Hoot", FIXED_NOW, Random(0), species="owl").species == "owl"
+
+
+@pytest.mark.parametrize("species", ["", "Owl", "big bear", "../tama", "1owl", "owl!"])
+def test_invalid_species_are_rejected(species: str) -> None:
+    with pytest.raises(InvalidArgumentError, match="species"):
+        validate_species(species)
+    with pytest.raises(InvalidArgumentError, match="species"):
+        make_pet(species=species)
+
+
+@pytest.mark.parametrize("species", ["tama", "owl", "polar-bear", "cat_2"])
+def test_valid_species_names(species: str) -> None:
+    assert validate_species(species) == species

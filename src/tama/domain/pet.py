@@ -1,5 +1,6 @@
 """The pet aggregate: an immutable snapshot of everything about the pet."""
 
+import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from fractions import Fraction
@@ -13,6 +14,9 @@ from tama.errors import InvalidArgumentError
 
 ZERO = timedelta(0)
 MAX_NAME_LENGTH = 16
+DEFAULT_SPECIES = "tama"
+"""The original species; every pet saved before species existed is one."""
+_SPECIES_NAME = re.compile(r"^[a-z][a-z0-9_-]*$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +77,7 @@ class Pet:
         born_at: When the egg was created.
         updated_at: The wall-clock time this snapshot corresponds to.
         lifespan: Age at which an elder dies of old age (seeded at birth).
+        species: What kind of animal it is (see ``validate_species``); chosen at hatching.
         age: Simulated time lived, always a whole number of simulation steps.
         carry: Elapsed time not yet simulated because it is shorter than one step.
         sickness_doses: Medicine doses still needed; 0 means healthy.
@@ -84,6 +89,7 @@ class Pet:
     born_at: datetime
     updated_at: datetime
     lifespan: timedelta
+    species: str = DEFAULT_SPECIES
     stage: LifeStage = LifeStage.EGG
     variant: Variant = Variant.DEFAULT
     stats: Stats = field(default_factory=Stats)
@@ -106,6 +112,7 @@ class Pet:
         """Validate invariants."""
         _require_aware(self.born_at)
         _require_aware(self.updated_at)
+        validate_species(self.species)
         for name in ("poop_count", "sickness_doses", "care_mistakes"):
             if getattr(self, name) < 0:
                 raise InvalidArgumentError(f"{name} must not be negative")
@@ -136,8 +143,28 @@ def validate_name(name: str) -> str:
     return stripped
 
 
-def new_egg(name: str, now: datetime, rng: Random, balance: Balance = DEFAULT_BALANCE) -> Pet:
-    """Create a fresh egg called ``name`` at ``now``, with a lifespan drawn from ``rng``."""
+def validate_species(species: str) -> str:
+    """Return ``species`` if it is a valid species identifier, or raise ``InvalidArgumentError``.
+
+    Species are lowercase identifiers (``tama``, ``owl``, ``polar-bear``). Which species have
+    art is a UI concern; the domain only checks the name is well formed.
+    """
+    if not _SPECIES_NAME.match(species):
+        raise InvalidArgumentError(
+            f"species must be a lowercase name like 'owl' or 'polar-bear', got {species!r}"
+        )
+    return species
+
+
+def new_egg(
+    name: str,
+    now: datetime,
+    rng: Random,
+    balance: Balance = DEFAULT_BALANCE,
+    *,
+    species: str = DEFAULT_SPECIES,
+) -> Pet:
+    """Create a fresh ``species`` egg called ``name`` at ``now``, lifespan drawn from ``rng``."""
     _require_aware(now)
     span_steps = (balance.lifespan_max - balance.lifespan_min) // balance.step
     lifespan = balance.lifespan_min + balance.step * rng.randint(0, span_steps)
@@ -146,5 +173,6 @@ def new_egg(name: str, now: datetime, rng: Random, balance: Balance = DEFAULT_BA
         born_at=now,
         updated_at=now,
         lifespan=lifespan,
+        species=validate_species(species),
         weight=balance.start_weight,
     )

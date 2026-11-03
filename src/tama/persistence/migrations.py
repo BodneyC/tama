@@ -16,7 +16,16 @@ from tama.persistence.models import CURRENT_SCHEMA_VERSION
 
 Migration = Callable[[dict[str, Any]], dict[str, Any]]
 
-MIGRATIONS: dict[int, Migration] = {}
+
+def _v1_to_v2(raw: dict[str, Any]) -> dict[str, Any]:
+    """v2 records the pet's species; every pet before then was a ``tama``."""
+    pet = raw.get("pet")
+    if not isinstance(pet, dict):
+        return raw  # malformed; validation will report it
+    return {**raw, "pet": {"species": "tama", **pet}}
+
+
+MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2}
 """Key ``N`` upgrades a version-N save to version N+1."""
 
 

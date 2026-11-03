@@ -20,7 +20,7 @@ FIXTURES = Path(__file__).parents[2] / "fixtures" / "saves"
 def test_encode_is_indented_json_with_trailing_newline() -> None:
     text = encode(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert text.startswith('{\n  "schema_version": 1,')
+    assert text.startswith('{\n  "schema_version": 2,')
     assert text.endswith("}\n")
 
 
@@ -38,7 +38,7 @@ def test_invalid_text_is_corrupt(text: str) -> None:
 
 def test_newer_schema_is_unsupported() -> None:
     raw = json.loads(encode(SaveGame(make_pet(), Random(0).getstate())))
-    raw["schema_version"] = 2
+    raw["schema_version"] = 3
 
     with pytest.raises(UnsupportedSaveVersionError):
         decode(json.dumps(raw))
@@ -52,6 +52,7 @@ def test_v1_fixture_loads() -> None:
     pet = game.pet
 
     assert pet.name == "Fixture"
+    assert pet.species == "tama"
     assert pet.stage is LifeStage.TEEN
     assert pet.born_at == datetime(2026, 1, 1, 12, tzinfo=UTC)
     assert pet.age == timedelta(days=1, hours=2, minutes=54)
@@ -66,9 +67,29 @@ def test_v1_fixture_loads() -> None:
     assert restore_rng(game.rng_state).random() == 0.6715634814879851
 
 
-def test_v1_fixture_reencodes_identically() -> None:
-    """Guards the v1 format against accidental changes (which would need a migration)."""
-    text = (FIXTURES / "v1.json").read_text()
+def test_v1_fixture_migrates_losslessly_to_v2() -> None:
+    """Only the version and the new species field change when a v1 save is upgraded."""
+    original: dict[str, Any] = json.loads((FIXTURES / "v1.json").read_text())
+
+    upgraded: dict[str, Any] = json.loads(encode(decode((FIXTURES / "v1.json").read_text())))
+
+    for raw in (original, upgraded):
+        raw.pop("app_version")
+    assert upgraded["schema_version"] == 2
+    assert upgraded["pet"].pop("species") == "tama"
+    assert {**upgraded, "schema_version": 1} == original
+
+
+def test_v2_fixture_loads_its_species() -> None:
+    game = decode((FIXTURES / "v2.json").read_text())
+
+    assert game.pet.species == "owl"
+    assert game.pet.name == "Fixture"
+
+
+def test_v2_fixture_reencodes_identically() -> None:
+    """Guards the v2 format against accidental changes (which would need a migration)."""
+    text = (FIXTURES / "v2.json").read_text()
     original: dict[str, Any] = json.loads(text)
 
     reencoded: dict[str, Any] = json.loads(encode(decode(text)))

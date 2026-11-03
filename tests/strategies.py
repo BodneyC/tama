@@ -54,6 +54,7 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
         make_pet(stage=stage),
         age=age,
         lifespan=timedelta(days=draw(st.integers(min_value=14, max_value=18))),
+        species=draw(st.sampled_from(["tama", "owl", "polar-bear"])),
         updated_at=FIXED_NOW + draw(minutes(24 * 60)),
         carry=timedelta(seconds=draw(st.integers(min_value=0, max_value=59))),
         stats=draw(stats_strategy),
