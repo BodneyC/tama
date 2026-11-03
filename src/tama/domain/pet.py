@@ -84,6 +84,10 @@ class Pet:
         recent_snacks: Ages at which snacks were eaten within the last hour.
         poop_progress: Fraction of the way to the next poop.
         paused_since: When the pet went on holiday (frozen in time), or ``None``.
+        stay_awake: How much longer a pet the player woke stays up regardless of night or
+            tiredness; zero once it's back to its normal sleep rules.
+        woken_tantrum: Whether the current tantrum is from being woken, which earns no
+            discipline when disciplined.
     """
 
     name: str
@@ -109,6 +113,8 @@ class Pet:
     recent_snacks: tuple[timedelta, ...] = ()
     cause_of_death: DeathCause | None = None
     paused_since: datetime | None = None
+    stay_awake: timedelta = ZERO
+    woken_tantrum: bool = False
 
     def __post_init__(self) -> None:
         """Validate invariants."""
@@ -120,6 +126,8 @@ class Pet:
         for name in ("poop_count", "sickness_doses", "care_mistakes"):
             if getattr(self, name) < 0:
                 raise InvalidArgumentError(f"{name} must not be negative")
+        if self.stay_awake < ZERO:
+            raise InvalidArgumentError(f"stay_awake must not be negative, got {self.stay_awake}")
         if self.weight < 1:
             raise InvalidArgumentError(f"weight must be at least 1, got {self.weight}")
 

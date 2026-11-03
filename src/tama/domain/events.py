@@ -25,6 +25,7 @@ class Action(StrEnum):
     MEDICINE = "medicine"
     LIGHTS = "lights"
     DISCIPLINE = "discipline"
+    WAKE = "wake"
 
 
 class RefusalReason(StrEnum):
@@ -33,6 +34,7 @@ class RefusalReason(StrEnum):
     DEAD = "dead"
     EGG = "egg"
     ASLEEP = "asleep"
+    AWAKE = "awake"
     NOT_HUNGRY = "not_hungry"
     TOO_TIRED = "too_tired"
     NOT_SICK = "not_sick"
@@ -166,6 +168,11 @@ class Disciplined(Event):
     """The pet was disciplined; ``effective`` if it was actually misbehaving."""
 
     effective: bool
+
+
+@dataclass(frozen=True, slots=True)
+class Woken(Event):
+    """The player woke the pet up early; it is grumpy and throwing a tantrum."""
 
 
 @dataclass(frozen=True, slots=True)

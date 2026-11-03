@@ -95,6 +95,8 @@ def test_pet_rejects_negative_counters() -> None:
         make_pet(poop_count=-1)
     with pytest.raises(InvalidArgumentError, match="weight"):
         make_pet(weight=0)
+    with pytest.raises(InvalidArgumentError, match="stay_awake"):
+        make_pet(stay_awake=timedelta(minutes=-1))
 
 
 def test_pet_rejects_naive_timestamps() -> None:

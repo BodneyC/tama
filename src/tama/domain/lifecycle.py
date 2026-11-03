@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from tama.domain.balance import Balance
 from tama.domain.events import Died, Event, Evolved
-from tama.domain.pet import Pet
+from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 
 _NEXT_STAGE: dict[LifeStage, LifeStage] = {
@@ -29,7 +29,13 @@ def die(pet: Pet, cause: DeathCause, events: list[Event]) -> Pet:
     """Return ``pet`` dead of ``cause``, recording a ``Died`` event."""
     events.append(Died(pet.age, cause))
     return replace(
-        pet, stage=LifeStage.DEAD, cause_of_death=cause, is_asleep=False, misbehaving=False
+        pet,
+        stage=LifeStage.DEAD,
+        cause_of_death=cause,
+        is_asleep=False,
+        misbehaving=False,
+        woken_tantrum=False,
+        stay_awake=ZERO,
     )
 
 

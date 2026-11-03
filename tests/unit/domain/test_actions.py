@@ -15,6 +15,7 @@ from tama.domain.events import (
     Played,
     RefusalReason,
     Refused,
+    Woken,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.pet import Timers
@@ -47,6 +48,7 @@ def test_dead_pet_refuses_everything(action: Action) -> None:
         (Action.PLAY, True),
         (Action.DISCIPLINE, True),
         (Action.MEDICINE, True),
+        (Action.WAKE, True),
         (Action.CLEAN, False),
         (Action.LIGHTS, False),
     ],
@@ -64,7 +66,8 @@ def test_egg_refusals(action: Action, refused: bool) -> None:
         (Action.SNACK, True),
         (Action.PLAY, True),
         (Action.DISCIPLINE, True),
-        (Action.MEDICINE, False),
+        (Action.MEDICINE, True),
+        (Action.WAKE, False),
         (Action.CLEAN, False),
         (Action.LIGHTS, False),
     ],
@@ -300,3 +303,68 @@ def test_unwarranted_discipline_upsets_the_pet() -> None:
     assert out.pet.stats.happiness == 30
     assert out.pet.stats.discipline == 10
     assert out.events == (Disciplined(pet.age, effective=False),)
+
+
+def test_disciplining_a_woken_tantrum_earns_nothing() -> None:
+    pet = make_pet(misbehaving=True, woken_tantrum=True, stats=Stats(discipline=10))
+
+    out = apply(pet, Action.DISCIPLINE, make_ctx())
+
+    assert not out.pet.misbehaving
+    assert not out.pet.woken_tantrum
+    assert out.pet.stats.discipline == 10
+    assert out.events == (Disciplined(pet.age, effective=True),)
+
+
+# --- Waking -------------------------------------------------------------------------------
+
+
+def test_wake_refused_when_already_awake() -> None:
+    pet = make_pet()
+
+    out = apply(pet, Action.WAKE, make_ctx())
+
+    assert out.pet == pet
+    assert out.refusal is RefusalReason.AWAKE
+
+
+def test_waking_upsets_tires_and_starts_a_tantrum() -> None:
+    pet = make_pet(
+        is_asleep=True,
+        lights_on=False,
+        updated_at=NIGHT,
+        stats=Stats(happiness=60, energy=50),
+        timers=Timers(lights_on_asleep=timedelta(minutes=3)),
+    )
+
+    out = apply(pet, Action.WAKE, make_ctx())
+
+    assert not out.pet.is_asleep
+    assert out.pet.stats.happiness == 40
+    assert out.pet.stats.energy == 30
+    assert out.pet.misbehaving
+    assert out.pet.woken_tantrum
+    assert out.pet.timers.misbehaving == timedelta(0)
+    assert out.pet.stay_awake == DEFAULT_BALANCE.wake_stay_awake
+    assert out.events == (Woken(pet.age),)
+
+
+def test_waking_mid_tantrum_keeps_the_tantrum_it_had() -> None:
+    timers = Timers(misbehaving=timedelta(minutes=12))
+    pet = make_pet(is_asleep=True, updated_at=NIGHT, misbehaving=True, timers=timers)
+
+    out = apply(pet, Action.WAKE, make_ctx())
+
+    assert out.pet.misbehaving
+    assert not out.pet.woken_tantrum  # a real tantrum still earns discipline
+    assert out.pet.timers == timers
+
+
+def test_a_woken_pet_takes_medicine() -> None:
+    pet = make_pet(is_asleep=True, updated_at=NIGHT, sickness_doses=1)
+
+    woken = apply(pet, Action.WAKE, make_ctx()).pet
+    out = apply(woken, Action.MEDICINE, make_ctx())
+
+    assert not out.pet.is_sick
+    assert out.events == (MedicineGiven(pet.age, cured=True),)

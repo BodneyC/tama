@@ -24,6 +24,7 @@ from tama.domain.events import (
     Played,
     RefusalReason,
     Refused,
+    Woken,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.pet import ZERO, Pet
@@ -31,9 +32,12 @@ from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
 
 _REFUSED_BY_EGG = frozenset(
+    {Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE, Action.MEDICINE, Action.WAKE}
+)
+# Medicine too: a sick pet found asleep can be left until morning or woken for its dose.
+_REFUSED_WHEN_ASLEEP = frozenset(
     {Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE, Action.MEDICINE}
 )
-_REFUSED_WHEN_ASLEEP = frozenset({Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE})
 _REFUSED_WHEN_MISBEHAVING = frozenset({Action.MEAL, Action.SNACK, Action.PLAY})
 
 
@@ -59,6 +63,8 @@ def _specific_refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReas
         return RefusalReason.TOO_TIRED
     if action is Action.MEDICINE and not pet.is_sick:
         return RefusalReason.NOT_SICK
+    if action is Action.WAKE and not pet.is_asleep:
+        return RefusalReason.AWAKE
     return None
 
 
@@ -148,13 +154,30 @@ def _discipline(pet: Pet, ctx: Context) -> Outcome:
             pet, stats=pet.stats.adjust(Stat.HAPPINESS, b.discipline_unwarranted_happiness)
         )
         return Outcome(upset, (Disciplined(pet.age, effective=False),))
+    # Settling a tantrum the player caused earns nothing, so waking can't farm discipline.
+    gain = 0 if pet.woken_tantrum else b.discipline_gain
     behaved = replace(
         pet,
         misbehaving=False,
-        stats=pet.stats.adjust(Stat.DISCIPLINE, b.discipline_gain),
+        woken_tantrum=False,
+        stats=pet.stats.adjust(Stat.DISCIPLINE, gain),
         timers=replace(pet.timers, misbehaving=ZERO),
     )
     return Outcome(behaved, (Disciplined(pet.age, effective=True),))
+
+
+def _wake(pet: Pet, ctx: Context) -> Outcome:
+    b = ctx.balance
+    stats = pet.stats.adjust(Stat.HAPPINESS, b.wake_happiness).adjust(Stat.ENERGY, b.wake_energy)
+    woken = replace(pet, is_asleep=False, stats=stats, stay_awake=b.wake_stay_awake)
+    if not pet.misbehaving:  # a tantrum it was already having carries on as it was
+        woken = replace(
+            woken,
+            misbehaving=True,
+            woken_tantrum=True,
+            timers=replace(pet.timers, misbehaving=ZERO),
+        )
+    return Outcome(woken, (Woken(pet.age),))
 
 
 _HANDLERS: dict[Action, Callable[[Pet, Context], Outcome]] = {
@@ -165,4 +188,5 @@ _HANDLERS: dict[Action, Callable[[Pet, Context], Outcome]] = {
     Action.MEDICINE: _medicine,
     Action.LIGHTS: _lights,
     Action.DISCIPLINE: _discipline,
+    Action.WAKE: _wake,
 }

@@ -119,6 +119,8 @@ def _per_step(balance: Balance, period: timedelta) -> Fraction:
 
 
 def _update_sleep(pet: Pet, now: datetime, ctx: Context, events: list[Event]) -> Pet:
+    if pet.stay_awake > ZERO:  # woken by the player: night and tiredness wait (SPEC §2.4)
+        return replace(pet, stay_awake=max(ZERO, pet.stay_awake - ctx.balance.step))
     night = is_night(now, ctx)
     if pet.is_asleep:
         if night or pet.stats.energy < STAT_MAX:
@@ -239,4 +241,11 @@ def _update_timers(pet: Pet, b: Balance, events: list[Event]) -> Pet:
         misbehaving, ignored_for = False, ZERO
     timers = replace(timers, misbehaving=ignored_for)
 
-    return replace(pet, timers=timers, care_mistakes=mistakes, stats=stats, misbehaving=misbehaving)
+    return replace(
+        pet,
+        timers=timers,
+        care_mistakes=mistakes,
+        stats=stats,
+        misbehaving=misbehaving,
+        woken_tantrum=pet.woken_tantrum and misbehaving,
+    )

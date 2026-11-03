@@ -227,6 +227,19 @@ def test_dying_wakes_the_pet() -> None:
     assert not out.pet.is_asleep
 
 
+def test_dying_ends_a_woken_tantrum() -> None:
+    pet = make_pet(
+        stats=Stats(hunger=0, health=1), misbehaving=True, woken_tantrum=True, stay_awake=HOUR
+    )
+
+    out = run(pet, timedelta(minutes=8))
+
+    assert out.pet.stage is LifeStage.DEAD
+    assert not out.pet.misbehaving
+    assert not out.pet.woken_tantrum
+    assert out.pet.stay_awake == timedelta(0)
+
+
 # --- Care mistakes ------------------------------------------------------------------------
 
 
@@ -320,6 +333,49 @@ def test_rested_pet_keeps_sleeping_at_night() -> None:
     pet = make_pet(is_asleep=True, lights_on=False, updated_at=NIGHT)
 
     assert run(pet, HOUR).pet.is_asleep
+
+
+def test_a_woken_pet_stays_up_for_half_an_hour_at_night() -> None:
+    pet = make_pet(updated_at=NIGHT, stay_awake=30 * MIN)
+
+    out = run(pet, 30 * MIN)
+
+    assert not out.pet.is_asleep
+    assert out.pet.stay_awake == timedelta(0)
+    assert out.events == ()
+
+
+def test_a_woken_pet_falls_back_asleep_at_night_after_half_an_hour() -> None:
+    pet = make_pet(updated_at=NIGHT, stay_awake=30 * MIN)
+
+    out = run(pet, 31 * MIN)
+
+    assert out.pet.is_asleep
+    assert out.events == (FellAsleep(pet.age + 31 * MIN),)
+
+
+def test_a_woken_pet_stays_up_however_tired_it_is() -> None:
+    pet = make_pet(stats=Stats(energy=0), stay_awake=30 * MIN)
+
+    assert not run(pet, 30 * MIN).pet.is_asleep
+
+
+def test_a_rested_woken_pet_stays_up_by_day_once_the_half_hour_is_over() -> None:
+    pet = make_pet(stats=Stats(energy=80), stay_awake=30 * MIN)
+
+    out = run(pet, HOUR)
+
+    assert not out.pet.is_asleep
+    assert out.pet.stay_awake == timedelta(0)
+
+
+def test_stay_awake_never_goes_negative() -> None:
+    pet = make_pet(updated_at=NIGHT, stay_awake=timedelta(seconds=30))
+
+    out = run(pet, MIN)
+
+    assert out.pet.stay_awake == timedelta(0)
+    assert not out.pet.is_asleep
 
 
 # --- Poop ---------------------------------------------------------------------------------
@@ -449,6 +505,22 @@ def test_ignored_misbehaviour_lowers_discipline() -> None:
     assert out.pet.stats.discipline == 40
     assert out.pet.timers.misbehaving == timedelta(0)
     assert MisbehaviourIgnored(pet.age + 31 * MIN) in out.events
+
+
+def test_an_ignored_woken_tantrum_lowers_discipline_and_ends() -> None:
+    pet = make_pet(stats=Stats(discipline=50), misbehaving=True, woken_tantrum=True)
+
+    out = run(pet, 31 * MIN)
+
+    assert not out.pet.misbehaving
+    assert not out.pet.woken_tantrum
+    assert out.pet.stats.discipline == 40
+
+
+def test_a_woken_tantrum_stays_woken_until_it_ends() -> None:
+    pet = make_pet(misbehaving=True, woken_tantrum=True)
+
+    assert run(pet, 10 * MIN).pet.woken_tantrum
 
 
 def test_hourly_rolls_use_the_rng_deterministically() -> None:

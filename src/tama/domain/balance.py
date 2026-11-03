@@ -73,6 +73,10 @@ class Balance:
     sleepy_energy: int = 20
     night_start: time = time(22)
     night_end: time = time(7)
+    # Waking the pet early (SPEC §2.4): it stays up a while, grumpy and more tired.
+    wake_happiness: int = -20
+    wake_energy: int = -20
+    wake_stay_awake: timedelta = timedelta(minutes=30)
 
     # Misbehaviour (rolled once per simulated hour)
     misbehave_chance: float = 0.15
