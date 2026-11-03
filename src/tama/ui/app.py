@@ -32,6 +32,8 @@ class TamaApp(App[None]):
         start_new: Hatch a new pet even if a save exists (``--new``).
         tick_interval: Seconds between ticks; ``None`` disables the timer (tests tick by hand).
         handle_signals: Save and exit on SIGTERM/SIGHUP (POSIX only).
+        bell: Ring the terminal bell on new attention calls (used from M6).
+        reduced_motion: Limit animation to key frames (used from M5).
     """
 
     CSS_PATH = "app.tcss"
@@ -50,6 +52,8 @@ class TamaApp(App[None]):
         start_new: bool = False,
         tick_interval: float | None = 1.0,
         handle_signals: bool = True,
+        bell: bool = False,
+        reduced_motion: bool = False,
     ) -> None:
         """Wire the app to its dependencies."""
         super().__init__()
@@ -60,6 +64,8 @@ class TamaApp(App[None]):
         self._start_new = start_new
         self._tick_interval = tick_interval
         self._handle_signals = handle_signals
+        self.bell_enabled = bell
+        self.reduced_motion = reduced_motion
         self._quit_failed = False
         self._installed_signals: list[signal.Signals] = []
         self.session: GameSession | None = None
