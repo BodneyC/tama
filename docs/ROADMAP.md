@@ -139,6 +139,41 @@ monochrome, and an old v1 save still loads as a `tama`.
 
 **Accept:** A complete life can be played start to finish; every screen has a snapshot test.
 
+## M6.5 — More mini-games
+
+Two board games against the pet, chosen from a game select dialog (SPEC §3.1, ADR 0006).
+
+- [ ] Domain: `tama.domain.minigames` package with `GameKind` and `GameResult` (win/draw/loss);
+      move Left or Right there from `domain/minigame.py`
+- [ ] Domain: `apply_game_outcome(pet, result, ctx)` and `Played(result)` with the draw effect
+      (happiness +10, energy −10); `Balance.play_draw_happiness` and per-stage opponent
+      mistake chances
+- [ ] Domain: Four in a Row (7×6): drop, full columns, win in all four directions (winning
+      cells reported), draw on a full board — test-first
+- [ ] Domain: Tic-Tac-Toe (3×3): place, occupied cells, all eight lines, draw — test-first
+- [ ] Domain: `opponent.py`: wins, blocks, avoids handing Four in a Row wins, positional
+      preference, mistakes; property tests (random legal games always finish with exactly one
+      result; the pet never makes an illegal move; with no mistakes it never misses a win or a
+      block)
+- [ ] Services: `GameSession.pet_move(game)` and `finish_game(result)` using the session RNG
+- [ ] UI colours `piece-player` and `piece-pet` in `assets/ui.toml` (dark/light, theme refs
+      allowed) and the `/add-sprite` UI colour list; species may override them
+- [ ] UI: `GameSelectScreen` (`↑`/`↓` + `Enter`, `1`–`3`, `Esc`; remembers the last game this
+      session); `p` opens it after the play refusals; Help text updated
+- [ ] UI: `FourInARowScreen` (column marker, `←`/`→` wrap and skip full columns, `↓`/`Enter`
+      drop, falling pieces, pet "thinking", winning four highlighted, `●`/`○` in monochrome)
+- [ ] UI: `TicTacToeScreen` (cursor, `Enter`/`Space`, keypad-layout `1`–`9`, winning line
+      highlighted)
+- [ ] Reduced motion: no thinking pause or falling pieces
+- [ ] Snapshots: game select; each board game mid-game and finished; monochrome and light
+      variants of Four in a Row; all fit 60×20
+- [ ] Balance check: extend `tools/balance.py` (or a sibling) to play many games with a simple
+      scripted player and confirm young pets are easy and adults challenging
+
+**Accept:** from the main screen a player can pick each of the three games, play it to a win,
+draw or loss with the keyboard, and see the right effect on the pet; the board games are
+readable in colour, light theme and monochrome at 60×20.
+
 ## M7 — Release readiness
 
 - [ ] README with screenshot/GIF (e.g. via `vhs` or `asciinema`), install instructions

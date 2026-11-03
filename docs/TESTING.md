@@ -27,6 +27,11 @@
 - UI tests: build the app with `tests/ui/helpers.make_app` (in-memory save, `FakeClock`,
   `tick_interval=None`, no signal handlers) and call `app.tick()` by hand. Capture toasts with
   `Notes(app)`. Use `await pilot.pause()` after key presses that push or pop screens.
+- Mini-games (ADR 0006): test the rules on hand-written boards (every winning direction, full
+  columns, occupied cells, draws) and drive the opponent with a seeded RNG and a `Balance`
+  whose mistake chance is 0 (it must take wins and blocks) or 1 (it must still only make legal
+  moves). Property tests: random legal games always end with exactly one result within the
+  board's size. Snapshot each board game mid-game and finished, in monochrome too.
 - Reviewing snapshots: Pilot tests can't see layout bugs (an empty dialog still "contains"
   its text), so look at every new or changed snapshot. Render one to PNG, swapping in a
   locally installed monospace font that has the block glyphs (Textual's SVGs ask for Fira Code):

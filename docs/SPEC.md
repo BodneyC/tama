@@ -89,7 +89,7 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 | Key | Action | Effect | Refused when |
 | --- | --- | --- | --- |
 | `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. | Asleep, egg, dead, (meal) hunger ≥ 95 |
-| `p` | Play → mini-game | Win: happiness +20, energy −10, weight −1g. Lose: happiness +5, energy −10. | Asleep, energy < 10 |
+| `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, energy < 10 |
 | `c` | Clean | Removes all poop, hygiene → 100 | — |
 | `m` | Medicine | Cures one dose of sickness | Not sick |
 | `l` | Lights on/off | Toggles lights | — |
@@ -98,9 +98,9 @@ The same capped catch-up applies to large gaps while the game is open (e.g. a la
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
 
-Dialog keys: Feed menu `m` meal / `s` snack / `Esc` cancel. Mini-game `←`/`→` guess, `Enter`
-when finished, `Esc` gives up (no effect on the pet). Status/Help close with `Esc` (or their own
-key). On the name prompt, `↑`/`↓` choose the animal (starting from `--species`, else `tama`;
+Dialog keys: Feed menu `m` meal / `s` snack / `Esc` cancel. Mini-game keys are in §3.1; in
+every game `Enter` closes the finished game and `Esc` gives up (no effect on the pet). Status/Help
+close with `Esc` (or their own key). On the name prompt, `↑`/`↓` choose the animal (starting from `--species`, else `tama`;
 the egg changes to match) and `Esc` quits without creating a pet.
 
 Refused actions play a short "shake head" animation and show a toast explaining why.
@@ -110,10 +110,39 @@ A dead pet refuses everything; an egg refuses feeding, play, discipline and medi
 chance to start misbehaving (an attention call with no real need). Disciplining it then gives
 discipline +25. Ignoring it for > 5 min costs discipline −10 and the pet gives up.
 
-### Mini-game: "Left or Right"
+### 3.1 Mini-games
 
-Classic Tamagotchi guessing game. Five rounds; pet will look left or right (seeded RNG);
-player presses `←`/`→`. Win ≥ 3 rounds. Animated pet turn + result per round.
+`p` first checks the play refusals (asleep, energy < 10). If the pet is willing, a **game
+select** dialog lists the games; `↑`/`↓` + `Enter` or the number keys `1`–`3` start one, and
+`Esc` closes it without playing (no effect on the pet). The last game chosen this session is
+pre-selected. Every game ends in a **win, draw or loss** for the player, applied as in the `p`
+row of §3; the pet shows its sprite beside the game and reacts when it ends (`happy` when the
+player wins, `play` otherwise). Games are not saved: quitting tama mid-game abandons it with no
+effect. All randomness (the pet's choices) comes from the session's seeded RNG.
+
+1. **Left or Right** — the classic Tamagotchi guessing game. Five rounds; the pet will look left
+   or right; the player presses `←`/`→` to guess. Win ≥ 3 rounds (no draws). The pet turns the
+   way it looked (`look_left`/`look_right` poses) and the result is shown each round.
+2. **Four in a Row** (connect-four style) — a 7-column × 6-row board, played against the pet.
+   The player always moves first. `←`/`→` move a marker (`▼`) above the columns (wrapping
+   at the edges; full columns are skipped), `↓` or `Enter` drops a piece, which falls to the
+   lowest empty cell. Pieces are circles: the player's `●` in `$tama-piece-player`, the pet's
+   `●` in `$tama-piece-pet`; empty cells are a dim `·`. In monochrome the pet's pieces are `○`
+   so the two sides differ by shape. Four in a row horizontally, vertically or diagonally
+   wins; a full board with no line is a draw. The winning four are highlighted.
+3. **Tic-Tac-Toe** — a 3×3 board against the pet; the player is `✕` (`$tama-piece-player`),
+   the pet `◯` (`$tama-piece-pet`), and the player always moves first. Arrow keys move a
+   highlighted cursor and `Enter`/`Space` place a mark in an empty cell; `1`–`9` place
+   directly, laid out like a numeric keypad (`7` top-left, `3` bottom-right). Three in a row
+   wins (highlighted); a full board without one is a draw.
+
+**The pet as an opponent** (both board games): after a short "thinking" pause it picks, in
+order: a move that wins now; a move that blocks the player's immediate win; in Four in a Row,
+a column that doesn't let the player win directly on top of it; otherwise the best-placed
+move (Four in a Row: nearest the centre column; Tic-Tac-Toe: centre, then corners, then
+edges), ties broken at random. With a per-stage **mistake chance** it instead plays a random
+legal move, so young pets are easy and grown-ups put up a fight (defaults in `Balance`:
+baby 60%, child 40%, teen 25%, adult 15%, elder 20%: elders get a little rusty).
 
 ## 4. Attention calls
 
@@ -145,8 +174,10 @@ there), and with reduced motion the icon is steady instead of blinking.
   lights off (via Textual CSS class on the stage).
 - **Footer:** key bindings (Textual `Footer`).
 - **Screens:** `NewPetScreen` (name entry + egg), `MainScreen`, `StatusScreen` (modal),
-  `FeedMenu` (modal), `MiniGameScreen`, `AwaySummaryScreen` (modal), `MemorialScreen`,
-  `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery).
+  `FeedMenu` (modal), `GameSelectScreen` (modal), one modal per mini-game (`LeftRightScreen`,
+  `FourInARowScreen`, `TicTacToeScreen`), `AwaySummaryScreen` (modal), `MemorialScreen`,
+  `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery). Every game fits the minimum
+  60×20 terminal with the pet beside the board.
 
 ### 5.2 Animation
 
@@ -157,6 +188,9 @@ there), and with reduced motion the icon is steady instead of blinking.
   `idle` (2–4 frames, ~2 fps), `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
   `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`, and the poses `look_left`/`look_right`
   (the Left/Right game). The feed menu shows small animated meal and snack sprites.
+- Board games: while "thinking" the pet alternates `look_left`/`look_right` (~0.6 s); a dropped
+  Four in a Row piece falls row by row (~40 ms per row). With reduced motion the pet's move
+  appears at once and pieces land without falling.
 - Idle animation includes random blinks and small horizontal wandering across the stage.
 - One-shot animations (eat, refuse, …) play once, then return to the state-appropriate loop.
 - Frame timing is driven by Textual `set_interval`; the animation *selection* is a pure

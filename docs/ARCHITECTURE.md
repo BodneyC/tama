@@ -50,7 +50,12 @@ src/tama/
 │   ├── lifecycle.py       # stage transitions, adult variant selection, death
 │   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
 │   ├── attention.py       # attention_reasons(pet, balance) (SPEC §4)
-│   ├── minigame.py        # Left/Right game state machine
+│   ├── minigames/         # pure game state machines (ADR 0006)
+│   │   ├── __init__.py    # GameKind, GameResult (win/draw/loss for the player)
+│   │   ├── left_right.py  # Left/Right guessing game
+│   │   ├── four_in_a_row.py  # 7x6 board: drop, win/draw detection
+│   │   ├── tic_tac_toe.py # 3x3 board: place, win/draw detection
+│   │   └── opponent.py    # the pet's move: win, block, positional preference, mistakes
 │   └── animation.py       # select_animation(pet, last_event) -> AnimationKey (pure)
 ├── services/
 │   ├── session.py         # GameSession: create/load (+ offline catch-up), tick, act, save
@@ -72,7 +77,11 @@ src/tama/
 │   ├── screens/
 │   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
-│   │   └── dialogs.py     # Help, Status, FeedMenu, MiniGame modals
+│   │   ├── dialogs.py     # Help, Status, FeedMenu modals
+│   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget)
+│   │   ├── away.py        # AwaySummaryScreen: "While you were away"
+│   │   ├── memorial.py    # MemorialScreen: gravestone, life story, new egg
+│   │   └── error.py       # ErrorScreen: unreadable save → new pet or quit
 │   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
 │   ├── sprites.py         # load, validate and render pixel sprites per Look; species_of(pet)
 │   ├── colours.py         # dark/light colour values, Mode, Look
@@ -137,6 +146,17 @@ knows nothing about how events are presented.
 - `ui/sprites.py` parses sprite files once (`functools.cache`) into `tuple[Frame, ...]`, validating
   that all frames of an animation share dimensions (a test asserts this for every asset).
 - Missing sprite for a variant falls back to the default variant, then a placeholder — never crash.
+
+### Mini-games
+
+Each game is a frozen state object in `domain/minigames/` whose moves return a new state
+(`drop(column)`, `place(cell)`, `guess(direction, rng)`), with `result` set once it is over.
+The pet's moves come from `opponent.py`, a pure function of the board, the pet's stage
+(its mistake chance in `Balance`) and the injected RNG, so any game can be replayed from a
+seed (ADR 0006). The UI only renders a state and turns keys into moves; `GameSession` supplies
+the RNG (`pet_move(game)`) and applies the finished game's `GameResult` with
+`finish_game(result)`, which is the only point where a game touches the pet. The "thinking"
+pause and falling pieces are UI timers and are skipped with reduced motion.
 
 ### Time in the UI
 
