@@ -147,7 +147,9 @@ When a need drops below 25, the pet becomes sick, poops, or misbehaves, raise an
 ### 5.2 Animation
 
 - Sprites are colour pixel art rendered with block characters (`█ ▀ ▄ ░ ▒ ▓`, two pixels per
-  cell; see ADR 0003), one file per `(species_variant, stage, animation)`; animations include at least
+  cell; see ADR 0003). Each species has its own palette with colours for dark and light themes,
+  and may theme the UI's colours (ADR 0004). One file per `(species, variant, stage,
+  animation)`; animations include at least
   `idle` (2–4 frames, ~2 fps), `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
   `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`.
 - Idle animation includes random blinks and small horizontal wandering across the stage.

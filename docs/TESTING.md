@@ -10,7 +10,7 @@
 | UI behaviour | `tests/ui/` | `App.run_test()` + `Pilot`, pytest-asyncio | Press keys, assert on screen/widget state and session state. |
 | UI snapshots | `tests/ui/snapshots/` | pytest-textual-snapshot | SVG snapshots (stored as `__snapshots__/**/*.raw`) of key screens at 80×24 with a `FakeClock`, fixed seed and no tick timer. |
 | Integration | `tests/integration/` | pytest, Typer `CliRunner` | CLI flags, `tama status`, full load→play→save→reload cycle. |
-| Assets | `tests/unit/test_sprites.py` | pytest (parametrised) | Every sprite file parses; palette covers every pixel; even height and size limits; frames consistent; every (stage, animation) required by `domain.animation` exists for the default variant. Renderer tested cell by cell. |
+| Assets | `tests/unit/test_sprites.py`, `test_theme.py` | pytest (parametrised) | Every base palette and sprite file parses; merged palettes cover every pixel; size limits; shared canvases; every required (stage, animation) exists for every species; generated art is up to date; every sprite draws something in every look (dark/light × colour/mono). Renderer tested cell by cell; UI colour resolution per mode. |
 
 ## Conventions
 

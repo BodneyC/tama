@@ -1,6 +1,6 @@
 # ADR 0003: Colour pixel-art sprites rendered with block characters
 
-- **Status:** Accepted
+- **Status:** Accepted; palette layout and generator amended by [ADR 0004](0004-species-palettes-and-themeable-ui.md)
 - **Date:** 2026-11-03
 
 ## Context
@@ -28,7 +28,7 @@ think in half-cells and keep three grids in sync.
   show as holes in the shape, like an old LCD. Drawing every opaque pixel produced a featureless
   blob.
 
-- The shipped art is produced by `tools/generate_sprites.py` from one base grid per stage
+- The shipped art is produced by `tools/sprites/` (see ADR 0004) from one base grid per stage
   and variant, so all animations stay consistent. All animations of a stage share one canvas
   (2-column side margins, 2 rows of headroom), which raised the size limit to 32×20 pixels.
 - Status indicators (Zzz, sickness, poop) are small pixel sprites too (`sprites/overlays/`).

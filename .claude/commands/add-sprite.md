@@ -1,57 +1,72 @@
 ---
-description: Create or revise a pixel-art sprite animation (e.g. "/add-sprite child eat")
+description: Create or revise pixel-art sprites, palettes or a whole species (e.g. "/add-sprite child eat", "/add-sprite owl species")
 ---
 
-Create or update the pixel-art sprite animation described by: $ARGUMENTS
+Create or update the pixel-art sprites described by: $ARGUMENTS
 
-Sprites are **colour pixel art**, not ASCII. You draw a grid of pixels; the renderer turns each
-pair of pixel rows into one terminal row of block characters (see ADR 0003).
+Sprites are **colour pixel art** drawn with block characters (ADR 0003). Colours live in
+per-species palettes with dark- and light-theme values, and the UI's colours can be themed per
+species (ADR 0004).
 
-**The shipped art is generated.** `tools/generate_sprites.py` holds one hand-drawn base grid per
-stage (and adult/elder variant) plus the overlays, and derives every animation from it with named
-transformations (`eyes_closed`, `mouth_open`, `shift`, `sparkles`, `flash`, `sickly`...). So:
+## Where things live
 
-- To change how a stage looks, edit its base grid (or palette) in the generator.
-- To change an animation for every stage, edit its transformation or its entry in `living()`.
-- To add a new animation, add it to `living()` (and to `REQUIRED` in `tests/unit/test_sprites.py`
-  if SPEC §5.2 requires it).
-- Then run `uv run python tools/generate_sprites.py`. Never hand-edit a generated `.toml`:
-  `test_generated_art_is_up_to_date` fails if the files and the generator disagree.
-- Hand-drawn files are fine for new variants the generator doesn't cover; remove them from the
-  generator's output first so they aren't overwritten.
+```
+src/tama/assets/ui.toml                                   # default UI colours
+src/tama/assets/sprites/<species>/base.toml               # species palette (+ [ui] overrides)
+src/tama/assets/sprites/<species>/<variant>/<stage>/<animation>.toml   # frames (+ overrides)
+src/tama/assets/sprites/overlays/base.toml, <name>.toml   # Zzz / sick / poop indicators
+tools/sprites/kit.py                                      # shared toolkit + pixel vocabulary
+tools/sprites/<species>.py                                # one generator per species
+tools/sprites/overlays.py, generate.py                    # overlays; the entry point
+```
 
-## File format
+`<variant>` is `default`, `good` or `scruffy` (adults and elders). `<stage>` is `egg` … `dead`.
+Required animations per stage are in SPEC §5.2 and enforced by `tests/unit/test_sprites.py`.
 
-`src/tama/assets/sprites/<variant>/<stage>/<animation>.toml`:
+## Colours
+
+Every colour, in palettes and UI colours alike, is either:
 
 ```toml
-fps = 2          # frames per second
-loop = true      # false = one-shot reaction (eat, refuse, hatch, ...)
+k = "#3b2a20"                                   # same in dark and light themes
+c = { dark = "#fff1dc", light = "#f7e1bd" }     # per theme mode
+s = { dark = "#7fc8b8", light = "#4fa392", shade = "medium" }   # textured with ▒
+```
 
-[palette]        # one character per colour; "." is always transparent (terminal background)
-k = "#2b1d14"                                    # outline
-b = "#f4b860"                                    # body
-h = "#ffe3a3"                                    # highlight
-c = "#e86a6a"                                    # cheeks
-s = { color = "#f4b860", shade = "medium" }      # textured body: drawn with a shade glyph
+`color = "..."` inside a table sets both modes; add `dark`/`light` to override one of them.
+
+**`base.toml`**: the species' whole palette, and optionally UI colour overrides:
+
+```toml
+[palette]
+k = { dark = "#6b4a35", light = "#3b2a20" }   # outline
+b = "#f6b26b"                                 # body
+
+[ui]
+accent = { dark = "#f6b26b", light = "#b45f06" }
+```
+
+**Animation files**: only timing, frames, and any palette **overrides** for that file (same
+format), e.g. a sick animation's greener skin:
+
+```toml
+fps = 1
+loop = true
+
+[palette]
+b = { dark = "#c3d69b", light = "#a9c47a" }   # sickly green
 
 [[frames]]
 pixels = """
-....kkkkkk....
-..kkbbbbbbkk..
-.kbbhhbbbbbbk.
-.kbkbbbbbbkbk.
-kbbcbbbbbbcbbk
-kbbbbkkkkbbbbk
-.kbbbbbbbbbbk.
-..kkkkkkkkkk..
-"""
-
-[[frames]]
-pixels = """
-...
+..kkkk..
+.kbbbbk.
 """
 ```
+
+**UI colours** (`[ui]` keys, each becomes the CSS variable `$tama-<key>`): `header-background`,
+`header-text`, `stat-good`, `stat-warning`, `stat-bad`, `attention`, `accent`, `lights-off`.
+Defaults are in `assets/ui.toml`; values there may be Textual theme variables (`$panel`,
+`$success`, ...) so they follow the active theme. A species overrides only what it wants.
 
 ## How pixels become characters
 
@@ -66,36 +81,52 @@ Each terminal cell covers two vertically stacked pixels (top, bottom):
 | colour A / colour B | `▀` | fg = A, bg = B |
 | same shaded entry / same shaded entry | `░` `▒` `▓` (light / medium / dark) | fg = entry colour |
 
-A shaded entry that shares a cell with a different pixel is drawn as its plain colour.
-
 ## Rules
 
-- **Size:** at most 32 pixels wide × 20 pixels tall, i.e. at most 32 columns × 10 terminal rows.
-  The pixel height must be **even**; pad with a row of `.`.
-- **Consistency:** every frame in a file has the same width and height, and every animation of a
-  stage uses the same canvas (base grid plus 2 columns each side and 2 rows above, for bobbing
-  and sparkles), so switching animations never makes the pet jump. Pad with `.`.
-- **Timing:** looping animations (`idle`, `sleep`, `sick`, `wobble`) set `loop = true`; reactions
-  set `loop = false` and play once at their `fps`.
-- **Palette:** every character used in `pixels` must be in `[palette]` (or be `.`). Use hex
-  colours only; keep a sprite to about 8 colours. Reuse the character's established palette
-  across stages and animations so it stays recognisable.
-- **Light and dark terminals:** transparent pixels show the terminal background. Give the pet a
-  dark outline and avoid relying on pure black or pure white for anything that must be seen.
-- **Silhouette:** the outline should read clearly at a glance; keep idle frames subtle (1–2 pixel
-  shifts, blinking eyes) and reactions bold.
-- **No colour (NO_COLOR):** in monochrome, light pixels (relative luminance ≥ 0.45) are drawn
-  in the default colour and dark ones become gaps. Keep eyes, mouth and outline clearly darker
-  than the body (and the body clearly lighter), so features show as holes in the shape.
+- **Size:** at most 32 × 20 pixels (32 columns × 10 rows). Pixel height must be **even**.
+- **Consistency:** every frame in a file is the same size, and every animation of a stage uses
+  the same canvas (the kit adds 2 columns each side and 2 rows above), so the pet never jumps.
+- **Timing:** loops (`idle`, `sleep`, `sick`, `wobble`) set `loop = true`; reactions set
+  `loop = false` and play once.
+- **Both themes:** pick each colour for its mode. On dark themes avoid very dark outlines (use a
+  lighter brown); on light themes avoid pale fills that disappear (shells, sparkles, white tufts).
+- **Monochrome (`NO_COLOR`):** only pixels that contrast with the background are drawn: light
+  pixels (luminance ≥ 0.45) on dark themes, dark ones (< 0.45) on light themes, giving line
+  art. Keep outline/eyes/mouth clearly dark and bodies clearly light in both modes. A test fails
+  if any frame draws nothing in any look.
+- **Silhouette:** clear at a glance; idle frames subtle, reactions bold.
 
-## Workflow
+## The pixel vocabulary (for generated species)
 
-1. Edit the generator (or a hand-drawn `.toml`), then run `uv run python tools/generate_sprites.py`.
-   Required animations per stage are listed in SPEC §5.2.
-2. Run `uv run pytest tests/unit/test_sprites.py`: it parses every sprite, checks the palette,
-   sizes, frame consistency and shared canvases, that every required animation exists, and that
-   the generated files are up to date.
-3. Look at the result. Snapshot it, then render to PNG and inspect it (see `docs/TESTING.md`,
-   "Reviewing snapshots"):
-   `uv run pytest tests/ui/snapshots --snapshot-update`.
-4. Only accept snapshot changes you have looked at.
+The kit's transformations assume these roles; keep them when drawing a new species:
+`k` outline (closed eyes, frowns), `b` body, `e` eyes, `m` mouth, `h` highlight, `c` belly,
+`r` cheeks, `x` sparkle/flash, `o` egg outline/cracks, `l` egg shell. Any other character is
+free for species-specific details (crowns, feathers, stripes...). Colours are per species.
+
+## Workflows
+
+**Change a colour:** edit the species' palette in `tools/sprites/<species>.py` (or its
+`base.toml` if hand-drawn), then regenerate. One file changes for every animation.
+
+**Change a stage's look or an animation:** edit the base grid in `tools/sprites/<species>.py`,
+or a recipe in `kit.py` (`living()`, `hatch()`, `wobble()`, transformations), then regenerate.
+
+**Add a species (owl, bear, ...):**
+1. Copy `tools/sprites/tama.py` to `tools/sprites/<species>.py`; set `NAME`, draw base grids
+   for every stage (egg → dead) using the pixel vocabulary, and give it a `PALETTE` with dark
+   and light values (plus `UI` overrides if it should theme the app).
+2. Add its `build` to `COLLECTIONS` in `tools/sprites/generate.py`.
+3. Regenerate. The tests require every SPEC §5.2 animation for every species directory.
+4. Until the domain tracks species (roadmap M5.5), it won't appear in play; preview it with
+   snapshots or a contact sheet.
+
+Hand-drawn species are fine too: create `sprites/<species>/` with `base.toml` and files by hand,
+and don't add it to the generator (which only rewrites collections it owns).
+
+**Then always:**
+1. `uv run python -m tools.sprites.generate` (never hand-edit generated files;
+   `test_generated_art_is_up_to_date` fails if they disagree with the generator).
+2. `uv run pytest tests/unit/test_sprites.py tests/unit/test_theme.py`.
+3. Review: render a contact sheet of every frame from the pixel grids, in both modes, and the
+   affected snapshots as images (`docs/TESTING.md`, "Reviewing snapshots"); then
+   `uv run pytest tests/ui/snapshots --snapshot-update` and accept only what you have looked at.

@@ -74,11 +74,19 @@ src/tama/
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
 │   │   └── dialogs.py     # Help, Status, FeedMenu, MiniGame modals
 │   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
-│   └── sprites.py         # load, validate and render pixel sprites; cache frames as Content
-└── assets/sprites/        # <variant>/<stage>/<animation>.toml + overlays/ (generated, ADR 0003)
+│   ├── sprites.py         # load, validate and render pixel sprites per Look; species_of(pet)
+│   ├── colours.py         # dark/light colour values, Mode, Look
+│   └── theme.py           # UI colours -> $tama-* CSS variables for the active theme
+└── assets/
+    ├── ui.toml            # default UI colours (ADR 0004)
+    └── sprites/           # <species>/base.toml + <species>/<variant>/<stage>/<animation>.toml,
+                           # overlays/ (ADR 0003, 0004)
 
-tools/
-└── generate_sprites.py    # builds the sprite set from base grids (dev only, not shipped)
+tools/sprites/             # dev only, not shipped
+├── kit.py                 # grid ops, transformations, animation recipes, pixel vocabulary
+├── tama.py                # one module per species: base grids + dark/light palette
+├── overlays.py
+└── generate.py            # python -m tools.sprites.generate
 ```
 
 Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests/ui/...`,
@@ -119,7 +127,12 @@ knows nothing about how events are presented.
   once before reverting to the state's loop. Idle pets blink and wander using a UI-only RNG
   (cosmetic, never game state). `ViewOptions` turns animation off (tests/snapshots) or to
   static key frames (reduced motion), and selects monochrome.
-- Sprites are pixel grids rendered to block characters, two pixels per cell (ADR 0003).
+- Sprites are pixel grids rendered to block characters, two pixels per cell (ADR 0003). Each
+  species has a `base.toml` palette with dark- and light-theme colours; animation files only
+  override entries. Sprites are pre-rendered per `Look` (theme mode × colour/monochrome) and
+  `PetView` picks the look from the app's current theme (ADR 0004).
+- UI colours are CSS variables `$tama-*`, produced by `TamaApp.get_theme_variable_defaults()`
+  from `assets/ui.toml` plus the species' `[ui]` overrides, so CSS never hard-codes a colour.
 - `ui/sprites.py` parses sprite files once (`functools.cache`) into `tuple[Frame, ...]`, validating
   that all frames of an animation share dimensions (a test asserts this for every asset).
 - Missing sprite for a variant falls back to the default variant, then a placeholder — never crash.

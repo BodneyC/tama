@@ -49,7 +49,7 @@ uv run mypy                              # type-check (strict, config in pyproje
 uv run pytest                            # all tests + coverage
 uv run pytest tests/unit -q              # fast unit tests only
 uv run pytest --snapshot-update          # regenerate UI snapshots (review the diff!)
-uv run python tools/generate_sprites.py  # regenerate the pixel-art sprite set (see /add-sprite)
+uv run python -m tools.sprites.generate # regenerate the pixel-art sprite set (see /add-sprite)
 ```
 
 **Definition of done for any change** — all of these must pass:
@@ -78,8 +78,11 @@ See `docs/ARCHITECTURE.md` for detail. Summary:
 5. **Saves are versioned and atomic.** Every save file has `schema_version`. Write to a temp
    file in the same dir, `fsync`, then `os.replace`. Keep one `.bak`. Never crash on a corrupt
    save — surface a recoverable error to the user.
-6. **Sprites are data, not code.** Pixel-art frames live in `src/tama/assets/sprites/**/*.toml`
-   and are loaded via `importlib.resources` (format: ADR 0003 and `/add-sprite`).
+6. **Sprites are data, not code.** Pixel-art frames live in
+   `src/tama/assets/sprites/<species>/**/*.toml`, with each species' dark/light palette in its
+   `base.toml`; UI colours default in `assets/ui.toml` and are `$tama-*` CSS variables. All are
+   loaded via `importlib.resources` (formats: ADR 0003, ADR 0004 and `/add-sprite`). Never
+   hard-code a colour in CSS or Python: add a UI colour or a palette entry.
 
 ## Code conventions
 
