@@ -17,7 +17,7 @@ from tama.domain.events import (
     ResumedFromHoliday,
 )
 from tama.domain.holiday import PauseBlocker, pause, pause_blockers, resume
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.simulation import advance
 from tama.domain.stage import DeathCause, LifeStage
@@ -167,9 +167,9 @@ def test_care_actions_are_refused_on_holiday(action: Action) -> None:
 def test_game_results_are_refused_on_holiday() -> None:
     pet = on_holiday()
 
-    assert apply_game_outcome(pet, GameResult.WIN, ctx=make_ctx()).refusal is (
-        RefusalReason.ON_HOLIDAY
-    )
+    assert apply_game_outcome(
+        pet, GameResult.WIN, game=GameKind.LEFT_RIGHT, ctx=make_ctx()
+    ).refusal is (RefusalReason.ON_HOLIDAY)
 
 
 def test_a_pet_on_holiday_never_calls_for_attention() -> None:

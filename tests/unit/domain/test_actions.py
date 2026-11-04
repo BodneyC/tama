@@ -17,7 +17,7 @@ from tama.domain.events import (
     Refused,
     Woken,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Timers
 from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import Stats
@@ -212,46 +212,49 @@ def test_play_refused_when_too_tired() -> None:
 def test_winning_a_game() -> None:
     pet = make_pet(stats=Stats(happiness=50, energy=50), weight=10)
 
-    out = apply_game_outcome(pet, GameResult.WIN, ctx=make_ctx())
+    out = apply_game_outcome(pet, GameResult.WIN, game=GameKind.LEFT_RIGHT, ctx=make_ctx())
 
     assert out.pet.stats.happiness == 70
     assert out.pet.stats.energy == 40
     assert out.pet.weight == 9
-    assert out.events == (Played(pet.age, GameResult.WIN),)
+    assert out.events == (Played(pet.age, GameResult.WIN, GameKind.LEFT_RIGHT),)
 
 
 def test_losing_a_game() -> None:
     pet = make_pet(stats=Stats(happiness=50, energy=50), weight=10)
 
-    out = apply_game_outcome(pet, GameResult.LOSS, ctx=make_ctx())
+    out = apply_game_outcome(pet, GameResult.LOSS, game=GameKind.LEFT_RIGHT, ctx=make_ctx())
 
     assert out.pet.stats.happiness == 55
     assert out.pet.stats.energy == 40
     assert out.pet.weight == 10
-    assert out.events == (Played(pet.age, GameResult.LOSS),)
+    assert out.events == (Played(pet.age, GameResult.LOSS, GameKind.LEFT_RIGHT),)
 
 
 def test_drawing_a_game() -> None:
     pet = make_pet(stats=Stats(happiness=50, energy=50), weight=10)
 
-    out = apply_game_outcome(pet, GameResult.DRAW, ctx=make_ctx())
+    out = apply_game_outcome(pet, GameResult.DRAW, game=GameKind.LEFT_RIGHT, ctx=make_ctx())
 
     assert out.pet.stats.happiness == 60
     assert out.pet.stats.energy == 40
     assert out.pet.weight == 10
-    assert out.events == (Played(pet.age, GameResult.DRAW),)
+    assert out.events == (Played(pet.age, GameResult.DRAW, GameKind.LEFT_RIGHT),)
 
 
 def test_weight_never_drops_below_minimum() -> None:
     pet = make_pet(weight=1)
 
-    assert apply_game_outcome(pet, GameResult.WIN, ctx=make_ctx()).pet.weight == 1
+    assert (
+        apply_game_outcome(pet, GameResult.WIN, game=GameKind.LEFT_RIGHT, ctx=make_ctx()).pet.weight
+        == 1
+    )
 
 
 def test_game_outcome_refused_for_dead_pet() -> None:
     pet = make_pet(stage=LifeStage.DEAD, cause_of_death=DeathCause.POOR_HEALTH)
 
-    out = apply_game_outcome(pet, GameResult.WIN, ctx=make_ctx())
+    out = apply_game_outcome(pet, GameResult.WIN, game=GameKind.LEFT_RIGHT, ctx=make_ctx())
 
     assert out.pet == pet
     assert out.refusal is RefusalReason.DEAD

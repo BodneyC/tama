@@ -31,7 +31,7 @@ from tama.domain.events import (
     Woken,
     WokeUp,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.domain.weight import WeightStatus
@@ -102,9 +102,9 @@ def test_format_age(age: timedelta, text: str) -> None:
         (Ate(AGE, Action.MEAL), "Ate a meal"),
         (Ate(AGE, Action.SNACK), "Ate a snack"),
         (Ate(AGE, Action.MEAL, stuffed=True), "Ate a meal anyway and is stuffed"),
-        (Played(AGE, GameResult.WIN), "Won a game"),
-        (Played(AGE, GameResult.DRAW), "Drew a game"),
-        (Played(AGE, GameResult.LOSS), "Lost a game"),
+        (Played(AGE, GameResult.WIN, GameKind.LEFT_RIGHT), "Won a game"),
+        (Played(AGE, GameResult.DRAW, GameKind.LEFT_RIGHT), "Drew a game"),
+        (Played(AGE, GameResult.LOSS, GameKind.LEFT_RIGHT), "Lost a game"),
         (Cleaned(AGE, 2), "Was cleaned up"),
         (MedicineGiven(AGE, cured=True), "Was cured"),
         (MedicineGiven(AGE, cured=False), "Took some medicine"),

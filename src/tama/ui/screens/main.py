@@ -218,14 +218,16 @@ class MainScreen(Screen[None]):
             self._report(outcome)
             return
 
-        def played(result: GameResult | None) -> None:
-            if result is not None:
-                self._report(self.session.finish_game(result))
-
         def chosen(kind: GameKind | None) -> None:
-            if kind is not None:
-                self.last_game = kind
-                self.app.push_screen(game_screen(kind, self.session, self._view), played)
+            if kind is None:
+                return
+            self.last_game = kind
+
+            def played(result: GameResult | None) -> None:
+                if result is not None:
+                    self._report(self.session.finish_game(result, kind))
+
+            self.app.push_screen(game_screen(kind, self.session, self._view), played)
 
         self.app.push_screen(GameSelectScreen(self.last_game), chosen)
 

@@ -26,7 +26,7 @@ from tama.domain.events import (
     Refused,
     Woken,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
@@ -74,8 +74,8 @@ def apply(pet: Pet, action: Action, ctx: Context) -> Outcome:
     return _HANDLERS[action](pet, ctx)
 
 
-def apply_game_outcome(pet: Pet, result: GameResult, *, ctx: Context) -> Outcome:
-    """Apply the result of a finished mini-game.
+def apply_game_outcome(pet: Pet, result: GameResult, *, game: GameKind, ctx: Context) -> Outcome:
+    """Apply the result of a finished mini-game, ``game``.
 
     Only death refuses this: the game was already accepted, so a pet that dozed off
     mid-game still gets the result.
@@ -92,7 +92,7 @@ def apply_game_outcome(pet: Pet, result: GameResult, *, ctx: Context) -> Outcome
     weight_change = b.play_win_weight if result is GameResult.WIN else 0
     stats = pet.stats.adjust(Stat.HAPPINESS, happiness).adjust(Stat.ENERGY, b.play_energy)
     played = replace(pet, stats=stats, weight=_weight(pet, weight_change, b))
-    return Outcome(played, (Played(pet.age, result),))
+    return Outcome(played, (Played(pet.age, result, game),))
 
 
 def _weight(pet: Pet, delta: int, b: Balance) -> int:

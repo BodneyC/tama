@@ -31,7 +31,7 @@ from tama.domain.events import (
     MisbehaviourIgnored,
     MistakeReason,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet, new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage, Variant
@@ -98,9 +98,8 @@ def care(pet: Pet, ctx: Context, *, snacker: bool = False) -> Pet:
         if snacker:  # a treat is quicker than a game
             act(Action.SNACK)
             continue
-        pet = apply_game_outcome(
-            pet, GameResult.WIN if ctx.rng.random() < 0.6 else GameResult.LOSS, ctx=ctx
-        ).pet
+        result = GameResult.WIN if ctx.rng.random() < 0.6 else GameResult.LOSS
+        pet = apply_game_outcome(pet, result, game=GameKind.LEFT_RIGHT, ctx=ctx).pet
     if pet.stats.happiness < 50:
         act(Action.SNACK)
     if pet.is_asleep == pet.lights_on:

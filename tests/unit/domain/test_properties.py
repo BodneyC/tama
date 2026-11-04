@@ -9,7 +9,7 @@ from hypothesis import strategies as st
 from tama.domain.actions import apply, apply_game_outcome
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.events import Action
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.simulation import advance
 from tama.domain.stats import DRIFTING, STAT_MAX, STAT_MIN, Stat
@@ -78,7 +78,7 @@ def test_actions_preserve_invariants(pet: Pet, moves: list[Action | GameResult],
     for move in moves:
         # A GameResult stands for finishing a mini-game.
         out = (
-            apply_game_outcome(pet, move, ctx=ctx)
+            apply_game_outcome(pet, move, game=GameKind.LEFT_RIGHT, ctx=ctx)
             if isinstance(move, GameResult)
             else apply(pet, move, ctx)
         )

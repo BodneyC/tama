@@ -15,7 +15,7 @@ from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.holiday import pause, resume
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import BoardGame, pet_move
 from tama.domain.pet import DEFAULT_SPECIES, ZERO, Pet, new_egg
@@ -206,9 +206,9 @@ class GameSession:
         """
         return self._commit(apply(self._pet, action, self._ctx))
 
-    def finish_game(self, result: GameResult) -> Outcome:
+    def finish_game(self, result: GameResult, game: GameKind) -> Outcome:
         """Apply a finished mini-game's result, saving if it was accepted."""
-        return self._commit(apply_game_outcome(self._pet, result, ctx=self._ctx))
+        return self._commit(apply_game_outcome(self._pet, result, game=game, ctx=self._ctx))
 
     def pause(self) -> Outcome:
         """Put the pet on holiday (SPEC §2.6), saving at once; refused if it isn't settled."""

@@ -19,7 +19,7 @@ from tama.domain.events import (
     RefusalReason,
     ResumedFromHoliday,
 )
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.minigames.four_in_a_row import FourInARow
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import pet_move
@@ -264,7 +264,7 @@ def test_finish_game_applies_result_and_saves(clock: FakeClock) -> None:
     repo = saved(stats=Stats(happiness=50))
     session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
 
-    outcome = session.finish_game(GameResult.WIN)
+    outcome = session.finish_game(GameResult.WIN, GameKind.TIC_TAC_TOE)
 
     assert isinstance(outcome.events[0], Played)
     assert session.pet.stats.happiness == 70

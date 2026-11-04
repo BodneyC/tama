@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 
-from tama.domain.minigames import GameResult
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
@@ -146,9 +146,10 @@ class Ate(Event):
 
 @dataclass(frozen=True, slots=True)
 class Played(Event):
-    """A mini-game finished, with ``result`` from the player's side."""
+    """A ``game`` finished, with ``result`` from the player's side."""
 
     result: GameResult
+    game: GameKind
 
 
 @dataclass(frozen=True, slots=True)
