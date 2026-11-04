@@ -52,6 +52,7 @@ uv run pytest -n0 --snapshot-update      # regenerate UI snapshots, single-proce
 uv run python -m tools.sprites.generate # regenerate the pixel-art sprite set (see /add-sprite)
 uv run python -m tools.balance          # play many simulated lives; judge Balance changes on this
 uv run python -m tools.games            # the pet as a board-game opponent: win rates per stage
+uv run python -m tools.generations      # family lines (SPEC §2.8): generations reached in a month
 ```
 
 **Definition of done for any change** — all of these must pass:

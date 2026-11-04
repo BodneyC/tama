@@ -8,6 +8,7 @@ from datetime import timedelta
 
 import pytest
 from tools.balance import PLAYERS, Player, live
+from tools.generations import Line, keep_a_line
 
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.stage import Variant
@@ -58,3 +59,10 @@ def test_cheering_a_pet_up_with_snacks_raises_a_chubby_adult() -> None:
 
     assert life.variant is Variant.CHUBBY
     assert life.weight_mistakes == 1  # one long episode, counted once
+
+
+@pytest.mark.slow
+def test_a_casual_player_keeps_a_family_line_going_for_a_month() -> None:
+    line = keep_a_line(CASUAL, seed=1, balance=DEFAULT_BALANCE, days=30)
+
+    assert line == Line(generations=2, ended="going")
