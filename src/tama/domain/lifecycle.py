@@ -3,7 +3,7 @@
 from dataclasses import replace
 
 from tama.domain.balance import Balance
-from tama.domain.events import Died, Event, Evolved
+from tama.domain.events import Died, Event, Evolved, LaidEgg
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.weight import WeightStatus, weight_status_at
@@ -34,6 +34,8 @@ def adult_variant(pet: Pet, balance: Balance) -> Variant:
 def die(pet: Pet, cause: DeathCause, events: list[Event]) -> Pet:
     """Return ``pet`` dead of ``cause``, recording a ``Died`` event."""
     events.append(Died(pet.age, cause))
+    if cause is DeathCause.OLD_AGE:  # a long life leaves an egg for an heir (SPEC §2.8)
+        events.append(LaidEgg(pet.age))
     return replace(
         pet,
         stage=LifeStage.DEAD,

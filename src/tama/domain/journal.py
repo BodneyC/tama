@@ -22,6 +22,8 @@ from tama.domain.events import (
     Event,
     Evolved,
     GotSick,
+    HeirHatched,
+    LaidEgg,
     MedicineGiven,
     Misbehaved,
     MisbehaviourIgnored,
@@ -52,11 +54,13 @@ class Topic(StrEnum):
     """What an entry is about. ``Entry.detail`` says more for some topics (see each)."""
 
     JOURNAL_STARTED = "journal_started"
-    HATCHED = "hatched"
+    HATCHED = "hatched"  # whose egg it was, for an heir
     EVOLVED = "evolved"  # "<stage>/<variant>"
     DIED = "died"  # the cause
     HOLIDAY = "holiday"
     BACK = "back_from_holiday"  # whole minutes away
+    LAID_EGG = "laid_egg"
+    HEIR_HATCHED = "heir_hatched"  # the heir's name
     MEAL = "meal"
     SNACK = "snack"
     TANTRUM = "tantrum"
@@ -157,7 +161,7 @@ def record(journal: Journal, events: Iterable[Event], before: Pet) -> Journal:
         The updated journal (``journal`` itself if nothing was worth writing or counting).
     """
     start = before.updated_at - before.carry
-    writer = _Writer(journal, lambda age: start + (age - before.age))
+    writer = _Writer(journal, before, lambda age: start + (age - before.age))
     for event in events:
         writer.write(event)
     return writer.journal
@@ -166,15 +170,24 @@ def record(journal: Journal, events: Iterable[Event], before: Pet) -> Journal:
 class _Writer:
     """Applies events to a journal one by one (keeps ``record`` readable)."""
 
-    def __init__(self, journal: Journal, when: Callable[[timedelta], datetime]) -> None:
+    def __init__(
+        self, journal: Journal, before: Pet, when: Callable[[timedelta], datetime]
+    ) -> None:
         self.journal = journal
+        self._before = before
         self._when = when
 
-    def write(self, event: Event) -> None:  # noqa: PLR0912 - one arm per event type
+    def write(self, event: Event) -> None:
+        if not self._life(event):
+            self._care(event)
+
+    def _life(self, event: Event) -> bool:
+        """Write a life event; ``False`` if ``event`` isn't one."""
         t = self.journal.tallies
         match event:
             case Evolved(from_stage=LifeStage.EGG):
-                self._add(EntryKind.LIFE, Topic.HATCHED, event)
+                parent = self._before.ancestors[-1].name if self._before.ancestors else ""
+                self._add(EntryKind.LIFE, Topic.HATCHED, event, parent)
             case Evolved(to_stage=stage, variant=variant):
                 self._add(EntryKind.LIFE, Topic.EVOLVED, event, f"{stage}/{variant}")
             case Died(cause=cause):
@@ -184,6 +197,17 @@ class _Writer:
                 self._add(EntryKind.LIFE, Topic.HOLIDAY, event)
             case ResumedFromHoliday(length=length):
                 self._add(EntryKind.LIFE, Topic.BACK, event, str(length // _MINUTE))
+            case LaidEgg():
+                self._add(EntryKind.LIFE, Topic.LAID_EGG, event)
+            case HeirHatched(heir=heir):
+                self._add(EntryKind.LIFE, Topic.HEIR_HATCHED, event, heir)
+            case _:
+                return False
+        return True
+
+    def _care(self, event: Event) -> None:  # noqa: PLR0912 - one arm per event type
+        t = self.journal.tallies
+        match event:
             case Ate(food=Action.SNACK):
                 self._count(replace(t, snacks=t.snacks + 1))
                 self._first(Topic.SNACK, event)

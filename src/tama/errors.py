@@ -50,5 +50,9 @@ class PetLockedError(TamaError):
         self.pid = pid
 
 
+class NoEggError(TamaError):
+    """There is no egg to hatch: the pet is alive, died of poor health, or its egg hatched."""
+
+
 class UnknownPetError(TamaError):
     """``--pet NAME`` matched no pet, or several."""

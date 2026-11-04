@@ -21,6 +21,8 @@ from tama.domain.events import (
     Evolved,
     FellAsleep,
     GotSick,
+    HeirHatched,
+    LaidEgg,
     LightsToggled,
     MedicineGiven,
     Misbehaved,
@@ -114,6 +116,10 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return f"Grew into {_stage_phrase(stage, variant)}"
         case Died(cause=cause):
             return _DEATHS[cause]
+        case LaidEgg():
+            return "Left an egg"
+        case HeirHatched(heir=heir):
+            return f"Its egg hatched as {heir}"
         case FellAsleep():
             return "Fell asleep"
         case WokeUp():
@@ -175,7 +181,7 @@ GAME_NAMES = {
 }
 _JOURNAL_TEXT = {
     Topic.JOURNAL_STARTED: "Started keeping a journal",
-    Topic.HATCHED: "Hatched",
+    Topic.LAID_EGG: "Left an egg",
     Topic.HOLIDAY: "Went on holiday",
     Topic.MEAL: "First meal",
     Topic.SNACK: "First snack",
@@ -196,6 +202,10 @@ def _ordinal(n: int) -> str:
 def describe_entry(entry: Entry) -> str:  # noqa: PLR0911 - one arm per topic with a detail
     """A journal entry as a short sentence (SPEC §2.9)."""
     match entry.topic:
+        case Topic.HATCHED:
+            return f"Hatched from {entry.detail}'s egg" if entry.detail else "Hatched"
+        case Topic.HEIR_HATCHED:
+            return f"Its egg hatched as {entry.detail}"
         case Topic.EVOLVED:
             stage, variant = entry.detail.split("/")
             return f"Grew into {_stage_phrase(LifeStage(stage), Variant(variant))}"

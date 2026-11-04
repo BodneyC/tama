@@ -79,6 +79,18 @@ class Died(Event):
 
 
 @dataclass(frozen=True, slots=True)
+class LaidEgg(Event):
+    """A pet that died of old age left an egg for an heir (SPEC §2.8)."""
+
+
+@dataclass(frozen=True, slots=True)
+class HeirHatched(Event):
+    """The egg this pet left has hatched as ``heir``."""
+
+    heir: str
+
+
+@dataclass(frozen=True, slots=True)
 class FellAsleep(Event):
     """The pet went to sleep."""
 

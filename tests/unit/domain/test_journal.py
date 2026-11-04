@@ -15,6 +15,8 @@ from tama.domain.events import (
     Event,
     Evolved,
     GotSick,
+    HeirHatched,
+    LaidEgg,
     LightsToggled,
     MedicineGiven,
     Misbehaved,
@@ -35,7 +37,7 @@ from tama.domain.journal import (
     record,
 )
 from tama.domain.minigames import GameKind, GameResult
-from tama.domain.pet import Pet
+from tama.domain.pet import AncestorRecord, Pet
 from tama.domain.simulation import advance
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tests.factories import FIXED_NOW, make_ctx, make_pet
@@ -88,6 +90,8 @@ def test_time_carried_over_from_a_part_step_is_not_counted_twice() -> None:
         (Died(PET.age + MIN, DeathCause.OLD_AGE), Topic.DIED, "old_age"),
         (PausedForHoliday(PET.age + MIN), Topic.HOLIDAY, ""),
         (ResumedFromHoliday(PET.age + MIN, timedelta(days=3, minutes=7)), Topic.BACK, "4327"),
+        (LaidEgg(PET.age + MIN), Topic.LAID_EGG, ""),
+        (HeirHatched(PET.age + MIN, "Mochi II"), Topic.HEIR_HATCHED, "Mochi II"),
     ],
 )
 def test_life_events_are_always_written(event: Event, topic: Topic, detail: str) -> None:
@@ -96,6 +100,14 @@ def test_life_events_are_always_written(event: Event, topic: Topic, detail: str)
 
     assert once.entries == (entry(LIFE, topic, detail),)
     assert twice.entries == once.entries * 2
+
+
+def test_an_heir_hatching_names_whose_egg_it_was() -> None:
+    parent = AncestorRecord("Mochi", FIXED_NOW, 1, Variant.GOOD, timedelta(days=16))
+    heir = replace(PET, ancestors=(parent,), generation=2)
+    hatched = Evolved(PET.age + MIN, LifeStage.EGG, LifeStage.BABY, Variant.DEFAULT)
+
+    assert write(hatched, before=heir).entries == (entry(LIFE, Topic.HATCHED, "Mochi"),)
 
 
 # --- Firsts --------------------------------------------------------------------------------

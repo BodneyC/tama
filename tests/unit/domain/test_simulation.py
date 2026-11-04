@@ -12,6 +12,7 @@ from tama.domain.events import (
     Evolved,
     FellAsleep,
     GotSick,
+    LaidEgg,
     Misbehaved,
     MisbehaviourIgnored,
     MistakeReason,
@@ -613,7 +614,19 @@ def test_elder_dies_of_old_age_at_lifespan() -> None:
     assert out.pet.stage is LifeStage.DEAD
     assert out.pet.cause_of_death is DeathCause.OLD_AGE
     assert out.pet.age == timedelta(days=15)
-    assert out.events[-1] == Died(timedelta(days=15), DeathCause.OLD_AGE)
+    assert out.events[-2:] == (
+        Died(timedelta(days=15), DeathCause.OLD_AGE),
+        LaidEgg(timedelta(days=15)),
+    )
+    assert out.pet.egg_waiting
+
+
+def test_a_pet_that_dies_of_poor_health_leaves_no_egg() -> None:
+    out = run(make_pet(stats=Stats(hunger=0, health=1)), HOUR)
+
+    assert out.pet.cause_of_death is DeathCause.POOR_HEALTH
+    assert not any(isinstance(e, LaidEgg) for e in out.events)
+    assert not out.pet.egg_waiting
 
 
 # --- Skipping time ------------------------------------------------------------------------

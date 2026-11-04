@@ -111,6 +111,8 @@ class Balance:
     play_lose_happiness: int = 5
     play_win_weight: int = -1
     discipline_gain: int = 25
+    # A good adult's heir starts with this much discipline (SPEC §2.8).
+    heir_discipline: int = 25
 
     # Weight (SPEC §2.7). Awake, the pet burns this share of its own weight per hour (scaled by
     # the stage multiplier), so its weight settles where what it eats meets what it burns.

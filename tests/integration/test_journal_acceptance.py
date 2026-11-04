@@ -78,6 +78,7 @@ def test_a_whole_life_journal_tells_its_story_and_tama_journal_prints_it() -> No
         "Grew into a well-behaved adult",
         "Grew into an elder",
         "Passed away peacefully of old age",
+        "Left an egg",
     ]
     assert session.pet.cause_of_death is DeathCause.OLD_AGE
     assert [e.at for e in journal.entries] == sorted(e.at for e in journal.entries)

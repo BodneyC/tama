@@ -64,6 +64,20 @@ class Timers:
         return replace(self, **{need.value: value})
 
 
+@dataclass(frozen=True, slots=True)
+class AncestorRecord:
+    """One pet in an heir's family line (SPEC §2.8): copied, so the line never needs its file.
+
+    ``name`` and ``born_at`` together identify the ancestor; ``lifespan`` is how long it lived.
+    """
+
+    name: str
+    born_at: datetime
+    generation: int
+    variant: Variant
+    lifespan: timedelta
+
+
 def _require_aware(when: datetime) -> None:
     if when.tzinfo is None or when.utcoffset() is None:
         raise InvalidArgumentError(f"datetime must be timezone-aware, got {when!r}")
@@ -90,6 +104,9 @@ class Pet:
             tiredness; zero once it's back to its normal sleep rules.
         woken_tantrum: Whether the current tantrum is from being woken, which earns no
             discipline when disciplined.
+        generation: 1 for a pet hatched from a new egg; its parent's + 1 for an heir.
+        ancestors: The family line, oldest (the founder) first, parent last.
+        heir_hatched: Whether the egg it left (dying of old age) has been hatched.
     """
 
     name: str
@@ -118,6 +135,9 @@ class Pet:
     paused_since: datetime | None = None
     stay_awake: timedelta = ZERO
     woken_tantrum: bool = False
+    generation: int = 1
+    ancestors: tuple[AncestorRecord, ...] = ()
+    heir_hatched: bool = False
 
     def __post_init__(self) -> None:
         """Validate invariants."""
@@ -133,6 +153,8 @@ class Pet:
             raise InvalidArgumentError(f"stay_awake must not be negative, got {self.stay_awake}")
         if self.weight < 1:
             raise InvalidArgumentError(f"weight must be at least 1, got {self.weight}")
+        if self.generation < 1:
+            raise InvalidArgumentError(f"generation must be at least 1, got {self.generation}")
 
     @property
     def is_alive(self) -> bool:
@@ -143,6 +165,11 @@ class Pet:
     def on_holiday(self) -> bool:
         """Whether the pet is paused: nothing happens to it until it is resumed."""
         return self.paused_since is not None
+
+    @property
+    def egg_waiting(self) -> bool:
+        """Whether it died of old age and the egg it left hasn't hatched yet (SPEC §2.8)."""
+        return self.cause_of_death is DeathCause.OLD_AGE and not self.heir_hatched
 
     @property
     def is_sick(self) -> bool:
