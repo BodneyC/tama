@@ -13,6 +13,7 @@ from tama.domain.stage import LifeStage
 from tama.errors import InvalidArgumentError
 
 HOUR = timedelta(hours=1)
+_BANDED_STAGES = (LifeStage.BABY, LifeStage.CHILD, LifeStage.TEEN, LifeStage.ADULT, LifeStage.ELDER)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +109,19 @@ class Balance:
     play_win_weight: int = -1
     discipline_gain: int = 25
 
+    # Weight (SPEC §2.7). Awake, the pet burns this share of its own weight per hour (scaled by
+    # the stage multiplier), so its weight settles where what it eats meets what it burns.
+    weight_burn: Fraction = Fraction(1, 64)
+    # Healthy band (lowest, highest grams) per stage; it rises as the pet grows.
+    baby_weight: tuple[int, int] = (4, 10)
+    child_weight: tuple[int, int] = (4, 14)
+    teen_weight: tuple[int, int] = (7, 24)
+    adult_weight: tuple[int, int] = (12, 36)
+    elder_weight: tuple[int, int] = (14, 36)
+    overweight_sickness_chance: float = 0.05
+    overweight_energy_multiplier: Fraction = Fraction(5, 4)
+    weight_episode_grace: timedelta = 12 * HOUR
+
     # The pet as a board-game opponent: the chance it plays a random move instead of a good one
     baby_mistake_chance: float = 0.6
     child_mistake_chance: float = 0.4
@@ -120,6 +134,12 @@ class Balance:
         """Validate constraints the simulation relies on."""
         if self.step <= timedelta(0) or HOUR % self.step:
             raise InvalidArgumentError(f"step must be positive and divide an hour, got {self.step}")
+        for stage in _BANDED_STAGES:
+            low, high = self.weight_band(stage)
+            if not self.min_weight <= low <= high:
+                raise InvalidArgumentError(
+                    f"{stage.value} weight band must be min_weight <= low <= high, got {low}-{high}"
+                )
 
     def stage_age(self, stage: LifeStage) -> timedelta:
         """Return the age at which the pet enters ``stage``."""
@@ -138,6 +158,22 @@ class Balance:
                 return self.elder_age
             case _:  # LifeStage.DEAD
                 raise InvalidArgumentError("dead is not entered at a fixed age")
+
+    def weight_band(self, stage: LifeStage) -> tuple[int, int]:
+        """Return the healthy weight range (lowest, highest grams) at ``stage``."""
+        match stage:
+            case LifeStage.BABY:
+                return self.baby_weight
+            case LifeStage.CHILD:
+                return self.child_weight
+            case LifeStage.TEEN:
+                return self.teen_weight
+            case LifeStage.ADULT:
+                return self.adult_weight
+            case LifeStage.ELDER:
+                return self.elder_weight
+            case _:  # eggs and dead pets
+                raise InvalidArgumentError(f"a pet has no healthy weight as {stage.value}")
 
     def decay_multiplier(self, stage: LifeStage) -> Fraction:
         """Return how much faster (>1) or slower (<1) awake needs decay at ``stage``."""
