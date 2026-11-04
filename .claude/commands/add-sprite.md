@@ -20,7 +20,8 @@ tools/sprites/<species>.py                                # one generator per sp
 tools/sprites/overlays.py, generate.py                    # overlays; the entry point
 ```
 
-`<variant>` is `default`, `good` or `scruffy` (adults and elders). `<stage>` is `egg` … `dead`.
+`<variant>` is `default`, `good`, `scruffy` or `chubby` (adults and elders). `<stage>` is `egg` …
+`dead`. Every species needs every variant (`test_sprites.py`).
 Required animations per stage are in SPEC §5.2 and enforced by `tests/unit/test_sprites.py`.
 
 ## Colours
@@ -121,7 +122,10 @@ or a recipe in `kit.py` (`living()`, `hatch()`, `wobble()`, transformations), th
    base grids for every stage (egg → dead) using the pixel vocabulary, and give it a `PALETTE`
    with dark and light values (plus `UI` overrides if it should theme the app). Describe it as
    a `Species` (`tools/sprites/species.py`): sick and per-variant palette overrides, and
-   `looks` that redraw good/scruffy adults (owl: scholar's cap; bear: bow tie).
+   `looks` that redraw good/scruffy adults (owl: scholar's cap; bear: bow tie). `chubby`
+   defaults to `kit.chubby()`, which widens the grid by repeating the plain columns nearest the
+   centre; override it if that stretches a feature (owl: evens out belly feathers; bear:
+   `chubby(g, at=8)` widens the cheeks, not the snout).
 2. Add its `build` to `COLLECTIONS` in `tools/sprites/generate.py`.
 3. Regenerate. The tests require every SPEC §5.2 animation for every species directory; update
    `test_shipped_species` in `tests/unit/test_sprites.py`.

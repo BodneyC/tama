@@ -29,7 +29,9 @@ uv run tama --pause          # going away? put every settled pet on holiday (--r
 In the game, `?` lists the keys: `f` feed, `p` play, `c` clean, `m` medicine, `l` lights,
 `d` discipline, `w` wake, `h` holiday, `t` switch pets, `q` save and quit.
 
-Planned (see the roadmap): weight that matters, a journal for every pet (`j`, `tama journal`),
+Watch its weight (`s`): snacks cheer it up but fatten it, and games keep it trim.
+
+Planned (see the roadmap): a journal for every pet (`j`, `tama journal`),
 eggs left by pets that die of old age so a family line carries on, visits between your pets
 (`v`), tricks for well-behaved pets, and a stage that follows the time of day.
 

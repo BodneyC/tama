@@ -50,7 +50,7 @@ src/tama/
 │   ├── simulation.py      # advance(pet, elapsed, ctx) -> Outcome
 │   ├── lifecycle.py       # stage transitions, adult variant selection, death
 │   ├── holiday.py         # pause/resume: settled-pet check, frozen pets (ADR 0008)
-│   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)  [M6.9]
+│   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)
 │   ├── journal.py         # Journal + record(journal, events, pet) (ADR 0009)  [M6.10]
 │   ├── lineage.py         # AncestorRecord, heir_name, hatch_heir (ADR 0010)  [M6.11]
 │   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)  [M6.12]

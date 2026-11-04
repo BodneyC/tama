@@ -32,7 +32,8 @@ at hatching; default `tama`), `variant` (adult form),
 `born_at`, `last_updated_at`, `care_mistakes` (int), `paused_since` (when the pet went on
 holiday, §2.6; empty while it is living normally), `stay_awake` (how much longer a pet the
 player woke stays up, §2.4), `woken_tantrum` (its current tantrum came from being woken),
-`weight_episode` (how long its weight has been outside the healthy band, §2.7),
+`weight_progress` (fraction of a gram burned, §2.7) and `timers.weight` (how long its weight has
+been outside the healthy band),
 `generation`, `ancestors` and `heir_hatched` (its family line, §2.8) and `last_visit` (pet
 age at its last visit, §3.2). Each pet also keeps a **journal** (§2.9) beside it in the save.
 
@@ -132,24 +133,31 @@ put a pet **on holiday**: it is frozen in time until they resume it.
 Weight used to be a number on the status panel and nothing more. It now matters, so the
 choice between a meal and a snack is a real one.
 
-- **Gaining and losing:** a meal adds 1 g, a snack 2 g, a stuffed meal (§3) 3 g, and a won game
-  takes 1 g off. The pet also burns 1 g every 4 h awake (scaled by the stage multiplier, like
-  the other awake drift), never going below `min_weight`.
-- **Healthy band per stage** (in `Balance`; these starting values are tuned in the balance
-  pass, see below): baby 4–10 g, child 8–18 g, teen 14–28 g, adult 20–40 g, elder 18–36 g.
-  The bands rise from stage to stage, so a growing pet has to eat to stay in them.
+- **Gaining and losing:** a meal adds 2 g, a snack 2 g, a stuffed meal (§3) 4 g, and a won game
+  takes 1 g off. Awake, the pet also burns **1/64 of its own weight per hour** (scaled by the
+  stage multiplier, like the other awake drift; fractions of a gram are carried in
+  `weight_progress`), never going below `min_weight`. Because the burn grows with the weight,
+  weight settles where diet and burn meet instead of climbing for ever: about 20 g for a pet
+  fed meals when hungry, over 80 g for one kept happy with snacks.
+- **Healthy band per stage** (in `Balance`): baby 4–10 g, child 4–16 g, teen 7–24 g, adult
+  12–44 g, elder 18–50 g. The bands rise from stage to stage, so a growing pet has to eat to
+  stay in them; elders burn more slowly (×0.75) and are allowed to be heavier.
 - **Overweight** (above the band): +5% hourly sickness chance (§2.3) and awake energy drift
   ×1.25. **Underweight** (below the band): health doesn't regenerate (§2.3). Either one raises
   a `weight` attention call (§4), and **12 h** outside the band in a row is a care mistake
   (once per episode; the timer resets when weight is back in the band and is frozen on
   holiday). A pet that grows up while overweight becomes a **chubby** adult (§2.2).
-- **Showing it:** the status panel shows the weight with its healthy band ("23 g (20–40)") and
-  marks it `▲` over or `▼` under in the warning colour; the header's attention reasons say
+- **Showing it:** the status panel shows the weight with its healthy band ("23 g (12-44)") and,
+  outside it, the weight and a `▲` over or `▼` under in the warning colour. Leaving the band is
+  announced ("Got overweight", "Got underweight") and the header's attention reasons say
   "overweight" or "underweight".
-- **Balance:** `tools/balance.py` reports time spent out of band and chubby adults. A diligent
-  or casual player (meals when hungry, the odd snack) stays in the band without trying; a
-  player who uses snacks to keep happiness up raises a chubby adult; an under-fed pet ends up
-  underweight. Tune the band and the burn rate, not the logic, until that holds.
+- **Balance:** `tools/balance.py` reports time out of band, weight at adulthood and chubby
+  adults, and has a "casual snacker" who cheers the pet up with snacks instead of games.
+  Results (20 lives each): diligent, casual and busy players spend 0% of life out of band and
+  reach adulthood at 14-24 g, with every other result as before weight mattered; the snacker's
+  pet is out of band 98% of its life, reaches adulthood at 84-92 g, is always chubby and falls
+  sick about 21 times a life (casual: 5). At 1 g a meal, won games kept every pet underweight,
+  so meals add 2 g. Tune the bands and the burn rate, not the logic.
 
 ### 2.8 Generations
 
@@ -227,7 +235,7 @@ A disciplined pet learns tricks. They are for show: nothing in the game depends 
 
 | Key | Action | Effect | Refused when |
 | --- | --- | --- | --- |
-| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. At hunger ≥ 95 the pet eats it anyway but is **stuffed**: hunger 100, weight +3g, happiness −5. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. Weight matters (§2.7). | Asleep, egg, dead, misbehaving |
+| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +2g. At hunger ≥ 95 the pet eats it anyway but is **stuffed**: hunger 100, weight +4g, happiness −5. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. Weight matters (§2.7). | Asleep, egg, dead, misbehaving |
 | `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, misbehaving, energy < 10 |
 | `c` | Clean | Removes all poop, hygiene → 100 | — |
 | `m` | Medicine | Cures one dose of sickness | Asleep, not sick |
@@ -415,7 +423,7 @@ there), and with reduced motion the icon is steady instead of blinking.
 - Format: JSON, human-readable, Pydantic model with `schema_version: int` (v3 adds
   `paused_since`; the v2 → v3 migration sets it to empty, i.e. not on holiday. v4 adds
   `stay_awake` and `woken_tantrum`; the v3 → v4 migration sets them to zero and false.
-  v5 adds `weight_episode` (migrated to zero). v6 adds the journal (§2.9); the v5 → v6
+  v5 adds `weight_progress` and `timers.weight` (migrated to zero). v6 adds the journal (§2.9); the v5 → v6
   migration starts it with one life entry, "Journal started", and zero tallies, since the
   past can't be reconstructed. v7 adds `generation`, `ancestors` and `heir_hatched` (migrated
   to 1, none and false; a pet that already died of old age before v7 has no egg to hatch, so

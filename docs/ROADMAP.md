@@ -284,29 +284,36 @@ happiness, energy and a tantrum, and it is back asleep half an hour later.
 
 Asked for after M6.8: weight was tracked but did nothing (SPEC §2.7). Includes overfeeding.
 
-- [ ] Domain: `Balance` healthy weight band per stage, awake weight burn (1 g / 4 h, stage
-      multiplier), overweight sickness chance and energy multiplier, 12 h episode limit,
-      stuffed-meal numbers; `weight_status(pet, balance)` → under / healthy / over — test-first
-- [ ] Domain: burn in `advance` (fractional progress carried like other drift, so
+- [x] Domain: `Balance` healthy weight band per stage, awake weight burn, overweight sickness
+      chance and energy multiplier, 12 h episode limit, stuffed-meal numbers;
+      `weight_status(pet, balance)` → under / healthy / over — test-first.
+      The burn is **a share of the pet's own weight** (1/64 per awake hour), not a flat
+      1 g / 4 h: measured play showed ~6.7 meals and ~7.2 won games a day, so a flat burn
+      pinned every pet at the minimum, and only a weight-proportional burn settles at a
+      steady weight for a given diet
+- [x] Domain: burn in `advance` (`Pet.weight_progress` carries the fraction of a gram, so
       tick-splitting stays exact); overweight sickness term and energy drift; no health regen
-      while underweight; `Pet.weight_episode` and `MistakeReason.WEIGHT` once per episode;
-      frozen on holiday
-- [ ] Domain: `weight` attention reason (overweight / underweight); it doesn't block a holiday
-- [ ] Domain: stuffed meal at hunger ≥ 95 (hunger 100, weight +3, happiness −5,
+      while underweight; `Timers.weight` and `MistakeReason.WEIGHT` once per episode
+      (`WeightLeftBand` announces it); frozen on holiday
+- [x] Domain: `overweight` / `underweight` attention reasons; they don't block a holiday
+- [x] Domain: stuffed meal at hunger ≥ 95 (hunger 100, weight +4, happiness −5,
       `Ate(stuffed=True)`) replaces the `NOT_HUNGRY` refusal
-- [ ] Domain: `Variant.CHUBBY`, chosen before good/scruffy when overweight at adulthood;
-      elders keep it
-- [ ] Persistence: save schema v5 with `weight_episode` (v4 → v5 migration, a v5 fixture, the
-      v1-v4 fixtures still loading); `chubby` loads as a variant
-- [ ] Sprites: a `chubby` look for adults and elders in every species generator (rounder
-      body), all animations; `test_sprites.py` requires it; `/add-sprite` documents it
-- [ ] UI: status panel "23 g (20–40)" with `▲`/`▼` in the warning colour; toasts for a stuffed
-      meal and the weight attention reasons; Help text
-- [ ] `tools/balance.py`: report time out of band, weight at adulthood and chubby adults; add a
-      snack-heavy player. Tune band and burn so diligent and casual players stay in band,
-      the snack-heavy player raises a chubby adult, and the earlier results otherwise hold
-- [ ] Snapshots: a chubby adult per species (dark, light, monochrome); status panel over and
-      under weight
+- [x] Domain: `Variant.CHUBBY`, chosen before good/scruffy when over the adult band at
+      adulthood; elders keep it
+- [x] Persistence: save schema v5 with `weight_progress` and `timers.weight` (v4 → v5
+      migration, a v5 fixture, the v1-v4 fixtures still loading); `chubby` loads as a variant
+- [x] Sprites: a `chubby` look for adults and elders in every species (`kit.chubby()` widens the
+      body; owl and bear adjust it), all animations; `test_sprites.py` requires every variant
+      for every species; `/add-sprite` documents it
+- [x] UI: status panel "23 g (12-44)" with the weight and `▲`/`▼` in the warning colour; toasts
+      for a stuffed meal and for leaving the band; Help text
+- [x] `tools/balance.py`: reports time out of band, weight at adulthood and chubby adults; a
+      "casual snacker" profile. Meals now add 2 g (at 1 g won games kept every pet
+      underweight) and the adult/elder bands are wider. Diligent, casual and busy players: 0%
+      out of band, every earlier result unchanged; snacker: chubby 20/20, ~21 sicknesses a
+      life (casual 5). Pinned by `tests/integration/test_balance.py`
+- [x] Snapshots: a chubby adult and elder in every species line-up (dark, light, monochrome);
+      status panel over and under weight
 
 **Accept:** a pet fed only on snacks becomes overweight, raises a weight call, catches more
 sickness and grows into a chubby adult; a pet fed meals when hungry stays in its band for a
