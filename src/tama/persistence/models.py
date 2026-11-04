@@ -16,12 +16,12 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, NonNegativeInt, Posit
 from tama import __version__
 from tama.domain.journal import Entry, EntryKind, GameTally, Journal, Tallies, Topic
 from tama.domain.minigames import GameKind
-from tama.domain.pet import Drift, Pet, Timers
+from tama.domain.pet import AncestorRecord, Drift, Pet, Timers
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -80,6 +80,16 @@ class TimersModel(_Model):
     weight: timedelta
 
 
+class AncestorModel(_Model):
+    """Serialized ``AncestorRecord``."""
+
+    name: str
+    born_at: AwareDatetime
+    generation: PositiveInt
+    variant: Variant
+    lifespan: timedelta
+
+
 class PetModel(_Model):
     """Serialized ``Pet``. Field names match the domain one-to-one."""
 
@@ -109,6 +119,9 @@ class PetModel(_Model):
     paused_since: AwareDatetime | None
     stay_awake: timedelta
     woken_tantrum: bool
+    generation: PositiveInt
+    ancestors: tuple[AncestorModel, ...]
+    heir_hatched: bool
 
 
 class EntryModel(_Model):
@@ -186,14 +199,15 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV6(_Model):
-    """Version 6 of the save file.
+class SaveFileV7(_Model):
+    """Version 7 of the save file.
 
     v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4 + weight
-    burn and the time out of the healthy weight band in v5 + the journal in v6.
+    burn and the time out of the healthy weight band in v5 + the journal in v6 + the family
+    line and the egg a pet left in v7.
     """
 
-    schema_version: Literal[6] = 6
+    schema_version: Literal[7] = 7
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel
@@ -232,6 +246,9 @@ class SaveFileV6(_Model):
                 paused_since=pet.paused_since,
                 stay_awake=pet.stay_awake,
                 woken_tantrum=pet.woken_tantrum,
+                generation=pet.generation,
+                ancestors=tuple(AncestorModel(**_fields(a)) for a in pet.ancestors),
+                heir_hatched=pet.heir_hatched,
             ),
             rng=RngStateModel(version=version, internal=internal, gauss_next=gauss_next),
             journal=JournalModel.from_domain(game.journal),
@@ -273,6 +290,9 @@ class SaveFileV6(_Model):
                 paused_since=p.paused_since,
                 stay_awake=p.stay_awake,
                 woken_tantrum=p.woken_tantrum,
+                generation=p.generation,
+                ancestors=tuple(AncestorRecord(**_model_fields(a)) for a in p.ancestors),
+                heir_hatched=p.heir_hatched,
             )
         except InvalidArgumentError as exc:
             raise CorruptSaveError(f"invalid pet data: {exc}") from exc
@@ -284,7 +304,7 @@ class SaveFileV6(_Model):
         return SaveGame(pet, state, self.journal.to_domain())
 
 
-def _fields(obj: Stats | Drift | Timers | Entry | GameTally) -> dict[str, Any]:
+def _fields(obj: Stats | Drift | Timers | Entry | GameTally | AncestorRecord) -> dict[str, Any]:
     return {name: getattr(obj, name) for name in obj.__slots__}
 
 

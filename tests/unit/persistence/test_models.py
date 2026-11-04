@@ -9,13 +9,13 @@ from pydantic import ValidationError
 from tama.domain.journal import Journal
 from tama.domain.pet import Pet
 from tama.errors import CorruptSaveError
-from tama.persistence.models import CURRENT_SCHEMA_VERSION, SaveFileV6, SaveGame, restore_rng
+from tama.persistence.models import CURRENT_SCHEMA_VERSION, SaveFileV7, SaveGame, restore_rng
 from tests.factories import make_pet
 from tests.strategies import journals, pets, rng_states
 
 
 def dump(game: SaveGame) -> dict[str, Any]:
-    raw: dict[str, Any] = json.loads(SaveFileV6.from_domain(game).model_dump_json())
+    raw: dict[str, Any] = json.loads(SaveFileV7.from_domain(game).model_dump_json())
     return raw
 
 
@@ -23,15 +23,15 @@ def dump(game: SaveGame) -> dict[str, Any]:
 def test_round_trip_through_json_is_exact(pet: Pet, rng_state: Any, journal: Journal) -> None:
     game = SaveGame(pet, rng_state, journal)
 
-    text = SaveFileV6.from_domain(game).model_dump_json()
+    text = SaveFileV7.from_domain(game).model_dump_json()
 
-    assert SaveFileV6.model_validate_json(text).to_domain() == game
+    assert SaveFileV7.model_validate_json(text).to_domain() == game
 
 
 def test_schema_version_is_written() -> None:
     raw = dump(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert raw["schema_version"] == CURRENT_SCHEMA_VERSION == 6
+    assert raw["schema_version"] == CURRENT_SCHEMA_VERSION == 7
     assert raw["pet"]["species"] == "tama"
 
 
@@ -49,7 +49,7 @@ def test_restored_rng_continues_the_same_sequence() -> None:
     game = SaveGame(make_pet(), rng.getstate())
 
     restored = restore_rng(
-        SaveFileV6.model_validate_json(SaveFileV6.from_domain(game).model_dump_json())
+        SaveFileV7.model_validate_json(SaveFileV7.from_domain(game).model_dump_json())
         .to_domain()
         .rng_state
     )
@@ -62,7 +62,7 @@ def test_unknown_fields_are_rejected() -> None:
     raw["pet"]["favourite_colour"] = "blue"
 
     with pytest.raises(ValidationError):
-        SaveFileV6.model_validate(raw)
+        SaveFileV7.model_validate(raw)
 
 
 def test_naive_timestamps_are_rejected() -> None:
@@ -70,7 +70,7 @@ def test_naive_timestamps_are_rejected() -> None:
     raw["pet"]["born_at"] = "2026-01-01T12:00:00"
 
     with pytest.raises(ValidationError):
-        SaveFileV6.model_validate(raw)
+        SaveFileV7.model_validate(raw)
 
 
 def test_domain_invariant_violations_become_corrupt_save_errors() -> None:
@@ -78,7 +78,7 @@ def test_domain_invariant_violations_become_corrupt_save_errors() -> None:
     raw["pet"]["stats"]["hunger"] = 500
 
     with pytest.raises(CorruptSaveError, match="hunger"):
-        SaveFileV6.model_validate(raw).to_domain()
+        SaveFileV7.model_validate(raw).to_domain()
 
 
 @pytest.mark.parametrize(
@@ -89,4 +89,4 @@ def test_invalid_rng_state_becomes_corrupt_save_error(internal: list[int]) -> No
     raw["rng"]["internal"] = internal
 
     with pytest.raises(CorruptSaveError, match="RNG"):
-        SaveFileV6.model_validate(raw).to_domain()
+        SaveFileV7.model_validate(raw).to_domain()

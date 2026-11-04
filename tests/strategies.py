@@ -11,8 +11,8 @@ from hypothesis import strategies as st
 from tama.domain.events import Action
 from tama.domain.journal import Entry, EntryKind, GameTally, Journal, Tallies, Topic
 from tama.domain.minigames import GameKind
-from tama.domain.pet import Drift, Pet, Timers
-from tama.domain.stage import DeathCause, LifeStage
+from tama.domain.pet import AncestorRecord, Drift, Pet, Timers
+from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tests.factories import FIXED_NOW, make_pet
 
@@ -53,6 +53,21 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
     dead = draw(st.booleans()) if alive is None else not alive
     stage = LifeStage.DEAD if dead else draw(st.sampled_from(list(LifeStage)[:-1]))
     age = draw(minutes(20 * 24 * 60))
+    ancestors = tuple(
+        draw(
+            st.lists(
+                st.builds(
+                    AncestorRecord,
+                    name=st.sampled_from(["Mochi", "Mochi II", "Bao"]),
+                    born_at=minutes(60 * 24 * 30).map(lambda m: FIXED_NOW - m),
+                    generation=st.integers(min_value=1, max_value=50),
+                    variant=st.sampled_from(list(Variant)),
+                    lifespan=minutes(20 * 24 * 60),
+                ),
+                max_size=3,
+            )
+        )
+    )
     return replace(
         make_pet(stage=stage),
         age=age,
@@ -81,6 +96,9 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
         recent_snacks=tuple(draw(st.lists(minutes(age // timedelta(minutes=1)), max_size=4))),
         cause_of_death=draw(st.sampled_from(list(DeathCause))) if dead else None,
         paused_since=draw(st.none() | st.just(FIXED_NOW)),
+        generation=len(ancestors) + 1,
+        ancestors=ancestors,
+        heir_hatched=dead and draw(st.booleans()),
     )
 
 

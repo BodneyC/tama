@@ -81,12 +81,27 @@ def _v5_to_v6(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "journal": {"entries": [started], "tallies": _NO_TALLIES}}
 
 
+def _v6_to_v7(raw: dict[str, Any]) -> dict[str, Any]:
+    """v7 keeps the family line (ADR 0010); every older pet founded its own.
+
+    A pet that already died of old age was never offered its egg, and offering it now would be
+    a surprise, so its egg counts as hatched.
+    """
+    pet = raw.get("pet")
+    if not isinstance(pet, dict):
+        return raw  # malformed; validation will report it
+    old_age = pet.get("stage") == "dead" and pet.get("cause_of_death") == "old_age"
+    lineage: dict[str, Any] = {"generation": 1, "ancestors": [], "heir_hatched": old_age}
+    return {**raw, "pet": {**lineage, **pet}}
+
+
 MIGRATIONS: dict[int, Migration] = {
     1: _v1_to_v2,
     2: _v2_to_v3,
     3: _v3_to_v4,
     4: _v4_to_v5,
     5: _v5_to_v6,
+    6: _v6_to_v7,
 }
 """Key ``N`` upgrades a version-N save to version N+1."""
 

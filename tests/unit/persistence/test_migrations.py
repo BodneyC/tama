@@ -133,6 +133,27 @@ def test_v5_saves_that_cannot_start_a_journal_are_left_for_validation(
     assert migrate(raw, current=6) == {**raw, "schema_version": 6}
 
 
+@pytest.mark.parametrize(
+    ("pet", "heir_hatched"),
+    [
+        ({"stage": "child", "cause_of_death": None}, False),
+        ({"stage": "dead", "cause_of_death": "poor_health"}, False),
+        ({"stage": "dead", "cause_of_death": "old_age"}, True),
+    ],
+    ids=["alive", "poor-health", "old-age"],
+)
+def test_v6_pets_founded_their_line_and_old_eggs_are_not_offered(
+    pet: dict[str, object], heir_hatched: bool
+) -> None:
+    out = migrate({"schema_version": 6, "pet": pet}, current=7)
+
+    assert out["pet"] == {"generation": 1, "ancestors": [], "heir_hatched": heir_hatched, **pet}
+
+
+def test_v6_saves_without_a_pet_are_left_for_validation() -> None:
+    assert migrate({"schema_version": 6, "pet": 3}, current=7) == {"schema_version": 7, "pet": 3}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})
