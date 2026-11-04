@@ -52,7 +52,7 @@ src/tama/
 │   ├── holiday.py         # pause/resume: settled-pet check, frozen pets (ADR 0008)
 │   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)
 │   ├── journal.py         # Journal + record(journal, events, before) (ADR 0009)
-│   ├── lineage.py         # AncestorRecord, heir_name, hatch_heir (ADR 0010)  [M6.11]
+│   ├── lineage.py         # heir_name, hatch_heir, is_heir_of, founder (ADR 0010)
 │   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)  [M6.12]
 │   ├── tricks.py          # known_tricks from discipline (SPEC §2.10)  [M6.13]
 │   ├── daylight.py        # dawn/day/dusk/night phase from local time (SPEC §5.1)  [M6.13]

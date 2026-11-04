@@ -355,27 +355,28 @@ prints the same entries without changing the save.
 A pet that dies of old age leaves an egg; its heir carries on the family line (SPEC §2.8,
 ADR 0010).
 
-- [ ] Domain: `Pet.generation`, `Pet.ancestors` (`AncestorRecord`: name, generation, variant,
-      lifespan), `Pet.heir_hatched`; `LaidEgg` on death of old age only
-- [ ] Domain: `lineage.py` — `heir_name(name)` (Mochi → Mochi II → Mochi III …, roman
+- [x] Domain: `Pet.generation`, `Pet.ancestors` (`AncestorRecord`: name, born_at, generation,
+      variant, lifespan; name + born_at identify a parent), `Pet.heir_hatched`; `LaidEgg` on death of old age only
+- [x] Domain: `lineage.py` — `heir_name(name)` (Mochi → Mochi II → Mochi III …, roman
       numerals, `None` when it wouldn't fit 16 characters) and
       `hatch_heir(parent, name, now, rng, balance) -> (heir, parent)` (inherits species,
       generation + 1, ancestors + parent, `heir_discipline` if the parent was good; marks the
       parent `heir_hatched`; refused for a pet that died of poor health or already hatched it)
       — test-first, incl. numeral edge cases (IX → X, names ending in a word like "Vi")
-- [ ] Persistence: save schema v7 (v6 → v7 migration; pets already dead of old age get
+- [x] Persistence: save schema v7 (v6 → v7 migration; pets already dead of old age get
       `heir_hatched = true`; a v7 fixture; older fixtures still loading)
-- [ ] Services: `PetLibrary.hatch_heir(parent, name)`: 9-pet limit, unique living name,
+- [x] Services: `PetLibrary.hatch_heir(parent, name)`: 9-pet limit, unique living name,
       heir RNG seeded from the parent's, parent saved with its egg marked hatched (both
       writes atomic; a crash between them never gives two heirs — write the heir first,
       and treat an existing heir naming this parent as already hatched)
-- [ ] Journal: `HeirHatched` on the parent; "Hatched from Mochi's egg" on the heir
-- [ ] UI: memorial `e` "Hatch Mochi's egg"; pet select `e` on a dead pet with a waiting egg;
+- [x] Journal: `HeirHatched` on the parent; "Hatched from Mochi's egg" on the heir
+- [x] UI: memorial `e` "Hatch Mochi's egg"; pet select `e` on a dead pet with a waiting egg;
       name prompt prefilled and species locked; archive confirmation mentions a waiting egg;
       "Generation 3 · founded by Mochi" in status and pet select details; family line on the
       memorial
-- [ ] `tools/balance.py`: how many generations a casual player keeps going in a simulated month
-- [ ] Snapshots: memorial with an egg to hatch and a family line; prefilled name prompt; pet
+- [x] `tools/generations.py` (sibling of `tools/balance.py`): every profile reaches generation 2
+      in a simulated month and no line ends
+- [x] Snapshots: memorial with an egg to hatch and a family line; prefilled name prompt; pet
       select with a waiting egg
 
 **Accept:** a good elder that dies of old age offers its egg; hatching it gives "Mochi II", a

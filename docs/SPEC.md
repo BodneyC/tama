@@ -174,7 +174,8 @@ leaves no egg.
   The heir is a new pet with its own file and counts towards the 9-pet limit (refused at 9,
   saying so; archiving another pet makes room).
 - **What it inherits:** the species; `generation` = parent's + 1; `ancestors` = the parent's
-  ancestors plus a record of the parent (name, generation, adult form, lifespan); and a head
+  ancestors plus a record of the parent (name, birth time, generation, adult form, lifespan;
+  name and birth time together identify it); and a head
   start of discipline 25 if the parent was a good adult (`Balance.heir_discipline`), else 0.
   Stats, weight and lifespan are fresh. The heir's RNG is seeded from the parent's, so a line
   started with `--seed` is reproducible.
@@ -183,8 +184,16 @@ leaves no egg.
 - **Archiving** a dead pet whose egg is still waiting says so in the confirmation ("Its egg
   will be archived with it"); an archived egg can't be hatched.
 - **Showing it:** the status panel and the pet select details show "Generation 3 · founded by
-  Mochi" from generation 2 on; the memorial lists the family line (the last three ancestors,
-  then "…").
+  Mochi" from generation 2 on, and the pet select details say "left an egg (e to hatch)"; the
+  memorial lists the family line under the name ("… → Bao → Mochi II → Mochi III": the last
+  three ancestors, then the pet) and shows one first fewer to stay within 60×20. `e` is only
+  offered while an egg is waiting.
+- **One save file** (`--save-path`): there is no pet list, so the heir takes the parent's place
+  in the same file (the parent lives on in its family line and the file's backup).
+- **If tama stops mid-hatch:** the heir is saved before the parent; an heir whose newest
+  ancestor is this pet means its egg has hatched, whatever the parent's file says.
+- **Balance:** `tools/generations.py` keeps lines going for a month: with 14–18-day lives every
+  player profile reaches generation 2 and no line ends.
 - **Events:** `LaidEgg` (on the parent, at death of old age) and `HeirHatched(heir_name)` (on
   the parent's journal, §2.9).
 
