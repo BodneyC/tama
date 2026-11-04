@@ -359,8 +359,9 @@ def test_every_shipped_sprite_has_all_its_colours(path: Path) -> None:
         for animation in animations
     ]
     + [
-        (DEFAULT_SPECIES, variant, stage, animation)
-        for variant in (Variant.GOOD, Variant.SCRUFFY)
+        (species, variant, stage, animation)
+        for species in species_dirs()
+        for variant in (Variant.GOOD, Variant.SCRUFFY, Variant.CHUBBY)
         for stage in (LifeStage.ADULT, LifeStage.ELDER)
         for animation in REQUIRED[stage]
     ],

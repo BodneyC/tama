@@ -4,13 +4,15 @@ Plays whole lives with the simulated players from ``tools/balance.py`` (run that
 full picture across many seeds).
 """
 
+from datetime import timedelta
+
 import pytest
 from tools.balance import PLAYERS, Player, live
 
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.stage import Variant
 
-CASUAL, BUSY = PLAYERS[1], PLAYERS[2]
+CASUAL, BUSY, SNACKER = PLAYERS[1], PLAYERS[2], PLAYERS[4]
 
 
 @pytest.mark.slow
@@ -39,3 +41,20 @@ def test_a_casual_player_catches_enough_tantrums_for_a_good_adult() -> None:
     assert life.discipline_at_adult >= DEFAULT_BALANCE.good_adult_min_discipline
     assert life.mistakes_at_adult is not None
     assert life.mistakes_at_adult > DEFAULT_BALANCE.good_adult_max_care_mistakes
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("player", [CASUAL, BUSY], ids=["casual", "busy"])
+def test_ordinary_feeding_keeps_a_pet_in_its_weight_band(player: Player) -> None:
+    life = live(player, seed=1, balance=DEFAULT_BALANCE)
+
+    assert life.out_of_band == timedelta(0)
+    assert life.weight_mistakes == 0
+
+
+@pytest.mark.slow
+def test_cheering_a_pet_up_with_snacks_raises_a_chubby_adult() -> None:
+    life = live(SNACKER, seed=1, balance=DEFAULT_BALANCE)
+
+    assert life.variant is Variant.CHUBBY
+    assert life.weight_mistakes == 1  # one long episode, counted once

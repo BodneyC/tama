@@ -20,11 +20,11 @@ from tests.ui.helpers import make_app, repo_with
 
 SnapCompare = Callable[..., bool]
 
-D, G, S = Variant.DEFAULT, Variant.GOOD, Variant.SCRUFFY
+D, G, S, C = Variant.DEFAULT, Variant.GOOD, Variant.SCRUFFY, Variant.CHUBBY
 LINEUP: tuple[tuple[tuple[Variant, LifeStage], ...], ...] = (
     ((D, LifeStage.EGG), (D, LifeStage.BABY), (D, LifeStage.CHILD), (D, LifeStage.TEEN)),
-    ((D, LifeStage.ADULT), (G, LifeStage.ADULT), (S, LifeStage.ADULT)),
-    ((D, LifeStage.ELDER), (G, LifeStage.ELDER), (D, LifeStage.DEAD)),
+    ((D, LifeStage.ADULT), (G, LifeStage.ADULT), (S, LifeStage.ADULT), (C, LifeStage.ADULT)),
+    ((D, LifeStage.ELDER), (G, LifeStage.ELDER), (C, LifeStage.ELDER), (D, LifeStage.DEAD)),
 )
 """Rows of (variant, stage) to show, each as its first idle frame."""
 
@@ -55,7 +55,7 @@ class LineupApp(App[None]):
 @pytest.mark.parametrize("theme", ["textual-dark", "textual-light"])
 @pytest.mark.parametrize("species", available_species())
 def test_species_lineup(snap_compare: SnapCompare, species: str, theme: str, color: bool) -> None:
-    assert snap_compare(LineupApp(species, theme=theme, color=color), terminal_size=(90, 32))
+    assert snap_compare(LineupApp(species, theme=theme, color=color), terminal_size=(120, 32))
 
 
 @pytest.mark.parametrize("species", [s for s in available_species() if s != "tama"])

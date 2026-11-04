@@ -6,7 +6,7 @@ open the mouth into it) and the belly. Other bear pixels: ``p`` inner ears, ``n`
 ``i``/``y`` the good adult's bow tie, ``a`` dirt.
 """
 
-from tools.sprites.kit import Collection, Colour, Grid, Palette, grid, paste, set_pixels
+from tools.sprites.kit import Collection, Colour, Grid, Palette, chubby, grid, paste, set_pixels
 from tools.sprites.species import Look, Species, build_species
 
 NAME = "bear"
@@ -196,7 +196,12 @@ def scruffy(g: Grid) -> Grid:
     return paste(g, 11, 6, grid("aa\naa"))
 
 
-VARIANT_LOOKS: dict[str, Look] = {"good": bow_tie, "scruffy": scruffy}
+def plump(g: Grid) -> Grid:
+    """A chubby bear: fuller cheeks and belly, its snout the same size."""
+    return chubby(g, at=8)
+
+
+VARIANT_LOOKS: dict[str, Look] = {"good": bow_tie, "scruffy": scruffy, "chubby": plump}
 
 # --- Assembly -----------------------------------------------------------------------------------
 

@@ -17,6 +17,7 @@ from tools.sprites.kit import (
     anim_toml,
     base_toml,
     canvas_for,
+    chubby,
     living,
     place,
     wobble,
@@ -25,7 +26,7 @@ from tools.sprites.kit import (
 Look = Callable[[Grid], Grid]
 """Redraws an adult or elder grid for one variant (e.g. adds a crown)."""
 
-VARIANTS = ("default", "good", "scruffy")
+VARIANTS = ("default", "good", "scruffy", "chubby")
 
 
 def _unchanged(g: Grid) -> Grid:
@@ -44,7 +45,8 @@ class Species:
         sick: Palette overrides for every ``sick`` loop.
         egg, baby, child, teen, adult, elder, gravestone: One base grid per stage.
         adult_body, elder_body: Palette overrides per variant for adults and elders.
-        looks: Grid changes per variant for adults and elders (missing = unchanged).
+        looks: Grid changes per variant for adults and elders (missing = unchanged, except
+            ``chubby``, which defaults to the shared :func:`kit.chubby` widening).
     """
 
     name: str
@@ -89,13 +91,14 @@ def build_species(species: Species) -> Collection:
     for stage, base in (("child", species.child), ("teen", species.teen)):
         add("default", stage, living(Stage(base, canvas_for(base)), sick=sick))
     for variant in VARIANTS:
-        look = species.looks.get(variant, _unchanged)
+        look = species.looks.get(variant, chubby if variant == "chubby" else _unchanged)
         for stage, base, body in (
             ("adult", species.adult, species.adult_body),
             ("elder", species.elder, species.elder_body),
         ):
             drawn = look(base)
-            overrides = body.get(variant, {})
+            # A variant without its own colours looks like the default one (e.g. faded elders).
+            overrides = body.get(variant, body.get("default", {}))
             add(variant, stage, living(Stage(drawn, canvas_for(drawn), overrides), sick=sick))
     grave = species.gravestone
     add("default", "dead", {"idle": Anim((place(grave, *canvas_for(grave)),), 1)})

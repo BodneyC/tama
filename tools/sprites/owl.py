@@ -7,7 +7,7 @@ owl pixels: ``d`` wing feathers, ``v`` belly speckles, ``t`` talons, ``z``/``y``
 adult's cap and tassel, ``a`` dirt.
 """
 
-from tools.sprites.kit import Collection, Colour, Grid, Palette, grid, paste, set_pixels
+from tools.sprites.kit import Collection, Colour, Grid, Palette, chubby, grid, paste, set_pixels
 from tools.sprites.species import Look, Species, build_species
 
 NAME = "owl"
@@ -197,7 +197,12 @@ def scruffy(g: Grid) -> Grid:
     return paste(g, 12, 6, grid("aa\naa"))
 
 
-VARIANT_LOOKS: dict[str, Look] = {"good": capped, "scruffy": scruffy}
+def plump(g: Grid) -> Grid:
+    """A chubby owl: wider all round, its belly feathers still evenly spaced."""
+    return tuple(row.replace("vvv", "vcv") for row in chubby(g))
+
+
+VARIANT_LOOKS: dict[str, Look] = {"good": capped, "scruffy": scruffy, "chubby": plump}
 
 # --- Assembly -----------------------------------------------------------------------------------
 

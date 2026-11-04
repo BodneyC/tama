@@ -78,6 +78,30 @@ def shift(g: Grid, dx: int = 0, dy: int = 0) -> Grid:
     return paste(("." * len(g[0]),) * len(g), dy, dx, g)
 
 
+def chubby(g: Grid, extra: int = 2, *, keep: str = "ehmn", at: int | None = None) -> Grid:
+    """A rounder body: widen ``g`` by ``extra`` pixels each side of its middle.
+
+    Repeats a pair of mirrored columns: column ``at`` and its mirror if given, else the pair
+    nearest the centre that holds none of ``keep`` (eyes, highlights, mouth, nose), so the face,
+    belly and stance all widen while the features keep their shape.
+    """
+    width = len(g[0])
+    lefts = [at] if at is not None else [(width - 1) // 2 - i for i in range(width // 2)]
+    for left in lefts:
+        right = width - 1 - left
+        if at is None and any(row[left] in keep or row[right] in keep for row in g):
+            continue
+        return tuple(
+            row[:left]
+            + row[left] * extra
+            + row[left : right + 1]
+            + row[right] * extra
+            + row[right + 1 :]
+            for row in g
+        )
+    raise ValueError("no plain columns to widen")
+
+
 def set_pixels(g: Grid, pixels: Iterable[tuple[int, int, str]]) -> Grid:
     """Set individual pixels (row, col, char)."""
     rows = [list(row) for row in g]
