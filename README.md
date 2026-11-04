@@ -31,7 +31,10 @@ In the game, `?` lists the keys: `f` feed, `p` play, `c` clean, `m` medicine, `l
 
 Watch its weight (`s`): snacks cheer it up but fatten it, and games keep it trim.
 
-Planned (see the roadmap): a journal for every pet (`j`, `tama journal`),
+Every pet keeps a journal of its life, written even while tama is closed: `j` in the game,
+or `uv run tama journal` (`--pet NAME` for another pet) from the shell.
+
+Planned (see the roadmap):
 eggs left by pets that die of old age so a family line carries on, visits between your pets
 (`v`), tricks for well-behaved pets, and a stage that follows the time of day.
 

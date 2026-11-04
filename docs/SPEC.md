@@ -193,24 +193,30 @@ leaves no egg.
 Each pet keeps a journal: a diary of its life written from the domain's events, so it records
 what happened while tama was closed as well as while it was open.
 
-- **Entries** have the local date and time, the pet's age and a line of text. They come in
-  three kinds:
+- **Entries** have the local date and time, the pet's age and a line of text
+  (`3 Nov 14:05  1d 2h   First win at Four in a Row`). The time comes from the pet's own clock:
+  each event's age is measured from the pet's last simulated step before it, so entries written
+  during a catch-up keep the times they happened, even when a pet sitter covered the rest
+  (§2.5). They come in three kinds:
   - **Life:** hatched (and from whose egg, §2.8), evolved, its adult form, became an elder,
     went on and came back from holiday, laid an egg, its heir hatched, died (with cause).
   - **Firsts:** first meal, snack, tantrum, sickness, care mistake, game won (per game), visit
     (§3.2) and trick learned (§2.10).
-  - **Moments:** recovered from sickness, care mistakes (with the reason), tantrums caught or
-    ignored, visits and their results, and round-number tallies (the 10th, 50th, 100th game won
-    or meal eaten).
+  - **Moments:** recovered from sickness, care mistakes after the first (with the reason),
+    tantrums caught or ignored, visits and their results, and round-number tallies (the 10th,
+    50th, 100th, 250th, 500th and 1000th game won or meal eaten).
 - **Tallies** are kept for the whole life: meals, snacks, games won/drawn/lost per game,
   tantrums caught/ignored, sicknesses, medicine doses, poops cleaned, holidays, visits and care
   mistakes.
 - **Bounded:** life and first entries are always kept; moments are kept for the last 100, so
   a save stays small however long the pet lives.
 - **Showing it:** `j` opens the journal: the tallies at the top, then entries newest first
-  (`↑`/`↓`, `PgUp`/`PgDn`, `Home`/`End` scroll; `Esc` or `j` closes). It works on holiday and
-  for dead pets (from the memorial). The memorial shows **highlights**: the life entries, up to
-  three firsts and the tallies line. `tama journal` prints it from the shell (§8).
+  (`↑`/`↓`, `PgUp`/`PgDn`, `Home`/`End` scroll; `Esc` or `j` closes; "Nothing written yet."
+  when empty). It works on holiday and for dead pets (`j` on the memorial). The memorial sets
+  the gravestone beside the **highlights**: the story (hatched and each stage; the death is
+  said above it, holidays are left out), up to three happy firsts (meal, snack, win, tantrum,
+  sickness; not the first care mistake) and one line in numbers ("82 meals, 3 snacks, 40
+  wins"), so it fits 60×20. `tama journal` prints it from the shell (§8).
 - Looking at a journal never changes it: the pet select screen, `--status` and `tama journal`
   build entries for the in-memory catch-up but don't save them; the pet's own session writes
   them when it next catches up for real (the same events, so the same entries).

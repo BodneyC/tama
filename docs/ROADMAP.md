@@ -324,21 +324,26 @@ whole life in `tools/balance.py`; a v4 save loads.
 A diary of each pet's life built from domain events, with lifetime tallies (SPEC §2.9,
 ADR 0009). Comes before generations and visits so they can write to it.
 
-- [ ] Domain: `journal.py` — `Journal` (entries + tallies) and
-      `record(journal, events, pet) -> Journal`, pure; life / first / moment kinds; round-number
-      tallies; moments capped at 100 while life and firsts are kept — test-first
-- [ ] Domain: property test that recording the events of `advance(a + b)` equals recording
+- [x] Domain: `journal.py` — `Journal` (entries + tallies) and
+      `record(journal, events, before) -> Journal`, pure; life / first / moment kinds;
+      round-number tallies; moments capped at 100 while life and firsts are kept — test-first.
+      `before` is the pet before the call: entry times are measured from its last step, since
+      a dead pet's clock moves on while its age doesn't. `Played` now carries the `GameKind`
+      (and `finish_game` takes it) so tallies can be kept per game
+- [x] Domain: property test that recording the events of `advance(a + b)` equals recording
       those of `advance(a)` then `advance(b)` (the journal inherits tick-splitting equivalence)
-- [ ] Persistence: save schema v6 with the journal (v5 → v6 migration starting it with
-      "Journal started" and zero tallies; a v6 fixture; older fixtures still loading); a size
-      test: a long, busy simulated life keeps the save under 64 KiB
-- [ ] Services: `GameSession` records every outcome (catch-up, ticks, actions, games);
-      read-only views (pet select, `--status`, `tama journal`) build entries in memory only
-- [ ] UI: `JournalScreen` (tallies, entries newest first, local times, scrolling; `Esc`/`j`
+- [x] Persistence: save schema v6 with the journal (v5 → v6 migration starting it with
+      "Journal started" and zero tallies; a v6 fixture; older fixtures still loading); size
+      tests: a whole snack-heavy life, and a journal at the moment cap, stay under 64 KiB
+- [x] Services: `GameSession` records every outcome (catch-up, ticks, actions, games,
+      holidays), before any pet-sitter skip; read-only views (pet select, `--status`,
+      `tama journal`) build entries in memory only
+- [x] UI: `JournalScreen` (tallies, entries newest first, local times, scrolling; `Esc`/`j`
       closes); `j` on the main screen (Help, not footer) and from the memorial
-- [ ] UI: memorial highlights (life entries, up to three firsts, tallies line)
-- [ ] CLI: `tama journal [--pet NAME]`, plain text, read-only; exit codes as `--status`
-- [ ] Snapshots: a journal mid-life and a long one scrolled; memorial with highlights; all fit
+- [x] UI: memorial highlights (story, up to three happy firsts, a line in numbers), with the
+      gravestone beside them so it fits 60×20
+- [x] CLI: `tama journal [--pet NAME]`, plain text, read-only; exit codes as `--status`
+- [x] Snapshots: a journal mid-life and a long one scrolled; memorial with highlights; all fit
       60×20
 
 **Accept:** a pet played through a whole simulated life has a journal whose life entries

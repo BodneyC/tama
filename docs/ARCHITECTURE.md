@@ -51,7 +51,7 @@ src/tama/
 │   ├── lifecycle.py       # stage transitions, adult variant selection, death
 │   ├── holiday.py         # pause/resume: settled-pet check, frozen pets (ADR 0008)
 │   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)
-│   ├── journal.py         # Journal + record(journal, events, pet) (ADR 0009)  [M6.10]
+│   ├── journal.py         # Journal + record(journal, events, before) (ADR 0009)
 │   ├── lineage.py         # AncestorRecord, heir_name, hatch_heir (ADR 0010)  [M6.11]
 │   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)  [M6.12]
 │   ├── tricks.py          # known_tricks from discipline (SPEC §2.10)  [M6.13]
@@ -98,7 +98,7 @@ src/tama/
 │   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget)
 │   │   ├── away.py        # AwaySummaryScreen: "While you were away"
 │   │   ├── memorial.py    # MemorialScreen: gravestone, life story, new egg, heir's egg
-│   │   ├── journal.py     # JournalScreen: tallies + entries  [M6.10]
+│   │   ├── journal.py     # JournalScreen: tallies + entries, scrollable
 │   │   ├── visit.py       # VisitPickerScreen, VisitScreen  [M6.12]
 │   │   └── error.py       # ErrorScreen: unreadable save → new pet or quit
 │   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
@@ -222,8 +222,13 @@ write. Only the pet that is open is saved, and only while its lock is held (ADR 
 ### Journal
 
 The journal (ADR 0009) is a second product of the events every domain call already returns.
-`journal.record(journal, events, pet)` is pure, and `GameSession` applies it to every outcome
-it produces, so the journal covers offline catch-up as well as live play. It is saved beside
+`journal.record(journal, events, before)` is pure, and `GameSession` applies it to every outcome
+it takes (`_take`), so the journal covers offline catch-up as well as live play. `before` is the
+pet as it was before the call: events only carry the pet's age, and the wall-clock time of an
+event is the pet's last step boundary (`updated_at - carry`) plus how far its age is past
+`before.age`. Measuring from the pet *after* the call would be wrong for a pet that died (its
+clock moves on, its age doesn't) and would break tick-splitting equivalence. Catch-up records
+before skipping ahead for the pet sitter, so entries keep their own times. It is saved beside
 the pet in `SaveGame`, not on `Pet`, so the simulation never carries it around. Entries are
 structured (kind, event data, time, age); `services/describe.py` turns them into text, as it
 does for the away summary. Read-only views can preview entries but never save them.
