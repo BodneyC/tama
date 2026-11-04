@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from tama.domain.attention import AttentionReason, attention_reasons
+from tama.domain.journal import Journal
 from tama.domain.pet import Pet
 from tama.errors import SaveError, UnknownPetError
 from tama.infra.clock import Clock
@@ -29,6 +30,8 @@ class PetSummary:
     needs: frozenset[AttentionReason] = field(default_factory=frozenset)
     last: bool = False
     """Whether this is the pet played last."""
+    journal: Journal = field(default_factory=Journal)
+    """Its journal as of now (including what catching up wrote, which isn't saved)."""
 
     @property
     def name(self) -> str:
@@ -55,7 +58,8 @@ def summarize(
     except SaveError as exc:
         return PetSummary(file, error=exc, last=last)
     pet = session.pet
-    return PetSummary(file, pet, needs=attention_reasons(pet, settings.balance), last=last)
+    needs = attention_reasons(pet, settings.balance)
+    return PetSummary(file, pet, needs=needs, last=last, journal=session.journal)
 
 
 def pet_summaries(

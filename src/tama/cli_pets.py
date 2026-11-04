@@ -5,10 +5,18 @@ only parses options and echoes.
 """
 
 from dataclasses import dataclass, field
+from datetime import tzinfo
 
 from tama.domain.events import PauseRefused
+from tama.domain.journal import Journal
 from tama.errors import PetLockedError, SaveError
-from tama.services.describe import describe_event, holiday_since, status_line
+from tama.services.describe import (
+    describe_event,
+    holiday_since,
+    journal_entries,
+    status_line,
+    tally_lines,
+)
 from tama.services.library import PetLibrary
 from tama.services.roster import PetSummary, find_pet
 from tama.services.session import GameSession
@@ -61,6 +69,26 @@ def status_report(library: PetLibrary, query: str | None = None) -> Report:
         out.append(marker + _status(library, row))
     unreadable = any(row.pet is None for row in chosen)
     return Report(out, code=EXIT_ERROR if unreadable else EXIT_OK)
+
+
+def journal_lines(name: str, journal: Journal, tz: tzinfo) -> list[str]:
+    """``name``'s journal as plain text: tallies, a blank line, then entries newest first."""
+    return [f"{name}'s journal", *tally_lines(journal.tallies), "", *journal_entries(journal, tz)]
+
+
+def journal_report(library: PetLibrary, query: str | None = None) -> Report:
+    """One pet's journal as of now (read-only): ``query``'s, else the last played pet's.
+
+    Raises:
+        UnknownPetError: If ``query`` doesn't name exactly one pet.
+    """
+    rows = library.summaries()
+    if not rows:
+        return Report([NO_PET], code=EXIT_NO_PET)
+    row = find_pet(rows, query) if query is not None else rows[0]  # last played comes first
+    if row.pet is None:
+        return Report(err=[f"tama: {row.name} can't be read ({row.error})"], code=EXIT_ERROR)
+    return Report(journal_lines(row.pet.name, row.journal, library.tz))
 
 
 def holiday_report(library: PetLibrary, query: str | None, *, pausing: bool) -> Report:

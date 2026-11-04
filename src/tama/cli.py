@@ -18,6 +18,8 @@ from tama.cli_pets import (
     NO_PET,
     Report,
     holiday_report,
+    journal_lines,
+    journal_report,
     pause_or_resume,
     status_report,
 )
@@ -317,6 +319,29 @@ def _wrong_species(name: str, has: str, asked: str) -> NoReturn:
 def status(ctx: typer.Context) -> None:
     """Same as --status: one line per pet, as of now (handy for shell prompts)."""
     _print_status(ctx.obj)
+
+
+@app.command()
+def journal(
+    ctx: typer.Context,
+    pet: Annotated[
+        str | None,
+        typer.Option("--pet", help="Whose journal (default: the pet played last)."),
+    ] = None,
+) -> None:
+    """Print a pet's journal as of now: tallies, then entries newest first (read-only)."""
+    options: _Options = ctx.obj
+    query = pet if pet is not None else options.pet
+    settings = _settings(_load_config())
+    single = single_save_path(options.save_path)
+    if single is not None:
+        session = _load_single(single, settings)
+        _report(Report(journal_lines(session.pet.name, session.journal, session.tz)))
+    library = _library(SystemClock(), settings)
+    try:
+        _report(journal_report(library, query))
+    except UnknownPetError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--pet") from exc
 
 
 def main() -> None:

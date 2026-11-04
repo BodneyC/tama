@@ -10,16 +10,9 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 
 from tama.domain.journal import Journal
-from tama.services.describe import entry_line, tally_lines
+from tama.services.describe import journal_entries, tally_lines
 
-EMPTY = "Nothing written yet."
 HINT = "↑↓ PgUp PgDn scroll · Esc close"
-
-
-def entries_text(journal: Journal, tz: tzinfo = UTC) -> str:
-    """Every entry, newest first, one line each."""
-    lines = [entry_line(entry, tz) for entry in reversed(journal.entries)]
-    return "\n".join(lines) or EMPTY
 
 
 class JournalScreen(ModalScreen[None]):
@@ -44,7 +37,8 @@ class JournalScreen(ModalScreen[None]):
             yield Static(f"{self._name}'s journal", classes="dialog-title", markup=False)
             yield Static("\n".join(tally_lines(self._journal.tallies)), id="journal-tallies")
             with VerticalScroll(id="journal-scroll"):
-                yield Static(entries_text(self._journal, self._tz), id="journal-entries")
+                entries = "\n".join(journal_entries(self._journal, self._tz))
+                yield Static(entries, id="journal-entries", markup=False)
             yield Static(HINT, classes="dialog-hint")
 
     def on_mount(self) -> None:

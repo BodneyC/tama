@@ -38,7 +38,7 @@ from tama.domain.events import (
     Woken,
     WokeUp,
 )
-from tama.domain.journal import Entry, EntryKind, Tallies, Topic
+from tama.domain.journal import Entry, EntryKind, Journal, Tallies, Topic
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
@@ -222,6 +222,14 @@ def entry_line(entry: Entry, tz: tzinfo = UTC) -> str:
     local = entry.at.astimezone(tz)
     when = f"{local.day} {local:%b %H:%M}"
     return f"{when:<12} {format_age(entry.age):<8}{describe_entry(entry)}"
+
+
+EMPTY_JOURNAL = "Nothing written yet."
+
+
+def journal_entries(journal: Journal, tz: tzinfo = UTC) -> list[str]:
+    """Every entry as an ``entry_line``, newest first (or a line saying there are none)."""
+    return [entry_line(entry, tz) for entry in reversed(journal.entries)] or [EMPTY_JOURNAL]
 
 
 def tally_lines(tallies: Tallies) -> list[str]:
