@@ -19,7 +19,7 @@ from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -74,6 +74,7 @@ class TimersModel(_Model):
     hygiene: timedelta
     lights_on_asleep: timedelta
     misbehaving: timedelta
+    weight: timedelta
 
 
 class PetModel(_Model):
@@ -92,6 +93,7 @@ class PetModel(_Model):
     weight: PositiveInt
     poop_count: NonNegativeInt
     poop_progress: Fraction
+    weight_progress: Fraction
     sickness_doses: NonNegativeInt
     is_asleep: bool
     lights_on: bool
@@ -114,13 +116,14 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV4(_Model):
-    """Version 4 of the save file.
+class SaveFileV5(_Model):
+    """Version 5 of the save file.
 
-    v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4.
+    v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4 + weight
+    burn and the time out of the healthy weight band in v5.
     """
 
-    schema_version: Literal[4] = 4
+    schema_version: Literal[5] = 5
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel
@@ -145,6 +148,7 @@ class SaveFileV4(_Model):
                 weight=pet.weight,
                 poop_count=pet.poop_count,
                 poop_progress=pet.poop_progress,
+                weight_progress=pet.weight_progress,
                 sickness_doses=pet.sickness_doses,
                 is_asleep=pet.is_asleep,
                 lights_on=pet.lights_on,
@@ -184,6 +188,7 @@ class SaveFileV4(_Model):
                 weight=p.weight,
                 poop_count=p.poop_count,
                 poop_progress=p.poop_progress,
+                weight_progress=p.weight_progress,
                 sickness_doses=p.sickness_doses,
                 is_asleep=p.is_asleep,
                 lights_on=p.lights_on,

@@ -80,6 +80,31 @@ def test_v3_saves_were_never_woken(pet: object, expected: object) -> None:
     assert out == {"schema_version": 4, "pet": expected}
 
 
+@pytest.mark.parametrize(
+    ("pet", "expected"),
+    [
+        (
+            {"name": "Mochi", "timers": {"hunger": "PT0S"}},
+            {
+                "weight_progress": "0",
+                "name": "Mochi",
+                "timers": {"weight": "PT0S", "hunger": "PT0S"},
+            },
+        ),
+        (
+            {"weight_progress": "1/2", "timers": {"weight": "PT1H"}},
+            {"weight_progress": "1/2", "timers": {"weight": "PT1H"}},
+        ),
+        ({"timers": "not timers"}, {"weight_progress": "0", "timers": "not timers"}),
+        ("not a pet", "not a pet"),
+    ],
+)
+def test_v4_saves_had_burned_no_weight(pet: object, expected: object) -> None:
+    out = migrate({"schema_version": 4, "pet": pet}, current=5)
+
+    assert out == {"schema_version": 5, "pet": expected}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})

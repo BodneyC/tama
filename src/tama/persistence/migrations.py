@@ -41,7 +41,18 @@ def _v3_to_v4(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "pet": {"stay_awake": "PT0S", "woken_tantrum": False, **pet}}
 
 
-MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
+def _v4_to_v5(raw: dict[str, Any]) -> dict[str, Any]:
+    """v5 burns weight off over time (SPEC §2.7); nothing had been burned or timed before."""
+    pet = raw.get("pet")
+    if not isinstance(pet, dict):
+        return raw  # malformed; validation will report it
+    timers = pet.get("timers")
+    if isinstance(timers, dict):
+        pet = {**pet, "timers": {"weight": "PT0S", **timers}}
+    return {**raw, "pet": {"weight_progress": "0", **pet}}
+
+
+MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
 """Key ``N`` upgrades a version-N save to version N+1."""
 
 

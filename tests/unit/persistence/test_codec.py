@@ -20,7 +20,7 @@ FIXTURES = Path(__file__).parents[2] / "fixtures" / "saves"
 def test_encode_is_indented_json_with_trailing_newline() -> None:
     text = encode(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert text.startswith('{\n  "schema_version": 4,')
+    assert text.startswith('{\n  "schema_version": 5,')
     assert text.endswith("}\n")
 
 
@@ -47,6 +47,12 @@ def test_newer_schema_is_unsupported() -> None:
 # --- Fixtures from real older versions ------------------------------------------------------
 
 
+def assert_v5_fields_added(upgraded: dict[str, Any]) -> None:
+    """Pop v5's weight fields from an upgraded save, checking they start at zero."""
+    assert upgraded["pet"].pop("weight_progress") == "0"
+    assert upgraded["pet"]["timers"].pop("weight") == "PT0S"
+
+
 def test_v1_fixture_loads() -> None:
     game = decode((FIXTURES / "v1.json").read_text())
     pet = game.pet
@@ -67,7 +73,7 @@ def test_v1_fixture_loads() -> None:
     assert restore_rng(game.rng_state).random() == 0.6715634814879851
 
 
-def test_v1_fixture_migrates_losslessly_to_v4() -> None:
+def test_v1_fixture_migrates_losslessly_to_v5() -> None:
     """Only the version and the new fields change when a v1 save is upgraded."""
     original: dict[str, Any] = json.loads((FIXTURES / "v1.json").read_text())
 
@@ -75,11 +81,12 @@ def test_v1_fixture_migrates_losslessly_to_v4() -> None:
 
     for raw in (original, upgraded):
         raw.pop("app_version")
-    assert upgraded["schema_version"] == 4
+    assert upgraded["schema_version"] == 5
     assert upgraded["pet"].pop("species") == "tama"
     assert upgraded["pet"].pop("paused_since") is None
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v5_fields_added(upgraded)
     assert {**upgraded, "schema_version": 1} == original
 
 
@@ -90,7 +97,7 @@ def test_v2_fixture_loads_its_species() -> None:
     assert game.pet.name == "Fixture"
 
 
-def test_v2_fixture_migrates_losslessly_to_v4() -> None:
+def test_v2_fixture_migrates_losslessly_to_v5() -> None:
     """Only the version and the new holiday field change when a v2 save is upgraded."""
     original: dict[str, Any] = json.loads((FIXTURES / "v2.json").read_text())
 
@@ -98,10 +105,11 @@ def test_v2_fixture_migrates_losslessly_to_v4() -> None:
 
     for raw in (original, upgraded):
         raw.pop("app_version")
-    assert upgraded["schema_version"] == 4
+    assert upgraded["schema_version"] == 5
     assert upgraded["pet"].pop("paused_since") is None
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v5_fields_added(upgraded)
     assert {**upgraded, "schema_version": 2} == original
 
 
@@ -112,7 +120,7 @@ def test_v3_fixture_loads_a_pet_on_holiday() -> None:
     assert game.pet.paused_since == datetime(2026, 1, 1, 14, 54, 32, tzinfo=UTC)
 
 
-def test_v3_fixture_migrates_losslessly_to_v4() -> None:
+def test_v3_fixture_migrates_losslessly_to_v5() -> None:
     """Only the version and the new waking fields change when a v3 save is upgraded."""
     original: dict[str, Any] = json.loads((FIXTURES / "v3.json").read_text())
 
@@ -120,9 +128,10 @@ def test_v3_fixture_migrates_losslessly_to_v4() -> None:
 
     for raw in (original, upgraded):
         raw.pop("app_version")
-    assert upgraded["schema_version"] == 4
+    assert upgraded["schema_version"] == 5
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v5_fields_added(upgraded)
     assert {**upgraded, "schema_version": 3} == original
 
 
@@ -135,9 +144,29 @@ def test_v4_fixture_loads_a_woken_pet() -> None:
     assert not pet.is_asleep
 
 
-def test_v4_fixture_reencodes_identically() -> None:
-    """Guards the v4 format against accidental changes (which would need a migration)."""
-    text = (FIXTURES / "v4.json").read_text()
+def test_v4_fixture_migrates_losslessly_to_v5() -> None:
+    """Only the version and the new weight fields change when a v4 save is upgraded."""
+    original: dict[str, Any] = json.loads((FIXTURES / "v4.json").read_text())
+
+    upgraded: dict[str, Any] = json.loads(encode(decode((FIXTURES / "v4.json").read_text())))
+
+    for raw in (original, upgraded):
+        raw.pop("app_version")
+    assert upgraded["schema_version"] == 5
+    assert_v5_fields_added(upgraded)
+    assert {**upgraded, "schema_version": 4} == original
+
+
+def test_v5_fixture_loads_weight_burn_and_episode() -> None:
+    pet = decode((FIXTURES / "v5.json").read_text()).pet
+
+    assert pet.weight_progress == Fraction(7, 16)
+    assert pet.timers.weight == timedelta(hours=3, minutes=5)
+
+
+def test_v5_fixture_reencodes_identically() -> None:
+    """Guards the v5 format against accidental changes (which would need a migration)."""
+    text = (FIXTURES / "v5.json").read_text()
     original: dict[str, Any] = json.loads(text)
 
     reencoded: dict[str, Any] = json.loads(encode(decode(text)))

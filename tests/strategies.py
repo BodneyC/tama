@@ -41,6 +41,7 @@ timers_strategy = st.builds(
     hygiene=minutes(60),
     lights_on_asleep=minutes(60),
     misbehaving=minutes(10),
+    weight=minutes(24 * 60),
 )
 
 
@@ -64,6 +65,9 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
         poop_count=draw(st.integers(min_value=0, max_value=4)),
         poop_progress=draw(
             st.fractions(min_value=0, max_value=Fraction(119, 120), max_denominator=120)
+        ),
+        weight_progress=draw(
+            st.fractions(min_value=0, max_value=Fraction(63, 64), max_denominator=64 * 60)
         ),
         sickness_doses=draw(st.integers(min_value=0, max_value=2)),
         is_asleep=draw(st.booleans()),

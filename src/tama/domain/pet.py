@@ -52,6 +52,7 @@ class Timers:
     hygiene: timedelta = ZERO
     lights_on_asleep: timedelta = ZERO
     misbehaving: timedelta = ZERO
+    weight: timedelta = ZERO  # time spent outside the healthy weight band
 
     def neglect(self, need: Stat) -> timedelta:
         """Return how long ``need`` has been at zero."""
@@ -83,6 +84,7 @@ class Pet:
         sickness_doses: Medicine doses still needed; 0 means healthy.
         recent_snacks: Ages at which snacks were eaten within the last hour.
         poop_progress: Fraction of the way to the next poop.
+        weight_progress: Fraction of the way to burning off the next gram (SPEC §2.7).
         paused_since: When the pet went on holiday (frozen in time), or ``None``.
         stay_awake: How much longer a pet the player woke stays up regardless of night or
             tiredness; zero once it's back to its normal sleep rules.
@@ -103,6 +105,7 @@ class Pet:
     weight: int = DEFAULT_BALANCE.start_weight
     poop_count: int = 0
     poop_progress: Fraction = Fraction(0)
+    weight_progress: Fraction = Fraction(0)
     sickness_doses: int = 0
     is_asleep: bool = False
     lights_on: bool = True
