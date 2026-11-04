@@ -15,7 +15,7 @@ from tama.domain.pet import Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
 from tama.domain.weight import WeightStatus, weight_status
-from tama.services.describe import format_age
+from tama.services.describe import format_age, lineage_text
 from tama.ui.sprites import load_overlay
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
@@ -79,6 +79,9 @@ def status_text(pet: Pet, balance: Balance) -> Content:
         f"{'Stage':<11}{pet.stage.value}",
         f"{'Age':<11}{format_age(pet.age)}",
     ]
+    lineage = lineage_text(pet)
+    if lineage is not None:
+        before_weight.append(f"{'Family':<11}{lineage}")
     lines = [
         *map(Content, [pet.name, "", *bars, "", *before_weight]),
         Content(f"{'Weight':<11}") + weight_content(pet, balance),

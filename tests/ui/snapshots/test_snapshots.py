@@ -15,6 +15,7 @@ from textual.pilot import Pilot
 from tama.domain.minigames import Side
 from tama.domain.minigames.four_in_a_row import FourInARow
 from tama.domain.minigames.tic_tac_toe import TicTacToe
+from tama.domain.pet import AncestorRecord
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, SaveError, UnsupportedSaveVersionError
@@ -151,6 +152,40 @@ def test_memorial_screen_fits_the_smallest_terminal(snap_compare: SnapCompare) -
     assert snap_compare(dead_app(), terminal_size=GAME_SIZE)
 
 
+def line_of(*names: str) -> tuple[AncestorRecord, ...]:
+    """A family line of good adults, founder first."""
+    return tuple(
+        AncestorRecord(name, FIXED_NOW - timedelta(days=40), n, Variant.GOOD, timedelta(days=16))
+        for n, name in enumerate(names, start=1)
+    )
+
+
+def heir_memorial_app() -> TamaApp:
+    """A third-generation pet that died of old age, its egg still waiting."""
+    heir = make_pet(
+        stage=LifeStage.DEAD,
+        cause_of_death=DeathCause.OLD_AGE,
+        weight=28,
+        generation=3,
+        ancestors=line_of("Mochi", "Mochi II"),
+    )
+    return make_app(repo_with(name="Mochi III", journal=make_journal(heir), **_fields(heir)))
+
+
+def _fields(pet: Any) -> dict[str, Any]:
+    keep = ("stage", "cause_of_death", "weight", "generation", "ancestors")
+    return {name: getattr(pet, name) for name in keep}
+
+
+def test_memorial_of_an_heir_with_its_egg_waiting(snap_compare: SnapCompare) -> None:
+    assert snap_compare(heir_memorial_app(), terminal_size=GAME_SIZE)
+
+
+def test_naming_an_heir(snap_compare: SnapCompare) -> None:
+    """The name prompt, filled in and locked to the parent's animal (same size as a new pet's)."""
+    assert snap_compare(heir_memorial_app(), press=["e"])
+
+
 def test_journal_mid_life(snap_compare: SnapCompare) -> None:
     life = make_journal(moments=2)
     mid_life = replace(life, entries=life.entries[:8])
@@ -279,7 +314,11 @@ def pet_list(tmp_path: Path, **kwargs: Any) -> TamaApp:
         replace(make_pet(paused_since=FIXED_NOW, species="bear"), name="Bruno"),
         replace(
             make_pet(
-                stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE, age=timedelta(days=15)
+                stage=LifeStage.DEAD,
+                cause_of_death=DeathCause.OLD_AGE,
+                age=timedelta(days=15),
+                generation=2,
+                ancestors=line_of("Pip"),
             ),
             name="Old Pip",
         ),
@@ -303,6 +342,10 @@ def test_pet_select(
 
 def test_pet_select_on_a_pet_needing_care(snap_compare: SnapCompare, tmp_path: Path) -> None:
     assert snap_compare(pet_list(tmp_path), press=["down"], terminal_size=GAME_SIZE)
+
+
+def test_pet_select_on_a_pet_that_left_an_egg(snap_compare: SnapCompare, tmp_path: Path) -> None:
+    assert snap_compare(pet_list(tmp_path), press=["down"] * 3, terminal_size=GAME_SIZE)
 
 
 def test_header_counts_other_pets_needing_care(snap_compare: SnapCompare, tmp_path: Path) -> None:

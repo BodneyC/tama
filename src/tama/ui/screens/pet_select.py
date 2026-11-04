@@ -20,7 +20,7 @@ from textual.widgets.option_list import Option
 from tama.domain.attention import AttentionReason
 from tama.domain.stage import LifeStage
 from tama.persistence.roster import PetFile
-from tama.services.describe import format_age, holiday_since
+from tama.services.describe import format_age, holiday_since, lineage_text
 from tama.services.roster import PetSummary
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
@@ -33,6 +33,7 @@ class PetAction(StrEnum):
 
     PLAY = "play"
     NEW = "new"
+    HEIR = "heir"
     ARCHIVE = "archive"
 
 
@@ -70,9 +71,14 @@ def detail_text(row: PetSummary, tz: tzinfo = UTC) -> str:
     if pet is None:
         return f"{row.name}\ncan't be read"
     lines = [pet.name, f"{pet.stage.value} {pet.species}"]
+    lineage = lineage_text(pet)
+    if lineage is not None:
+        lines.append(lineage)
     if not pet.is_alive:
         cause = str(pet.cause_of_death).replace("_", " ")
         lines.append(f"passed away ({cause}) at {format_age(pet.age)}")
+        if row.egg_waiting:
+            lines.append("left an egg (e to hatch)")
     elif pet.paused_since is not None:
         lines.append(f"⏸ on holiday since {holiday_since(pet.paused_since, tz)}")
     elif row.needs:
@@ -89,6 +95,7 @@ class PetSelectScreen(Screen[PetChoice | None]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("enter", "play", "Play", show=False),
         Binding("n", "new", "New egg"),
+        Binding("e", "heir", "Hatch its egg"),
         Binding("a", "archive", "Archive"),
         Binding("q", "quit", "Quit"),
         Binding("escape", "quit", "Quit", show=False),
@@ -160,6 +167,18 @@ class PetSelectScreen(Screen[PetChoice | None]):
         """Hatch another egg."""
         self.dismiss(PetChoice(PetAction.NEW))
 
+    @override
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Offer to hatch an egg only while the highlighted pet has one waiting."""
+        if action != "heir":
+            return True
+        return self.is_mounted and self.selected.egg_waiting
+
+    def action_heir(self) -> None:
+        """Hatch the egg the highlighted pet left (SPEC §2.8)."""
+        if self.selected.egg_waiting:
+            self.dismiss(PetChoice(PetAction.HEIR, self.selected.file))
+
     def action_archive(self) -> None:
         """Archive the highlighted pet; only the dead can be archived."""
         row = self.selected
@@ -181,3 +200,4 @@ class PetSelectScreen(Screen[PetChoice | None]):
             sprite.show(row.pet)
         sprite.display = row.pet is not None
         self.query_one("#preview-detail", Static).update(detail_text(row, self._tz))
+        self.refresh_bindings()  # "hatch its egg" follows the highlighted pet

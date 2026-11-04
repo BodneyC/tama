@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 from tama.errors import PetLockedError, SaveError, SaveWriteError
 from tama.persistence.roster import PetFile
 from tama.services.library import PetLibrary
+from tama.services.roster import PetSummary
+from tama.ui.heir_flow import ask_for_heir
 from tama.ui.screens.confirm import ConfirmScreen
 from tama.ui.screens.error import PetErrorScreen
 from tama.ui.screens.pet_select import PetAction, PetChoice, PetSelectScreen
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 EXIT_ERROR = 2
+ROSTER_FULL = "You have nine pets already; archive one that has passed away to make room."
 
 
 class LibraryFlow:
@@ -64,11 +67,27 @@ class LibraryFlow:
             self.new_pet_if_room()
         elif choice.file is not None and choice.action is PetAction.ARCHIVE:
             question = "Move this pet to the archive? It won't be listed any more."
+            if self._row(choice.file).egg_waiting:
+                question += " Its egg will be archived with it."
             self.app.push_screen(
                 ConfirmScreen("Archive", question), partial(self.archive, choice.file)
             )
+        elif choice.file is not None and choice.action is PetAction.HEIR:
+            self.heir_if_room(choice.file)
         elif choice.file is not None:
             self.open(choice.file, from_list=True)
+
+    def heir_if_room(self, file: PetFile) -> None:
+        """Ask for the name of ``file``'s heir, unless there are nine pets already."""
+        row = self._row(file)
+        if not self.library.can_add():
+            self.app.notify(ROSTER_FULL, severity="warning")
+            self.show_pets(selected=file)
+        elif row.pet is not None:
+            ask_for_heir(self.app, row.pet, file)
+
+    def _row(self, file: PetFile) -> PetSummary:
+        return next(row for row in self.library.summaries() if row.file == file)
 
     def archive(self, file: PetFile, yes: bool | None) -> None:  # noqa: FBT001 - screen result
         """Archive ``file`` if the player said yes, then show the list again."""
@@ -84,7 +103,7 @@ class LibraryFlow:
         if self.library.can_add():
             self.app.ask_for_new_pet()
             return
-        message = "You have nine pets already; archive one that has passed away to make room."
+        message = ROSTER_FULL
         if self.app.session is None and self.library.summaries():
             self.app.notify(message, severity="warning")
             self.show_pets()

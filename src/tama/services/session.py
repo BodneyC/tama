@@ -238,6 +238,24 @@ class GameSession:
         self._take(outcome)
         return heir, heir_rng
 
+    def hand_over(self, name: str) -> "GameSession":
+        """Hatch this pet's egg in its place: the heir takes over the same save file.
+
+        For a single save file (``--save-path``), where there is no pet list to add the heir to;
+        the parent lives on in the heir's family line (and the file's backup).
+
+        Raises:
+            NoEggError: If this pet has no egg waiting.
+            InvalidArgumentError: If ``name`` is not a valid name.
+            SaveWriteError: If the heir could not be saved.
+        """
+        heir, rng = self.hatch_heir(name)
+        session = GameSession(
+            pet=heir, rng=rng, repo=self._repo, clock=self._clock, settings=self._settings
+        )
+        session.save()
+        return session
+
     def pause(self) -> Outcome:
         """Put the pet on holiday (SPEC §2.6), saving at once; refused if it isn't settled."""
         return self._commit_change(pause(self._pet, self._ctx.balance))

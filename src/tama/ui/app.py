@@ -18,11 +18,12 @@ from tama.persistence.roster import PetFile
 from tama.services.library import PetLibrary
 from tama.services.session import GameSession, LoadedSession, SessionSettings
 from tama.ui.colours import Mode
+from tama.ui.heir_flow import ask_for_heir
 from tama.ui.library_flow import LibraryFlow
 from tama.ui.screens.away import AwaySummaryScreen
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
-from tama.ui.screens.memorial import MemorialScreen
+from tama.ui.screens.memorial import MemorialChoice, MemorialScreen
 from tama.ui.screens.new_pet import NewPet, NewPetScreen
 from tama.ui.theme import css_variables, ui_palette
 from tama.ui.widgets.pet_view import ViewOptions
@@ -254,6 +255,10 @@ class TamaApp(App[None]):
         if loaded.away.summary or loaded.away.pet_sitter:
             self.push_screen(AwaySummaryScreen(loaded.session.pet.name, loaded.away))
 
+    def start(self, session: GameSession) -> None:
+        """Play ``session``'s pet (or show its memorial if it has died)."""
+        self._start(session)
+
     def _start(self, session: GameSession) -> None:
         self.session = session
         if session.pet.species != self.species:
@@ -284,6 +289,10 @@ class TamaApp(App[None]):
             self.pop_screen()
             self.main = None
 
+    def show_memorial(self) -> None:
+        """Show the open (dead) pet's memorial."""
+        self._show_memorial()
+
     def _show_memorial(self) -> None:
         if self.session is not None:
             memorial = MemorialScreen(
@@ -291,9 +300,13 @@ class TamaApp(App[None]):
             )
             self.push_screen(memorial, self._after_memorial)
 
-    def _after_memorial(self, new_egg: bool | None) -> None:  # noqa: FBT001 - screen result
-        if not new_egg or self.session is None:
+    def _after_memorial(self, choice: MemorialChoice | None) -> None:
+        if choice in (None, MemorialChoice.QUIT) or self.session is None:
             self.action_quit_game()
+            return
+        if choice is MemorialChoice.HEIR:
+            library = self.library
+            ask_for_heir(self, self.session.pet, library.open_file if library else None)
             return
         self.species = self.session.pet.species
         if self.flow is not None:

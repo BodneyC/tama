@@ -56,29 +56,37 @@ class NewPetScreen(Screen[NewPet]):
         Binding("down", "species(1)", "Next animal", show=False),
     ]
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - all optional, keyword-only after the first two
         self,
         view: ViewOptions | None = None,
         species: str = DEFAULT_SPECIES,
         *,
         taken: Callable[[str], bool] | None = None,
+        name: str = "",
+        title: str = "A new egg has appeared!",
+        locked: bool = False,
     ) -> None:
         """Show a wobbling egg, starting on ``species``, drawn with ``view`` options.
 
-        ``taken`` says whether a living pet already has a name (SPEC §6.1).
+        ``taken`` says whether a living pet already has a name (SPEC §6.1). An heir's egg
+        (SPEC §2.8) comes with a ``name`` filled in, its own ``title``, and its species
+        ``locked`` to its parent's.
         """
         super().__init__()
         self._taken = taken or (lambda _name: False)
         self._view = view or ViewOptions()
         self._species = species
+        self._name = name
+        self._title = title
         shipped = available_species()
-        self._choices = shipped if species in shipped else (species, *shipped)
+        choices = shipped if species in shipped else (species, *shipped)
+        self._choices = (species,) if locked else choices
 
     @override
     def compose(self) -> ComposeResult:
         """Build the screen."""
         with Vertical(id="new-pet"):
-            yield Static("A new egg has appeared!", classes="dialog-title")
+            yield Static(self._title, classes="dialog-title", markup=False)
             yield PetView(self._view, id="egg")
             yield Static(id="species", markup=False)
             yield Input(
@@ -86,6 +94,7 @@ class NewPetScreen(Screen[NewPet]):
                 max_length=MAX_NAME_LENGTH,
                 validators=[PetNameValidator()],
                 validate_on=["submitted"],
+                value=self._name,
                 id="name",
             )
             yield Static(id="name-error", markup=False)

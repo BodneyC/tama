@@ -26,9 +26,9 @@ from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import pet_move
 from tama.domain.pet import new_egg
 from tama.domain.simulation import advance
-from tama.domain.stage import LifeStage
+from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import Stats
-from tama.errors import SaveNotFoundError, SaveWriteError
+from tama.errors import NoEggError, SaveNotFoundError, SaveWriteError
 from tama.infra.clock import FakeClock
 from tama.infra.config import Config
 from tama.persistence.models import SaveGame
@@ -510,3 +510,26 @@ def test_the_journal_is_loaded_with_the_pet(clock: FakeClock) -> None:
 
     assert again.journal == session.journal
     assert topics(again) == [Topic.SNACK]
+
+
+# --- Generations (SPEC §2.8) ----------------------------------------------------------------
+
+
+def test_handing_over_puts_the_heir_in_the_same_save(clock: FakeClock) -> None:
+    repo = saved(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE, species="owl")
+    parent = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    heir = parent.hand_over("Mochi II")
+
+    assert repo.game is not None
+    assert repo.game.pet == heir.pet
+    assert (heir.pet.name, heir.pet.species, heir.pet.generation) == ("Mochi II", "owl", 2)
+    assert parent.pet.heir_hatched
+    assert [e.topic for e in parent.journal.entries] == [Topic.HEIR_HATCHED]
+
+
+def test_a_living_pet_has_nothing_to_hand_over(clock: FakeClock) -> None:
+    session = GameSession.load(repo=saved(), clock=clock, settings=SETTINGS).session
+
+    with pytest.raises(NoEggError):
+        session.hand_over("Mochi II")
