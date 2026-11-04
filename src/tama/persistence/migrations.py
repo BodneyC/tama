@@ -52,7 +52,42 @@ def _v4_to_v5(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "pet": {"weight_progress": "0", **pet}}
 
 
-MIGRATIONS: dict[int, Migration] = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
+_NO_TALLIES = {
+    "meals": 0,
+    "snacks": 0,
+    "tantrums_caught": 0,
+    "tantrums_ignored": 0,
+    "sicknesses": 0,
+    "doses": 0,
+    "poops_cleaned": 0,
+    "holidays": 0,
+    "care_mistakes": 0,
+    "games": {},
+}
+
+
+def _v5_to_v6(raw: dict[str, Any]) -> dict[str, Any]:
+    """v6 keeps a journal (ADR 0009); an older pet's starts now, as its past is unknown."""
+    pet = raw.get("pet")
+    if not isinstance(pet, dict) or "journal" in raw:
+        return raw  # malformed (validation will report it), or already has one
+    started = {
+        "kind": "life",
+        "topic": "journal_started",
+        "at": pet.get("updated_at"),
+        "age": pet.get("age"),
+        "detail": "",
+    }
+    return {**raw, "journal": {"entries": [started], "tallies": _NO_TALLIES}}
+
+
+MIGRATIONS: dict[int, Migration] = {
+    1: _v1_to_v2,
+    2: _v2_to_v3,
+    3: _v3_to_v4,
+    4: _v4_to_v5,
+    5: _v5_to_v6,
+}
 """Key ``N`` upgrades a version-N save to version N+1."""
 
 

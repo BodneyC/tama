@@ -10,6 +10,7 @@ what an ordinary player would. Balance changes should be judged on these numbers
 
 import argparse
 from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, time, timedelta
@@ -30,6 +31,7 @@ from tama.domain.events import (
     Misbehaved,
     MisbehaviourIgnored,
     MistakeReason,
+    Outcome,
 )
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet, new_egg
@@ -74,12 +76,26 @@ PLAYERS = (
 )
 
 
-def care(pet: Pet, ctx: Context, *, snacker: bool = False) -> Pet:
-    """What an ordinary player does when they look: fix whatever needs fixing."""
+def care(
+    pet: Pet,
+    ctx: Context,
+    *,
+    snacker: bool = False,
+    seen: Callable[[Pet, Outcome], None] | None = None,
+) -> Pet:
+    """What an ordinary player does when they look: fix whatever needs fixing.
+
+    ``seen`` is told about every outcome along with the pet before it (e.g. to keep a journal).
+    """
+
+    def done(outcome: Outcome) -> None:
+        nonlocal pet
+        if seen is not None:
+            seen(pet, outcome)
+        pet = outcome.pet  # refused actions just don't happen
 
     def act(action: Action) -> None:
-        nonlocal pet
-        pet = apply(pet, action, ctx).pet  # refused actions just don't happen
+        done(apply(pet, action, ctx))
 
     if pet.is_sick and pet.is_asleep:  # medicine needs it awake; the tantrum is dealt with next
         act(Action.WAKE)
@@ -99,7 +115,7 @@ def care(pet: Pet, ctx: Context, *, snacker: bool = False) -> Pet:
             act(Action.SNACK)
             continue
         result = GameResult.WIN if ctx.rng.random() < 0.6 else GameResult.LOSS
-        pet = apply_game_outcome(pet, result, game=GameKind.LEFT_RIGHT, ctx=ctx).pet
+        done(apply_game_outcome(pet, result, game=GameKind.LEFT_RIGHT, ctx=ctx))
     if pet.stats.happiness < 50:
         act(Action.SNACK)
     if pet.is_asleep == pet.lights_on:

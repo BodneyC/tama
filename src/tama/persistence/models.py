@@ -5,7 +5,7 @@ the boundary. Durations are ISO 8601 strings, fractions are exact ``"n/d"`` stri
 timestamps must carry a UTC offset, so a save round-trips exactly (see ADR 0002).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from fractions import Fraction
 from random import Random
@@ -14,12 +14,14 @@ from typing import Any, Literal, Self
 from pydantic import AwareDatetime, BaseModel, ConfigDict, NonNegativeInt, PositiveInt
 
 from tama import __version__
+from tama.domain.journal import Entry, EntryKind, GameTally, Journal, Tallies, Topic
+from tama.domain.minigames import GameKind
 from tama.domain.pet import Drift, Pet, Timers
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -28,10 +30,11 @@ RngState = tuple[Any, ...]
 
 @dataclass(frozen=True, slots=True)
 class SaveGame:
-    """Everything needed to resume a game exactly where it left off."""
+    """Everything needed to resume a game exactly where it left off, and its journal."""
 
     pet: Pet
     rng_state: RngState
+    journal: Journal = field(default_factory=Journal)
 
 
 def restore_rng(state: RngState) -> Random:
@@ -108,6 +111,73 @@ class PetModel(_Model):
     woken_tantrum: bool
 
 
+class EntryModel(_Model):
+    """Serialized journal ``Entry``."""
+
+    kind: EntryKind
+    topic: Topic
+    at: AwareDatetime
+    age: timedelta
+    detail: str
+
+
+class GameTallyModel(_Model):
+    """Serialized ``GameTally``."""
+
+    won: NonNegativeInt
+    drawn: NonNegativeInt
+    lost: NonNegativeInt
+
+
+class TalliesModel(_Model):
+    """Serialized ``Tallies``; ``games`` is keyed by game."""
+
+    meals: NonNegativeInt
+    snacks: NonNegativeInt
+    tantrums_caught: NonNegativeInt
+    tantrums_ignored: NonNegativeInt
+    sicknesses: NonNegativeInt
+    doses: NonNegativeInt
+    poops_cleaned: NonNegativeInt
+    holidays: NonNegativeInt
+    care_mistakes: NonNegativeInt
+    games: dict[GameKind, GameTallyModel]
+
+
+class JournalModel(_Model):
+    """Serialized ``Journal`` (SPEC §2.9, ADR 0009)."""
+
+    entries: tuple[EntryModel, ...]
+    tallies: TalliesModel
+
+    @classmethod
+    def from_domain(cls, journal: Journal) -> Self:
+        """Build the model for ``journal``."""
+        t = journal.tallies
+        counts = {name: getattr(t, name) for name in t.__slots__ if name != "games"}
+        return cls(
+            entries=tuple(EntryModel(**_fields(e)) for e in journal.entries),
+            tallies=TalliesModel(
+                **counts,
+                games={kind: GameTallyModel(**_fields(tally)) for kind, tally in t.games},
+            ),
+        )
+
+    def to_domain(self) -> Journal:
+        """Convert back to the domain ``Journal``."""
+        t = self.tallies
+        counts = {name: getattr(t, name) for name in TalliesModel.model_fields if name != "games"}
+        games = tuple(
+            (kind, GameTally(**_model_fields(t.games[kind])))
+            for kind in GameKind
+            if kind in t.games
+        )
+        return Journal(
+            entries=tuple(Entry(**_model_fields(e)) for e in self.entries),
+            tallies=Tallies(**counts, games=games),
+        )
+
+
 class RngStateModel(_Model):
     """Serialized ``random.Random`` state."""
 
@@ -116,17 +186,18 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV5(_Model):
-    """Version 5 of the save file.
+class SaveFileV6(_Model):
+    """Version 6 of the save file.
 
     v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4 + weight
-    burn and the time out of the healthy weight band in v5.
+    burn and the time out of the healthy weight band in v5 + the journal in v6.
     """
 
-    schema_version: Literal[5] = 5
+    schema_version: Literal[6] = 6
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel
+    journal: JournalModel
 
     @classmethod
     def from_domain(cls, game: SaveGame) -> Self:
@@ -163,6 +234,7 @@ class SaveFileV5(_Model):
                 woken_tantrum=pet.woken_tantrum,
             ),
             rng=RngStateModel(version=version, internal=internal, gauss_next=gauss_next),
+            journal=JournalModel.from_domain(game.journal),
         )
 
     def to_domain(self) -> SaveGame:
@@ -209,10 +281,10 @@ class SaveFileV5(_Model):
             restore_rng(state)
         except (ValueError, TypeError) as exc:
             raise CorruptSaveError(f"invalid RNG state: {exc}") from exc
-        return SaveGame(pet, state)
+        return SaveGame(pet, state, self.journal.to_domain())
 
 
-def _fields(obj: Stats | Drift | Timers) -> dict[str, Any]:
+def _fields(obj: Stats | Drift | Timers | Entry | GameTally) -> dict[str, Any]:
     return {name: getattr(obj, name) for name in obj.__slots__}
 
 

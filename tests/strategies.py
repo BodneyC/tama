@@ -9,6 +9,8 @@ from typing import Any
 from hypothesis import strategies as st
 
 from tama.domain.events import Action
+from tama.domain.journal import Entry, EntryKind, GameTally, Journal, Tallies, Topic
+from tama.domain.minigames import GameKind
 from tama.domain.pet import Drift, Pet, Timers
 from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import Stats
@@ -94,3 +96,34 @@ def rng_states(draw: st.DrawFn) -> tuple[Any, ...]:
     if draw(st.booleans()):
         rng.gauss()  # leaves a cached value in the state's gauss_next slot
     return rng.getstate()
+
+
+COUNT = st.integers(min_value=0, max_value=10_000)
+
+
+@st.composite
+def journals(draw: st.DrawFn) -> Journal:
+    """Arbitrary journals: any entries (in order) and any tallies."""
+    entries = draw(
+        st.lists(
+            st.builds(
+                Entry,
+                kind=st.sampled_from(list(EntryKind)),
+                topic=st.sampled_from(list(Topic)),
+                at=st.just(FIXED_NOW) | minutes(60 * 24).map(lambda m: FIXED_NOW + m),
+                age=minutes(20 * 24 * 60),
+                detail=st.text(max_size=20),
+            ),
+            max_size=6,
+        )
+    )
+    games = draw(st.lists(st.sampled_from(list(GameKind)), unique=True))
+    tallies = Tallies(
+        **{name: draw(COUNT) for name in Tallies.__slots__ if name != "games"},
+        games=tuple(
+            (kind, GameTally(draw(COUNT), draw(COUNT), draw(COUNT)))
+            for kind in GameKind
+            if kind in games
+        ),
+    )
+    return Journal(tuple(entries), tallies)

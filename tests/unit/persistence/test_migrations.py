@@ -105,6 +105,34 @@ def test_v4_saves_had_burned_no_weight(pet: object, expected: object) -> None:
     assert out == {"schema_version": 5, "pet": expected}
 
 
+def test_v5_saves_start_a_journal_as_of_their_last_update() -> None:
+    pet = {"updated_at": "2026-01-01T12:00:00Z", "age": "PT1H"}
+
+    out = migrate({"schema_version": 5, "pet": pet}, current=6)
+
+    assert out["journal"]["entries"] == [
+        {
+            "kind": "life",
+            "topic": "journal_started",
+            "at": "2026-01-01T12:00:00Z",
+            "age": "PT1H",
+            "detail": "",
+        }
+    ]
+    assert out["journal"]["tallies"]["meals"] == 0
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [{"schema_version": 5, "pet": "not a pet"}, {"schema_version": 5, "pet": {}, "journal": 1}],
+    ids=["malformed", "already-has-one"],
+)
+def test_v5_saves_that_cannot_start_a_journal_are_left_for_validation(
+    raw: dict[str, object],
+) -> None:
+    assert migrate(raw, current=6) == {**raw, "schema_version": 6}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})
