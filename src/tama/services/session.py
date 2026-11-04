@@ -15,6 +15,7 @@ from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.holiday import pause, resume
+from tama.domain.journal import Journal, record
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import BoardGame, pet_move
@@ -98,7 +99,7 @@ class GameSession:
     is exposed as ``save_error`` for the UI to show. ``save``/``close`` do raise.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - explicit dependencies, all keyword-only
         self,
         *,
         pet: Pet,
@@ -106,9 +107,11 @@ class GameSession:
         repo: SaveRepository,
         clock: Clock,
         settings: SessionSettings,
+        journal: Journal | None = None,
     ) -> None:
-        """Wrap an existing pet. Prefer ``create`` or ``load``."""
+        """Wrap an existing pet (and its journal). Prefer ``create`` or ``load``."""
         self._pet = pet
+        self._journal = journal or Journal()
         self._ctx = Context(rng=rng, balance=settings.balance, tz=settings.tz)
         self._repo = repo
         self._clock = clock
@@ -157,6 +160,7 @@ class GameSession:
             repo=repo,
             clock=clock,
             settings=settings,
+            journal=loaded.game.journal,
         )
         return LoadedSession(session, session._catch_up(), loaded.from_backup)
 
@@ -178,6 +182,11 @@ class GameSession:
     def pet(self) -> Pet:
         """The current pet."""
         return self._pet
+
+    @property
+    def journal(self) -> Journal:
+        """The pet's journal, up to date with everything the session has done (SPEC §2.9)."""
+        return self._journal
 
     @property
     def tz(self) -> tzinfo:
@@ -232,7 +241,7 @@ class GameSession:
         Raises:
             SaveWriteError: If saving failed.
         """
-        self._repo.save(SaveGame(self._pet, self._ctx.rng.getstate()))
+        self._repo.save(SaveGame(self._pet, self._ctx.rng.getstate(), self._journal))
         self._last_saved_at = self._clock.now()
         self.save_error = None
 
@@ -247,16 +256,21 @@ class GameSession:
     def _commit_change(self, outcome: Outcome) -> Outcome:
         """Take ``outcome``'s pet, saving only if anything changed."""
         changed = outcome.pet != self._pet
-        self._pet = outcome.pet
+        self._take(outcome)
         if changed:
             self._try_save()
         return outcome
 
     def _commit(self, outcome: Outcome) -> Outcome:
-        self._pet = outcome.pet
+        self._take(outcome)
         if outcome.refusal is None:
             self._try_save()
         return outcome
+
+    def _take(self, outcome: Outcome) -> None:
+        """Adopt ``outcome``'s pet, writing its events in the journal first."""
+        self._journal = record(self._journal, outcome.events, self._pet)
+        self._pet = outcome.pet
 
     def _try_save(self) -> None:
         try:
@@ -279,5 +293,6 @@ class GameSession:
         outcome = advance(self._pet, simulated, self._ctx)
         if simulated < away_for:
             logger.info("Pet sitter covered %s beyond the offline cap", away_for - simulated)
-        self._pet = skip_to(outcome.pet, now)
+        self._take(outcome)  # before skipping ahead, so entries keep their own times
+        self._pet = skip_to(self._pet, now)
         return CatchUp(away_for, simulated, outcome.events)

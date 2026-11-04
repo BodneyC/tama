@@ -31,16 +31,20 @@ from tama.domain.events import (
     Woken,
     WokeUp,
 )
+from tama.domain.journal import Entry, EntryKind, GameTally, Tallies, Topic
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.domain.weight import WeightStatus
 from tama.services.describe import (
+    describe_entry,
     describe_event,
+    entry_line,
     format_age,
     holiday_since,
     status_line,
     summarize,
+    tally_lines,
 )
 from tests.factories import make_pet
 
@@ -203,3 +207,85 @@ def test_holiday_dates_are_in_the_players_time_zone() -> None:
 
     assert holiday_since(late, timezone(timedelta(hours=2))) == "4 Nov"
     assert holiday_since(late) == "3 Nov"
+
+
+# --- Journal entries (SPEC §2.9) ------------------------------------------------------------
+
+
+def journal_entry(kind: EntryKind, topic: Topic, detail: str = "") -> Entry:
+    return Entry(kind, topic, datetime(2026, 11, 3, 14, 5, tzinfo=UTC), AGE, detail)
+
+
+L, F, M = EntryKind.LIFE, EntryKind.FIRST, EntryKind.MOMENT
+
+
+@pytest.mark.parametrize(
+    ("entry", "text"),
+    [
+        (journal_entry(L, Topic.JOURNAL_STARTED), "Started keeping a journal"),
+        (journal_entry(L, Topic.HATCHED), "Hatched"),
+        (journal_entry(L, Topic.EVOLVED, "teen/default"), "Grew into a teen"),
+        (journal_entry(L, Topic.EVOLVED, "adult/chubby"), "Grew into a chubby adult"),
+        (journal_entry(L, Topic.EVOLVED, "elder/good"), "Grew into an elder"),
+        (journal_entry(L, Topic.DIED, "old_age"), "Passed away peacefully of old age"),
+        (journal_entry(L, Topic.HOLIDAY), "Went on holiday"),
+        (journal_entry(L, Topic.BACK, "4327"), "Came back from 3d 0h on holiday"),
+        (journal_entry(F, Topic.MEAL), "First meal"),
+        (journal_entry(F, Topic.SNACK), "First snack"),
+        (journal_entry(F, Topic.TANTRUM), "First tantrum"),
+        (journal_entry(F, Topic.SICKNESS), "Fell sick for the first time"),
+        (journal_entry(F, Topic.WIN, "four_in_a_row"), "First win at Four in a Row"),
+        (journal_entry(F, Topic.CARE_MISTAKE, "hunger"), "First care mistake: was left starving"),
+        (journal_entry(M, Topic.CARE_MISTAKE, "lights"), "Slept with the lights on"),
+        (journal_entry(M, Topic.CURED, ""), "Got better"),
+        (journal_entry(M, Topic.TANTRUM_CAUGHT), "Was disciplined for a tantrum"),
+        (journal_entry(M, Topic.TANTRUM_IGNORED), "Got away with a tantrum"),
+        (journal_entry(M, Topic.MILESTONE, "meals:10"), "Ate its 10th meal"),
+        (journal_entry(M, Topic.MILESTONE, "games_won:50"), "Won its 50th game"),
+    ],
+)
+def test_journal_entries(entry: Entry, text: str) -> None:
+    assert describe_entry(entry) == text
+
+
+def test_an_entry_line_has_the_local_date_time_and_age() -> None:
+    entry = journal_entry(L, Topic.HATCHED)
+
+    line = entry_line(entry, timezone(timedelta(hours=-5)))
+
+    assert line == "3 Nov 09:05  1h 0m   Hatched"
+
+
+def test_tallies_summarise_a_life() -> None:
+    tallies = Tallies(
+        meals=12,
+        snacks=3,
+        tantrums_caught=4,
+        tantrums_ignored=1,
+        sicknesses=2,
+        doses=3,
+        poops_cleaned=9,
+        holidays=1,
+        care_mistakes=2,
+        games=(
+            (GameKind.FOUR_IN_A_ROW, GameTally(won=2, drawn=1, lost=3)),
+            (GameKind.TIC_TAC_TOE, GameTally(won=1)),
+        ),
+    )
+
+    assert tally_lines(tallies) == [
+        "Meals 12 · snacks 3 · poops cleaned 9",
+        "Tantrums 4 caught, 1 ignored · sick 2 times, 3 doses",
+        "Care mistakes 2 · holidays 1",
+        "Four in a Row: won 2, drew 1, lost 3",
+        "Tic-Tac-Toe: won 1, drew 0, lost 0",
+    ]
+
+
+def test_tallies_of_a_new_journal() -> None:
+    assert tally_lines(Tallies()) == [
+        "Meals 0 · snacks 0 · poops cleaned 0",
+        "Tantrums 0 caught, 0 ignored · sick 0 times, 0 doses",
+        "Care mistakes 0 · holidays 0",
+        "No games played yet",
+    ]

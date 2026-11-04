@@ -19,6 +19,7 @@ from tama.domain.events import (
     RefusalReason,
     ResumedFromHoliday,
 )
+from tama.domain.journal import Journal, Topic
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.minigames.four_in_a_row import FourInARow
 from tama.domain.minigames.left_right import Direction, LeftRightGame
@@ -424,3 +425,88 @@ def test_resuming_a_pet_that_is_not_on_holiday_changes_nothing(clock: FakeClock)
 
     assert session.resume().events == ()
     assert repo.save_count == 0
+
+
+# --- Journal (SPEC §2.9, ADR 0009) ----------------------------------------------------------
+
+
+def topics(session: GameSession) -> list[Topic]:
+    return [entry.topic for entry in session.journal.entries]
+
+
+def test_a_new_pet_starts_with_an_empty_journal(clock: FakeClock) -> None:
+    session = GameSession.create(
+        "Mochi", repo=InMemorySaveRepository(), clock=clock, settings=SETTINGS
+    )
+
+    assert session.journal == Journal()
+
+
+def test_time_passing_is_written_in_the_journal_and_saved(clock: FakeClock) -> None:
+    repo = InMemorySaveRepository()
+    session = GameSession.create("Mochi", repo=repo, clock=clock, settings=SETTINGS)
+
+    clock.advance(timedelta(hours=1, minutes=5))
+    session.tick()
+
+    assert topics(session) == [Topic.HATCHED, Topic.EVOLVED]
+    assert session.journal.entries[0].at == FIXED_NOW + timedelta(minutes=1)
+    assert repo.game is not None
+    assert repo.game.journal == session.journal
+
+
+def test_actions_and_games_are_written_in_the_journal(clock: FakeClock) -> None:
+    session = GameSession.load(
+        repo=saved(stats=Stats(hunger=50)), clock=clock, settings=SETTINGS
+    ).session
+
+    session.act(Action.MEAL)
+    session.finish_game(GameResult.WIN, GameKind.TIC_TAC_TOE)
+
+    assert topics(session) == [Topic.MEAL, Topic.WIN]
+    assert session.journal.tallies.meals == 1
+    assert session.journal.tallies.game(GameKind.TIC_TAC_TOE).won == 1
+
+
+def test_a_refused_action_writes_nothing(clock: FakeClock) -> None:
+    session = GameSession.load(repo=saved(misbehaving=True), clock=clock, settings=SETTINGS).session
+
+    session.act(Action.MEAL)
+
+    assert session.journal.tallies.meals == 0
+
+
+def test_a_holiday_is_written_in_the_journal(clock: FakeClock) -> None:
+    session = GameSession.load(repo=saved(), clock=clock, settings=SETTINGS).session
+
+    session.pause()
+    clock.advance(timedelta(days=2))
+    session.tick()
+    session.resume()
+
+    assert topics(session) == [Topic.HOLIDAY, Topic.BACK]
+    assert session.journal.entries[1].detail == str(2 * 24 * 60)
+    assert session.journal.entries[1].at == FIXED_NOW + timedelta(days=2)
+
+
+def test_catch_up_beyond_the_cap_dates_entries_before_the_pet_sitter(clock: FakeClock) -> None:
+    repo = saved(stage=LifeStage.EGG, age=timedelta(0))
+    clock.advance(timedelta(hours=10))
+    settings = replace(SETTINGS, offline_cap=timedelta(hours=2))
+
+    session = GameSession.load(repo=repo, clock=clock, settings=settings).session
+
+    hatched = session.journal.entries[0]
+    assert hatched.topic is Topic.HATCHED
+    assert hatched.at == FIXED_NOW + timedelta(minutes=1)
+
+
+def test_the_journal_is_loaded_with_the_pet(clock: FakeClock) -> None:
+    repo = saved()
+    session = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+    session.act(Action.SNACK)
+
+    again = GameSession.load(repo=repo, clock=clock, settings=SETTINGS).session
+
+    assert again.journal == session.journal
+    assert topics(again) == [Topic.SNACK]
