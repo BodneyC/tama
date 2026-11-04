@@ -69,6 +69,14 @@ def founder(pet: Pet) -> str | None:
     return pet.ancestors[0].name if pet.ancestors else None
 
 
+def is_heir_of(pet: Pet, parent: Pet) -> bool:
+    """Whether ``pet`` hatched from ``parent``'s egg (its newest ancestor is ``parent``)."""
+    if not pet.ancestors:
+        return False
+    newest = pet.ancestors[-1]
+    return (newest.name, newest.born_at) == (parent.name, parent.born_at)
+
+
 def hatch_heir(
     parent: Pet, name: str, now: datetime, rng: Random, balance: Balance
 ) -> tuple[Pet, Outcome]:

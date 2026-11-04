@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -35,6 +36,7 @@ from tama.domain.events import (
 )
 from tama.domain.journal import Entry, EntryKind, GameTally, Tallies, Topic
 from tama.domain.minigames import GameKind, GameResult
+from tama.domain.pet import AncestorRecord
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.domain.weight import WeightStatus
@@ -42,14 +44,16 @@ from tama.services.describe import (
     describe_entry,
     describe_event,
     entry_line,
+    family_line,
     format_age,
     holiday_since,
     life_in_numbers,
+    lineage_text,
     status_line,
     summarize,
     tally_lines,
 )
-from tests.factories import make_pet
+from tests.factories import FIXED_NOW, make_pet
 
 AGE = timedelta(hours=1)
 
@@ -311,3 +315,41 @@ def test_tallies_of_a_new_journal() -> None:
 )
 def test_life_in_numbers(tallies: Tallies, text: str) -> None:
     assert life_in_numbers(tallies) == text
+
+
+# --- Family line (SPEC §2.8) ----------------------------------------------------------------
+
+
+def line_of(*names: str) -> tuple[AncestorRecord, ...]:
+    return tuple(
+        AncestorRecord(name, FIXED_NOW, n, Variant.GOOD, timedelta(days=15))
+        for n, name in enumerate(names, start=1)
+    )
+
+
+def test_a_founder_has_no_lineage_to_show() -> None:
+    assert lineage_text(make_pet()) is None
+    assert family_line(make_pet()) is None
+
+
+def test_lineage_names_the_generation_and_founder() -> None:
+    pet = make_pet(generation=3, ancestors=line_of("Mochi", "Mochi II"))
+
+    assert lineage_text(pet) == "Generation 3 · founded by Mochi"
+
+
+@pytest.mark.parametrize(
+    ("names", "line"),
+    [
+        (("Mochi",), "Mochi → Mochi II"),
+        (("Mochi", "Mochi II"), "Mochi → Mochi II → Mochi III"),
+        (("Mochi", "Bao", "Mochi II"), "Mochi → Bao → Mochi II → Mochi III"),
+        (("Mochi", "Pip", "Bao", "Mochi II"), "… → Pip → Bao → Mochi II → Mochi III"),
+    ],
+)
+def test_the_family_line_ends_with_the_pet(names: tuple[str, ...], line: str) -> None:
+    pet = replace(
+        make_pet(), name="Mochi II" if len(names) == 1 else "Mochi III", ancestors=line_of(*names)
+    )
+
+    assert family_line(pet) == line

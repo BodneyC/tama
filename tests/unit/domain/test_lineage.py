@@ -7,7 +7,7 @@ import pytest
 
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.events import HeirHatched
-from tama.domain.lineage import founder, hatch_heir, heir_name
+from tama.domain.lineage import founder, hatch_heir, heir_name, is_heir_of
 from tama.domain.pet import AncestorRecord, Pet, new_egg
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
@@ -120,3 +120,13 @@ def test_the_heir_name_must_be_valid() -> None:
 def test_generation_must_be_positive() -> None:
     with pytest.raises(InvalidArgumentError, match="generation"):
         make_pet(generation=0)
+
+
+def test_an_heir_knows_its_parent_by_name_and_birth() -> None:
+    parent = dead_parent()
+    heir, _ = hatch_heir(parent, "Mochi II", LATER, Random(1), DEFAULT_BALANCE)
+    namesake = replace(parent, born_at=FIXED_NOW - timedelta(days=1))
+
+    assert is_heir_of(heir, parent)
+    assert not is_heir_of(heir, namesake)
+    assert not is_heir_of(parent, parent)

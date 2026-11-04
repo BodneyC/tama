@@ -12,6 +12,7 @@ from pathlib import Path
 
 from tama.domain.balance import Balance
 from tama.domain.pet import DEFAULT_SPECIES
+from tama.errors import InvalidArgumentError, NoEggError, RosterFullError
 from tama.infra.clock import Clock
 from tama.persistence.lock import PetLock
 from tama.persistence.roster import PetFile, PetRoster
@@ -93,6 +94,39 @@ class PetLibrary:
             seed=seed,
             species=species,
         )
+        self.roster.set_last(file)
+        return session
+
+    def hatch_heir(self, parent: PetFile, name: str) -> GameSession:
+        """Hatch the egg ``parent`` left as a new pet called ``name``, opened and played next.
+
+        The heir is saved before the parent, so a crash in between never yields two heirs
+        (ADR 0010).
+
+        Raises:
+            NoEggError: If ``parent`` has no egg waiting (or an heir already hatched from it).
+            RosterFullError: If there are nine pets already.
+            InvalidArgumentError: If ``name`` is invalid or a living pet already has it.
+            PetLockedError: If ``parent`` is open in another tama.
+            SaveError: If ``parent`` can't be loaded or a pet can't be saved.
+        """
+        rows = self.summaries()
+        row = next((r for r in rows if r.file == parent), None)
+        if row is None or not row.egg_waiting:
+            raise NoEggError(f"{row.name if row else parent.key} has no egg to hatch")
+        if not can_add_pet(rows):
+            raise RosterFullError("You have nine pets already; archive one to make room.")
+        if name_taken(rows, name):
+            raise InvalidArgumentError(f"You already have a {name.strip()}.")
+        with self.borrow(parent) as parent_session:
+            heir, rng = parent_session.hatch_heir(name)
+            file = self.roster.create(heir.name)
+            session = GameSession(
+                pet=heir, rng=rng, repo=file.repo(), clock=self._clock, settings=self._settings
+            )
+            session.save()
+            parent_session.save()
+        self._take(file)
         self.roster.set_last(file)
         return session
 

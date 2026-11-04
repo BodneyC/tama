@@ -54,5 +54,9 @@ class NoEggError(TamaError):
     """There is no egg to hatch: the pet is alive, died of poor health, or its egg hatched."""
 
 
+class RosterFullError(TamaError):
+    """There are nine pets already; one that has passed away must be archived first."""
+
+
 class UnknownPetError(TamaError):
     """``--pet NAME`` matched no pet, or several."""

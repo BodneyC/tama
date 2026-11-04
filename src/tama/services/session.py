@@ -16,6 +16,7 @@ from tama.domain.context import Context
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.holiday import pause, resume
 from tama.domain.journal import Journal, record
+from tama.domain.lineage import hatch_heir
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import BoardGame, pet_move
@@ -218,6 +219,24 @@ class GameSession:
     def finish_game(self, result: GameResult, game: GameKind) -> Outcome:
         """Apply a finished mini-game's result, saving if it was accepted."""
         return self._commit(apply_game_outcome(self._pet, result, game=game, ctx=self._ctx))
+
+    def hatch_heir(self, name: str) -> tuple[Pet, Random]:
+        """Hatch the egg this (dead) pet left: the heir called ``name``, and its own RNG.
+
+        The heir's RNG is seeded from this pet's, so a line started with ``--seed`` replays.
+        ``HeirHatched`` goes in this pet's journal; nothing is saved: the caller saves the heir
+        first and then this pet (ADR 0010).
+
+        Raises:
+            NoEggError: If this pet has no egg waiting.
+            InvalidArgumentError: If ``name`` is not a valid name.
+        """
+        heir_rng = Random(self._ctx.rng.getrandbits(64))
+        heir, outcome = hatch_heir(
+            self._pet, name, self._clock.now(), heir_rng, self._settings.balance
+        )
+        self._take(outcome)
+        return heir, heir_rng
 
     def pause(self) -> Outcome:
         """Put the pet on holiday (SPEC §2.6), saving at once; refused if it isn't settled."""

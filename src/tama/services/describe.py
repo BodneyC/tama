@@ -41,6 +41,7 @@ from tama.domain.events import (
     WokeUp,
 )
 from tama.domain.journal import Entry, EntryKind, Journal, Tallies, Topic
+from tama.domain.lineage import founder
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
@@ -268,6 +269,25 @@ def life_in_numbers(tallies: Tallies) -> str:
 
 def _plural(n: int, word: str) -> str:
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+FAMILY_SHOWN = 3
+"""How many ancestors the family line shows before the pet; older ones become "…"."""
+
+
+def lineage_text(pet: Pet) -> str | None:
+    """``Generation 3 · founded by Mochi`` for an heir; ``None`` for a pet that began its line."""
+    first = founder(pet)
+    return None if first is None else f"Generation {pet.generation} · founded by {first}"
+
+
+def family_line(pet: Pet) -> str | None:
+    """``… → Bao → Mochi II → Mochi III``: its newest ancestors, then the pet (``None`` if none)."""
+    if not pet.ancestors:
+        return None
+    names = [a.name for a in pet.ancestors] + [pet.name]
+    shown = names[-(FAMILY_SHOWN + 1) :]
+    return " → ".join((["…"] if len(names) > len(shown) else []) + shown)
 
 
 def summarize(events: Iterable[Event]) -> list[str]:

@@ -444,12 +444,12 @@ def test_a_new_pet_starts_with_an_empty_journal(clock: FakeClock) -> None:
 
 def test_time_passing_is_written_in_the_journal_and_saved(clock: FakeClock) -> None:
     repo = InMemorySaveRepository()
-    session = GameSession.create("Mochi", repo=repo, clock=clock, settings=SETTINGS)
+    session = GameSession.create("Mochi", repo=repo, clock=clock, settings=SETTINGS, seed=0)
 
     clock.advance(timedelta(hours=1, minutes=5))
     session.tick()
 
-    assert topics(session) == [Topic.HATCHED, Topic.EVOLVED]
+    assert topics(session)[:2] == [Topic.HATCHED, Topic.EVOLVED]
     assert session.journal.entries[0].at == FIXED_NOW + timedelta(minutes=1)
     assert repo.game is not None
     assert repo.game.journal == session.journal

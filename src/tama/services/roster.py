@@ -6,10 +6,11 @@ other pets needing care) can never change or corrupt them.
 """
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from tama.domain.attention import AttentionReason, attention_reasons
 from tama.domain.journal import Journal
+from tama.domain.lineage import is_heir_of
 from tama.domain.pet import Pet
 from tama.errors import SaveError, UnknownPetError
 from tama.infra.clock import Clock
@@ -32,6 +33,8 @@ class PetSummary:
     """Whether this is the pet played last."""
     journal: Journal = field(default_factory=Journal)
     """Its journal as of now (including what catching up wrote, which isn't saved)."""
+    egg_waiting: bool = False
+    """Whether it left an egg that hasn't hatched (no pet in the list is its heir)."""
 
     @property
     def name(self) -> str:
@@ -71,7 +74,21 @@ def pet_summaries(
         summarize(file, clock=clock, settings=settings, last=file == last)
         for file in roster.files()
     ]
+    pets = [row.pet for row in rows if row.pet is not None]
+    rows = [
+        replace(row, egg_waiting=row.pet is not None and _egg_waiting(row.pet, pets))
+        for row in rows
+    ]
     return sorted(rows, key=lambda row: (not row.last, row.name.casefold(), row.file.key))
+
+
+def _egg_waiting(pet: Pet, pets: Sequence[Pet]) -> bool:
+    """``pet``'s egg is waiting unless an heir already hatched from it.
+
+    The heir is saved before the parent (ADR 0010), so a crash in between leaves an heir whose
+    parent still has ``heir_hatched`` unset; the heir's existence settles it.
+    """
+    return pet.egg_waiting and not any(is_heir_of(other, pet) for other in pets)
 
 
 def others_needing_care(
