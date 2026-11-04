@@ -25,7 +25,7 @@ from tama.ui.screens.games.four_in_a_row import FourInARowScreen
 from tama.ui.screens.games.tic_tac_toe import TicTacToeScreen
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_view import ViewOptions
-from tests.factories import FIXED_NOW, make_pet
+from tests.factories import FIXED_NOW, make_journal, make_pet
 from tests.ui.helpers import library_with, make_app, make_library_app, mono, repo_with
 
 SnapCompare = Callable[..., bool]
@@ -130,11 +130,37 @@ def test_asleep_with_lights_off(snap_compare: SnapCompare) -> None:
     assert snap_compare(app)
 
 
-def test_memorial_screen(snap_compare: SnapCompare) -> None:
-    app = make_app(
-        repo_with(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE, care_mistakes=3)
+def dead_app() -> TamaApp:
+    """A pet that lived a whole life, with its journal."""
+    return make_app(
+        repo_with(
+            stage=LifeStage.DEAD,
+            cause_of_death=DeathCause.OLD_AGE,
+            care_mistakes=3,
+            weight=31,
+            journal=make_journal(),
+        )
     )
-    assert snap_compare(app)
+
+
+def test_memorial_screen(snap_compare: SnapCompare) -> None:
+    assert snap_compare(dead_app())
+
+
+def test_memorial_screen_fits_the_smallest_terminal(snap_compare: SnapCompare) -> None:
+    assert snap_compare(dead_app(), terminal_size=GAME_SIZE)
+
+
+def test_journal_mid_life(snap_compare: SnapCompare) -> None:
+    life = make_journal(moments=2)
+    mid_life = replace(life, entries=life.entries[:8])
+    app = make_app(repo_with(stage=LifeStage.TEEN, journal=mid_life))
+    assert snap_compare(app, press=["j"], terminal_size=GAME_SIZE)
+
+
+def test_long_journal_scrolled(snap_compare: SnapCompare) -> None:
+    app = make_app(repo_with(stage=LifeStage.ELDER, journal=make_journal(moments=30)))
+    assert snap_compare(app, press=["j", "pagedown"], terminal_size=GAME_SIZE)
 
 
 def test_away_summary(snap_compare: SnapCompare) -> None:

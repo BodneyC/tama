@@ -239,6 +239,19 @@ def tally_lines(tallies: Tallies) -> list[str]:
     ]
 
 
+def life_in_numbers(tallies: Tallies) -> str:
+    """One short line for the memorial: ``82 meals, 1 snack, 40 wins``."""
+    t = tallies
+    return ", ".join(
+        _plural(n, word)
+        for n, word in ((t.meals, "meal"), (t.snacks, "snack"), (t.games_won, "win"))
+    )
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
 def summarize(events: Iterable[Event]) -> list[str]:
     """Describe ``events``, merging repeats into ``"… ×n"`` lines in first-seen order."""
     counts = Counter(describe_event(event) for event in events)

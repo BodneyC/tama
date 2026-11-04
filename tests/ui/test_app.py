@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
+from textual.containers import VerticalScroll
 from textual.content import Content
 from textual.widgets import Static
 
@@ -29,13 +30,14 @@ from tama.ui.colours import Look, Mode
 from tama.ui.screens.away import AwaySummaryScreen, away_text
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen, weight_content
 from tama.ui.screens.error import ErrorScreen
+from tama.ui.screens.journal import JournalScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialScreen
 from tama.ui.screens.new_pet import NAME_RULE, NewPetScreen
 from tama.ui.sprites import load_overlay, load_sprite, overlay_content
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_view import PetView, ViewOptions
-from tests.factories import FIXED_NOW, make_pet
+from tests.factories import FIXED_NOW, make_journal, make_pet
 from tests.fakes import InMemorySaveRepository
 from tests.ui.helpers import Notes, make_app, mono, repo_with, text
 
@@ -226,6 +228,11 @@ async def test_quiet_time_away_needs_no_summary() -> None:
 # --- Death ----------------------------------------------------------------------------------
 
 OLD: dict[str, Any] = {"stage": LifeStage.ELDER, "age": timedelta(days=15) - timedelta(minutes=1)}
+DEAD: dict[str, Any] = {
+    "stage": LifeStage.DEAD,
+    "cause_of_death": DeathCause.OLD_AGE,
+    "age": timedelta(days=15),
+}
 
 
 async def test_a_dead_pet_opens_its_memorial() -> None:
@@ -242,8 +249,75 @@ async def test_a_dead_pet_opens_its_memorial() -> None:
         body = text(app, "#memorial-body")
         assert "Mochi the owl" in body
         assert "Passed away peacefully of old age" in body
-        assert "Lived 15d 0h" in body
-        assert "Care mistakes: 2" in body
+        assert "Lived 15d 0h · 2 mistakes" in body
+
+
+async def test_the_memorial_shows_highlights_from_the_journal() -> None:
+    app = make_app(repo_with(**DEAD, journal=make_journal()))
+    async with app.run_test():
+        body = text(app, "#memorial-body")
+        assert "Grew into a well-behaved adult" in body
+        assert "First win at Four in a Row" in body
+        assert "1 meal, 0 snacks, 1 win" in body
+        assert "Was disciplined for a tantrum" not in body  # moments are for the journal
+
+
+async def test_the_whole_journal_can_be_read_from_the_memorial() -> None:
+    app = make_app(repo_with(**DEAD, journal=make_journal()))
+    async with app.run_test() as pilot:
+        await pilot.press("j")
+        await pilot.pause()
+
+        assert isinstance(app.screen, JournalScreen)
+        await pilot.press("escape")
+        await pilot.pause()
+        assert isinstance(app.screen, MemorialScreen)
+
+
+# --- Journal --------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("close", ["escape", "j"])
+async def test_j_opens_the_journal_newest_first(close: str) -> None:
+    app = make_app(repo_with(stats=Stats(hunger=50)))
+    async with app.run_test() as pilot:
+        await pilot.press("f", "m")
+        await pilot.pause()
+        await pilot.press("j")
+        await pilot.pause()
+
+        assert isinstance(app.screen, JournalScreen)
+        assert "Mochi's journal" in text(app, ".dialog-title")
+        assert text(app, "#journal-entries").endswith("First meal")
+        assert text(app, "#journal-tallies").startswith("Meals 1 · snacks 0")
+        await pilot.press(close)
+        await pilot.pause()
+        assert isinstance(app.screen, MainScreen)
+
+
+async def test_an_empty_journal_says_so() -> None:
+    app = make_app(repo_with())
+    async with app.run_test() as pilot:
+        await pilot.press("j")
+        await pilot.pause()
+
+        assert text(app, "#journal-entries") == "Nothing written yet."
+
+
+async def test_a_long_journal_scrolls_with_the_page_keys() -> None:
+    app = make_app(repo_with(journal=make_journal(moments=40)))
+    async with app.run_test(size=(60, 20)) as pilot:
+        await pilot.press("j")
+        await pilot.pause()
+        scroll = app.screen.query_one("#journal-scroll", VerticalScroll)
+        assert scroll.max_scroll_y > 0
+
+        await pilot.press("pagedown")
+        await pilot.pause()
+        assert scroll.scroll_y > 0
+        await pilot.press("home")
+        await pilot.pause()
+        assert scroll.scroll_y == 0
 
 
 async def test_dying_during_play_opens_the_memorial() -> None:

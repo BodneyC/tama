@@ -26,6 +26,7 @@ c  Clean up                  s  Status
 m  Medicine                  ?  This help
 h  Holiday (pause/resume)    t  Switch pets
 w  Wake it up (it'll sulk)   q  Save and quit
+j  Journal (its life story)
 
 Keep your pet fed, happy and clean. Turn the lights
 off when it sleeps, give medicine when it's sick, and

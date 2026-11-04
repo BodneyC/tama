@@ -235,3 +235,37 @@ PetSelectScreen {
   width: 100%;
   color: $text-muted;
 }
+
+#memorial-row {
+  width: auto;
+  height: auto;
+}
+
+#memorial {
+  max-width: 100%;
+}
+
+#memorial #grave {
+  width: 18;
+  margin: 0 1 0 0;
+}
+
+#memorial-body {
+  width: auto;
+  max-width: 36;
+}
+
+#journal {
+  width: 64;
+  max-width: 100%;
+  height: 100%;
+  max-height: 32;
+}
+
+#journal-tallies {
+  margin-bottom: 1;
+}
+
+#journal-scroll {
+  height: 1fr;
+}

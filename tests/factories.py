@@ -11,8 +11,22 @@ from typing import Any
 
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
+from tama.domain.events import (
+    Action,
+    Ate,
+    CareMistake,
+    Died,
+    Disciplined,
+    Event,
+    Evolved,
+    Misbehaved,
+    MistakeReason,
+    Played,
+)
+from tama.domain.journal import Journal, record
+from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet, new_egg
-from tama.domain.stage import LifeStage
+from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.infra.clock import FakeClock
 
@@ -51,3 +65,25 @@ def make_pet(
         fields["weight"] = min(max(pet.weight, low), high)
     fields.update(overrides)
     return replace(pet, **fields)
+
+
+def make_journal(pet: Pet | None = None, *, moments: int = 4) -> Journal:
+    """A plausible journal for a pet that lived to old age, with ``moments`` caught tantrums."""
+    born = pet or make_pet(stage=LifeStage.EGG, age=timedelta(0))
+    born = replace(born, age=timedelta(0), carry=timedelta(0), updated_at=born.born_at)
+    hour, day = timedelta(hours=1), timedelta(days=1)
+    four = GameKind.FOUR_IN_A_ROW
+    events: list[Event] = [
+        Evolved(timedelta(minutes=1), LifeStage.EGG, LifeStage.BABY, Variant.DEFAULT),
+        Ate(timedelta(minutes=20), Action.MEAL),
+        Evolved(hour, LifeStage.BABY, LifeStage.CHILD, Variant.DEFAULT),
+        Played(2 * hour, GameResult.WIN, four),
+        Misbehaved(3 * hour),
+        *(Disciplined(3 * hour + i * day / 2, effective=True) for i in range(moments)),
+        Evolved(day, LifeStage.CHILD, LifeStage.TEEN, Variant.DEFAULT),
+        CareMistake(day + 5 * hour, MistakeReason.HUNGER),
+        Evolved(3 * day, LifeStage.TEEN, LifeStage.ADULT, Variant.GOOD),
+        Evolved(10 * day, LifeStage.ADULT, LifeStage.ELDER, Variant.GOOD),
+        Died(15 * day, DeathCause.OLD_AGE),
+    ]
+    return record(Journal(), sorted(events, key=lambda e: e.age), born)

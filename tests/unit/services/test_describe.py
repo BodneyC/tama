@@ -42,6 +42,7 @@ from tama.services.describe import (
     entry_line,
     format_age,
     holiday_since,
+    life_in_numbers,
     status_line,
     summarize,
     tally_lines,
@@ -289,3 +290,17 @@ def test_tallies_of_a_new_journal() -> None:
         "Care mistakes 0 · holidays 0",
         "No games played yet",
     ]
+
+
+@pytest.mark.parametrize(
+    ("tallies", "text"),
+    [
+        (Tallies(), "0 meals, 0 snacks, 0 wins"),
+        (
+            Tallies(meals=1, snacks=2, games=((GameKind.TIC_TAC_TOE, GameTally(won=1)),)),
+            "1 meal, 2 snacks, 1 win",
+        ),
+    ],
+)
+def test_life_in_numbers(tallies: Tallies, text: str) -> None:
+    assert life_in_numbers(tallies) == text

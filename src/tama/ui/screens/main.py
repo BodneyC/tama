@@ -32,6 +32,7 @@ from tama.services.session import GameSession
 from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen
 from tama.ui.screens.games import game_screen
 from tama.ui.screens.games.select import GameSelectScreen
+from tama.ui.screens.journal import JournalScreen
 from tama.ui.widgets.pet_header import PetHeader
 from tama.ui.widgets.pet_stage import PetStage
 from tama.ui.widgets.pet_view import ViewOptions
@@ -75,6 +76,7 @@ class MainScreen(Screen[None]):
         Binding("d", "act('discipline')", "Discipline"),
         # Rarely needed, and the footer has no room for it at 60 columns: listed in Help.
         Binding("w", "act('wake')", "Wake", show=False),
+        Binding("j", "journal", "Journal", show=False),
         Binding("h", "holiday", "Holiday"),
         Binding("t", "switch", "Pets"),
         Binding("s", "status", "Status"),
@@ -234,6 +236,12 @@ class MainScreen(Screen[None]):
     def action_status(self) -> None:
         """Show detailed stats."""
         self.app.push_screen(StatusScreen(self.session.pet, self.session.balance))
+
+    def action_journal(self) -> None:
+        """Read the pet's journal (SPEC §2.9)."""
+        self.app.push_screen(
+            JournalScreen(self.session.pet.name, self.session.journal, self.session.tz)
+        )
 
     def action_help(self) -> None:
         """Show key bindings."""

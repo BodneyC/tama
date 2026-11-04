@@ -7,6 +7,7 @@ from typing import Any
 from textual.app import App
 from textual.widgets import Static
 
+from tama.domain.journal import Journal
 from tama.domain.pet import Pet
 from tama.infra.clock import FakeClock
 from tama.persistence.models import SaveGame
@@ -20,9 +21,12 @@ from tests.factories import FIXED_NOW, make_pet
 from tests.fakes import InMemorySaveRepository
 
 
-def repo_with(seed: int = 0, **pet_overrides: Any) -> InMemorySaveRepository:
-    """An in-memory save holding a pet (a content CHILD by default)."""
-    return InMemorySaveRepository(SaveGame(make_pet(**pet_overrides), Random(seed).getstate()))
+def repo_with(
+    seed: int = 0, journal: Journal | None = None, **pet_overrides: Any
+) -> InMemorySaveRepository:
+    """An in-memory save holding a pet (a content CHILD by default) and its journal."""
+    pet = make_pet(**pet_overrides)
+    return InMemorySaveRepository(SaveGame(pet, Random(seed).getstate(), journal or Journal()))
 
 
 def make_app(

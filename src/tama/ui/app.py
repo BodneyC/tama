@@ -286,7 +286,10 @@ class TamaApp(App[None]):
 
     def _show_memorial(self) -> None:
         if self.session is not None:
-            self.push_screen(MemorialScreen(self.session.pet, self.view), self._after_memorial)
+            memorial = MemorialScreen(
+                self.session.pet, self.view, self.session.journal, self.session.tz
+            )
+            self.push_screen(memorial, self._after_memorial)
 
     def _after_memorial(self, new_egg: bool | None) -> None:  # noqa: FBT001 - screen result
         if not new_egg or self.session is None:
