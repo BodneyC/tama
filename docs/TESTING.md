@@ -37,6 +37,19 @@
 - Several pets (ADR 0007): roster tests use `tmp_path` and real files; assert that read-only
   views (`--status`, the pet select screen, the header count) leave every pet file byte-for-byte
   unchanged, and that two sessions can't hold the same pet's lock.
+- Weight (SPEC §2.7): keep the tick-splitting property with weight burn in play; test the
+  band edges for every stage and that a weight episode is one care mistake however long it
+  lasts. Judge the band and burn rate on `tools/balance.py`, not on unit tests.
+- Journal (ADR 0009): property-test that recording the events of `advance(a + b)` equals
+  recording `advance(a)` then `advance(b)`; that moments are capped and life/first entries
+  never dropped; and that read-only views leave the journal in the file unchanged.
+- Generations (ADR 0010): test `heir_name` on numerals and long names; simulate a crash between
+  writing the heir and the parent (write the heir, skip the parent) and assert the egg can't be
+  hatched twice; old-age-only eggs.
+- Visits (ADR 0011): Pilot tests with two pets in a `tmp_path` roster; assert the guest's lock
+  is released and its file saved on every way out (end, auto-end, `t`, `q`, signal handler,
+  an exception raised in the visit screen); pet-vs-pet games replay identically from saved RNG
+  states.
 - Reviewing snapshots: Pilot tests can't see layout bugs (an empty dialog still "contains"
   its text), so look at every new or changed snapshot. Render one to PNG, swapping in a
   locally installed monospace font that has the block glyphs (Textual's SVGs ask for Fira Code):

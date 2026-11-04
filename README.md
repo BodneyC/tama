@@ -27,7 +27,11 @@ uv run tama --pause          # going away? put every settled pet on holiday (--r
 ```
 
 In the game, `?` lists the keys: `f` feed, `p` play, `c` clean, `m` medicine, `l` lights,
-`d` discipline, `h` holiday, `t` switch pets, `q` save and quit.
+`d` discipline, `w` wake, `h` holiday, `t` switch pets, `q` save and quit.
+
+Planned (see the roadmap): weight that matters, a journal for every pet (`j`, `tama journal`),
+eggs left by pets that die of old age so a family line carries on, visits between your pets
+(`v`), tricks for well-behaved pets, and a stage that follows the time of day.
 
 Pets are saved in your user data directory (`TAMA_DATA_DIR` to move it). An older single
 `save.json` is moved into the pet list automatically. `--save-path FILE` plays exactly one

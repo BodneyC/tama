@@ -50,6 +50,12 @@ src/tama/
 │   ├── simulation.py      # advance(pet, elapsed, ctx) -> Outcome
 │   ├── lifecycle.py       # stage transitions, adult variant selection, death
 │   ├── holiday.py         # pause/resume: settled-pet check, frozen pets (ADR 0008)
+│   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)  [M6.9]
+│   ├── journal.py         # Journal + record(journal, events, pet) (ADR 0009)  [M6.10]
+│   ├── lineage.py         # AncestorRecord, heir_name, hatch_heir (ADR 0010)  [M6.11]
+│   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)  [M6.12]
+│   ├── tricks.py          # known_tricks from discipline (SPEC §2.10)  [M6.13]
+│   ├── daylight.py        # dawn/day/dusk/night phase from local time (SPEC §5.1)  [M6.13]
 │   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
 │   ├── attention.py       # attention_reasons(pet, balance) (SPEC §4)
 │   ├── minigames/         # pure game state machines (ADR 0006)
@@ -65,7 +71,8 @@ src/tama/
 │   ├── roster.py          # PetSummary per pet "as of now" (read-only catch-up), find_pet
 │   ├── library.py         # PetLibrary: the UI's entry point to several pets (open + lock,
 │   │                      # hatch, archive, borrow for --pause, others needing care)
-│   └── describe.py        # plain-text status line and event summaries (CLI + TUI)
+│   ├── visit.py           # VisitSession: host + guest sessions, pet-vs-pet games  [M6.12]
+│   └── describe.py        # plain-text status line, event summaries and journal entries
 ├── persistence/
 │   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
 │   ├── codec.py           # encode()/decode(): JSON text <-> SaveGame (incl. migration)
@@ -90,7 +97,9 @@ src/tama/
 │   │   ├── dialogs.py     # Help, Status, FeedMenu modals
 │   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget)
 │   │   ├── away.py        # AwaySummaryScreen: "While you were away"
-│   │   ├── memorial.py    # MemorialScreen: gravestone, life story, new egg
+│   │   ├── memorial.py    # MemorialScreen: gravestone, life story, new egg, heir's egg
+│   │   ├── journal.py     # JournalScreen: tallies + entries  [M6.10]
+│   │   ├── visit.py       # VisitPickerScreen, VisitScreen  [M6.12]
 │   │   └── error.py       # ErrorScreen: unreadable save → new pet or quit
 │   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
 │   ├── sprites.py         # load, validate and render pixel sprites per Look; species_of(pet)
@@ -110,6 +119,8 @@ tools/sprites/             # dev only, not shipped
 tools/balance.py           # simulated players live whole lives; judge Balance changes on this
 tools/games.py             # scripted players vs the pet at every stage: board-game win rates
 ```
+
+Modules marked `[M6.x]` are planned in that roadmap milestone and don't exist yet.
 
 Tests mirror this: `tests/unit/domain/...`, `tests/unit/persistence/...`, `tests/ui/...`,
 `tests/integration/...`. See `TESTING.md`.
@@ -207,6 +218,31 @@ running the same capped catch-up as `GameSession.load` **without saving**, so `-
 the pet select screen and the header's "other pets need care" count all agree and never
 write. Only the pet that is open is saved, and only while its lock is held (ADR 0007).
 `--save-path` bypasses the roster and plays a single file, as before.
+
+### Journal
+
+The journal (ADR 0009) is a second product of the events every domain call already returns.
+`journal.record(journal, events, pet)` is pure, and `GameSession` applies it to every outcome
+it produces, so the journal covers offline catch-up as well as live play. It is saved beside
+the pet in `SaveGame`, not on `Pet`, so the simulation never carries it around. Entries are
+structured (kind, event data, time, age); `services/describe.py` turns them into text, as it
+does for the away summary. Read-only views can preview entries but never save them.
+
+### Generations
+
+An egg left by a pet that died of old age is a flag on the dead pet, and its heir is an
+ordinary new pet (ADR 0010). `lineage.hatch_heir` returns both the heir and the updated parent;
+`PetLibrary` writes the heir first, then the parent, and treats an heir that names the parent
+as proof the egg is hatched. Ancestor records are copied into each heir, so the line never
+depends on other files.
+
+### Visits
+
+A visit is two ordinary `GameSession`s, the guest borrowed through `PetLibrary` with its lock
+(ADR 0011). `VisitSession` ticks both, moves each pet in a pet-vs-pet game with its own RNG and
+mistake chance, and ends the visit when either pet can't go on. The domain only ever sees one
+pet at a time; the other appears as a name in events. One `close()` path saves and unlocks the
+guest whichever way the visit ends.
 
 ### Error handling
 

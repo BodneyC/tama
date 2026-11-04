@@ -280,9 +280,158 @@ it (SPEC §2.4).
 **Accept:** a sick pet asleep at 23:00 refuses `m`; `w` then `m` cures it at the cost of
 happiness, energy and a tantrum, and it is back asleep half an hour later.
 
+## M6.9 — Weight
+
+Asked for after M6.8: weight was tracked but did nothing (SPEC §2.7). Includes overfeeding.
+
+- [ ] Domain: `Balance` healthy weight band per stage, awake weight burn (1 g / 4 h, stage
+      multiplier), overweight sickness chance and energy multiplier, 12 h episode limit,
+      stuffed-meal numbers; `weight_status(pet, balance)` → under / healthy / over — test-first
+- [ ] Domain: burn in `advance` (fractional progress carried like other drift, so
+      tick-splitting stays exact); overweight sickness term and energy drift; no health regen
+      while underweight; `Pet.weight_episode` and `MistakeReason.WEIGHT` once per episode;
+      frozen on holiday
+- [ ] Domain: `weight` attention reason (overweight / underweight); it doesn't block a holiday
+- [ ] Domain: stuffed meal at hunger ≥ 95 (hunger 100, weight +3, happiness −5,
+      `Ate(stuffed=True)`) replaces the `NOT_HUNGRY` refusal
+- [ ] Domain: `Variant.CHUBBY`, chosen before good/scruffy when overweight at adulthood;
+      elders keep it
+- [ ] Persistence: save schema v5 with `weight_episode` (v4 → v5 migration, a v5 fixture, the
+      v1-v4 fixtures still loading); `chubby` loads as a variant
+- [ ] Sprites: a `chubby` look for adults and elders in every species generator (rounder
+      body), all animations; `test_sprites.py` requires it; `/add-sprite` documents it
+- [ ] UI: status panel "23 g (20–40)" with `▲`/`▼` in the warning colour; toasts for a stuffed
+      meal and the weight attention reasons; Help text
+- [ ] `tools/balance.py`: report time out of band, weight at adulthood and chubby adults; add a
+      snack-heavy player. Tune band and burn so diligent and casual players stay in band,
+      the snack-heavy player raises a chubby adult, and the earlier results otherwise hold
+- [ ] Snapshots: a chubby adult per species (dark, light, monochrome); status panel over and
+      under weight
+
+**Accept:** a pet fed only on snacks becomes overweight, raises a weight call, catches more
+sickness and grows into a chubby adult; a pet fed meals when hungry stays in its band for a
+whole life in `tools/balance.py`; a v4 save loads.
+
+## M6.10 — Journal
+
+A diary of each pet's life built from domain events, with lifetime tallies (SPEC §2.9,
+ADR 0009). Comes before generations and visits so they can write to it.
+
+- [ ] Domain: `journal.py` — `Journal` (entries + tallies) and
+      `record(journal, events, pet) -> Journal`, pure; life / first / moment kinds; round-number
+      tallies; moments capped at 100 while life and firsts are kept — test-first
+- [ ] Domain: property test that recording the events of `advance(a + b)` equals recording
+      those of `advance(a)` then `advance(b)` (the journal inherits tick-splitting equivalence)
+- [ ] Persistence: save schema v6 with the journal (v5 → v6 migration starting it with
+      "Journal started" and zero tallies; a v6 fixture; older fixtures still loading); a size
+      test: a long, busy simulated life keeps the save under 64 KiB
+- [ ] Services: `GameSession` records every outcome (catch-up, ticks, actions, games);
+      read-only views (pet select, `--status`, `tama journal`) build entries in memory only
+- [ ] UI: `JournalScreen` (tallies, entries newest first, local times, scrolling; `Esc`/`j`
+      closes); `j` on the main screen (Help, not footer) and from the memorial
+- [ ] UI: memorial highlights (life entries, up to three firsts, tallies line)
+- [ ] CLI: `tama journal [--pet NAME]`, plain text, read-only; exit codes as `--status`
+- [ ] Snapshots: a journal mid-life and a long one scrolled; memorial with highlights; all fit
+      60×20
+
+**Accept:** a pet played through a whole simulated life has a journal whose life entries
+read as its story (hatched … died), tallies match the actions taken, and `tama journal`
+prints the same entries without changing the save.
+
+## M6.11 — Generations
+
+A pet that dies of old age leaves an egg; its heir carries on the family line (SPEC §2.8,
+ADR 0010).
+
+- [ ] Domain: `Pet.generation`, `Pet.ancestors` (`AncestorRecord`: name, generation, variant,
+      lifespan), `Pet.heir_hatched`; `LaidEgg` on death of old age only
+- [ ] Domain: `lineage.py` — `heir_name(name)` (Mochi → Mochi II → Mochi III …, roman
+      numerals, `None` when it wouldn't fit 16 characters) and
+      `hatch_heir(parent, name, now, rng, balance) -> (heir, parent)` (inherits species,
+      generation + 1, ancestors + parent, `heir_discipline` if the parent was good; marks the
+      parent `heir_hatched`; refused for a pet that died of poor health or already hatched it)
+      — test-first, incl. numeral edge cases (IX → X, names ending in a word like "Vi")
+- [ ] Persistence: save schema v7 (v6 → v7 migration; pets already dead of old age get
+      `heir_hatched = true`; a v7 fixture; older fixtures still loading)
+- [ ] Services: `PetLibrary.hatch_heir(parent, name)`: 9-pet limit, unique living name,
+      heir RNG seeded from the parent's, parent saved with its egg marked hatched (both
+      writes atomic; a crash between them never gives two heirs — write the heir first,
+      and treat an existing heir naming this parent as already hatched)
+- [ ] Journal: `HeirHatched` on the parent; "Hatched from Mochi's egg" on the heir
+- [ ] UI: memorial `e` "Hatch Mochi's egg"; pet select `e` on a dead pet with a waiting egg;
+      name prompt prefilled and species locked; archive confirmation mentions a waiting egg;
+      "Generation 3 · founded by Mochi" in status and pet select details; family line on the
+      memorial
+- [ ] `tools/balance.py`: how many generations a casual player keeps going in a simulated month
+- [ ] Snapshots: memorial with an egg to hatch and a family line; prefilled name prompt; pet
+      select with a waiting egg
+
+**Accept:** a good elder that dies of old age offers its egg; hatching it gives "Mochi II", a
+generation-2 pet of the same species with discipline 25, and the line survives archiving the
+parent; a pet that died of poor health offers no egg.
+
+## M6.12 — Visits
+
+The open pet invites another of your pets to play; you watch them play a board game (SPEC §3.2,
+ADR 0011).
+
+- [ ] Domain: `visit.py` — `visit_refusals(pet, balance)` (egg, dead, asleep, on holiday,
+      misbehaving, too tired); `start_visit(host, guest, ctx)` with happiness +10 unless within
+      `visit_cooldown`; `Pet.last_visit`; `Visited(friend)` and `PlayedWith(friend, game, result)`
+      events — test-first
+- [ ] Domain: `apply_game_outcome` from either side of a pet-vs-pet game (the guest's result is
+      the host's mirrored); opponent move selection works for either piece
+- [ ] Persistence: save schema v8 with `last_visit` (v7 → v8 migration, a v8 fixture, older
+      fixtures still loading)
+- [ ] Services: `PetLibrary.borrow_for_visit(name)` (loads with capped catch-up, takes the
+      lock, refuses pets open elsewhere); `VisitSession` ticking both `GameSession`s, moving
+      each pet with its own RNG, ending the visit when either can't go on; saves and unlocks
+      the guest on every exit path (end, `t`, `q`, SIGTERM/SIGHUP, crash in the UI)
+- [ ] UI: `VisitPickerScreen` (greyed-out pets with reasons; `↑`/`↓`, `1`–`9`, `Enter`, `Esc`)
+- [ ] UI: `VisitScreen` (two pets on the stage, names, greeting; `g`/`Enter` game choice,
+      `s` status for either pet, `Esc`/`v` end; toasts for "went home" and why)
+- [ ] UI: pet-vs-pet board games reusing the board widgets: a move every ~0.8 s, `Space`
+      skips to the end, `Esc` abandons; both pets beside the board; instant with reduced
+      motion
+- [ ] `v` on the main screen (Help, not footer); refusals and "no other pets" toasts
+- [ ] `tools/games.py`: pet vs pet win rates for every pair of stages
+- [ ] Journal: visits and game results on both pets; "first visit" first
+- [ ] Snapshots: visit picker (one pet asleep, one on holiday); visit screen (dark, light,
+      monochrome); each board game mid-game and finished, pet vs pet; all fit 60×20
+
+**Accept:** with two awake pets, `v` invites one, both gain happiness once, a watched game of
+Four in a Row ends with the right effect on each pet, and ending the visit leaves the guest
+saved and unlocked; a second tama can't open the guest during the visit.
+
+## M6.13 — Tricks and time of day
+
+Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
+
+- [ ] Domain: `Balance.trick_thresholds`; `known_tricks(pet, balance)`; `LearnedTrick(trick)`
+      when discipline rises past a threshold (CHILD and older) — test-first
+- [ ] Sprites: one-shot `trick_wave`, `trick_spin`, `trick_dance`, `trick_bow` for every
+      species, variant and stage from child to elder (recipes in `tools/sprites/kit.py`);
+      `test_sprites.py` requires them; `/add-sprite` lists them
+- [ ] UI: `PetView` swaps the odd blink for a known trick when the pet is content (UI RNG,
+      every 1–3 min), never with reduced motion; a new trick plays at once with a toast;
+      status panel lists known tricks
+- [ ] Domain: `daylight.py` — `phase(now, ctx)` → dawn / day / dusk / night from
+      `Balance.night_start`/`night_end` and the context's time zone, incl. windows that cross
+      midnight — test-first
+- [ ] UI colours `stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` in `assets/ui.toml`
+      (dark/light, theme refs allowed) and the `/add-sprite` UI colour list; the stage background
+      follows the phase each tick; none under `NO_COLOR`; lights-off dimming still on top
+- [ ] Journal: a trick learned for the first time is a first
+- [ ] Snapshots: a trick key frame per species; the stage at each phase on dark and light
+      themes; reviewed as images
+
+**Accept:** disciplining a child from 40 to 65 teaches it to spin (toast, then it performs it
+now and then when content); the stage background changes at dusk and dawn at the configured
+night window, and is readable in both themes.
+
 ## M7 — Release readiness
 
-- [ ] README with screenshot/GIF (e.g. via `vhs` or `asciinema`), install instructions
+- [ ] README with screenshot/GIF (showing a visit and the journal too) (e.g. via `vhs` or `asciinema`), install instructions
       (`uv tool install`, `pipx install`)
 - [ ] CHANGELOG.md (Keep a Changelog), version 1.0.0
 - [ ] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out

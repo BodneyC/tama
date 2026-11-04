@@ -7,8 +7,9 @@ with single keystrokes, close the terminal, and come back hours later to find it
 living (and getting hungry) in the meantime. It should feel alive: idle animations, blinking,
 reaction animations to every action, and visible mood.
 
-Non-goals (v1): networking, multiple simultaneous pets, sound, mouse-only interactions
-(mouse support is a bonus; everything must be keyboard-driven).
+Non-goals (v1): networking, sound, mouse-only interactions (mouse support is a bonus;
+everything must be keyboard-driven). Several pets live side by side (§6.1) and can visit each
+other in one window (§3.2), but never across machines.
 
 ## 2. Pet model
 
@@ -25,12 +26,15 @@ All stats are integers clamped to `0..100`.
 | `health` | 100 = healthy | see 2.3 | see 2.3 |
 | `discipline` | 0..100, affects obedience | no drift | no drift |
 
-Plus non-stat fields: `weight` (grams, int), `age` (`timedelta` of simulated life),
+Plus non-stat fields: `weight` (grams, int; §2.7), `age` (`timedelta` of simulated life),
 `poop_count` (0..4), `is_sick`, `is_asleep`, `lights_on`, `name`, `species` (the animal, fixed
 at hatching; default `tama`), `variant` (adult form),
 `born_at`, `last_updated_at`, `care_mistakes` (int), `paused_since` (when the pet went on
 holiday, §2.6; empty while it is living normally), `stay_awake` (how much longer a pet the
-player woke stays up, §2.4) and `woken_tantrum` (its current tantrum came from being woken).
+player woke stays up, §2.4), `woken_tantrum` (its current tantrum came from being woken),
+`weight_episode` (how long its weight has been outside the healthy band, §2.7),
+`generation`, `ancestors` and `heir_hatched` (its family line, §2.8) and `last_visit` (pet
+age at its last visit, §3.2). Each pet also keeps a **journal** (§2.9) beside it in the save.
 
 Awake decay is scaled by life stage (BABY ×1.5, ELDER ×0.75); asleep drift is not. Asleep
 rates are deliberately gentle so a well-fed pet survives a 9-hour night.
@@ -52,20 +56,22 @@ simulated time (e.g. `--speed 60` = one hour per minute) for manual testing.
 | `BABY` | 1 min | Needs decay ×1.5 faster. |
 | `CHILD` | 1 h | |
 | `TEEN` | 1 day | |
-| `ADULT` | 3 days | Adult form chosen by `care_mistakes` + `discipline`: "good" if ≤ 3 mistakes and discipline ≥ 50, else "scruffy". |
+| `ADULT` | 3 days | Adult form chosen by weight, `care_mistakes` and `discipline`: "chubby" if overweight on the day it grows up (§2.7), else "good" if ≤ 3 mistakes and discipline ≥ 50, else "scruffy". Elders keep their adult form. |
 | `ELDER` | 10 days | Slower decay (×0.75); eventually passes away peacefully of old age (14–18 days, seeded). |
-| `DEAD` | — | Terminal. Memorial screen with lifespan summary; option to start a new egg. |
+| `DEAD` | — | Terminal. Memorial screen with lifespan summary and journal highlights (§2.9); option to start a new egg, and after a death of old age, to hatch the egg it left (§2.8). |
 
 ### 2.3 Health, sickness, death
 
 - Each simulated hour: chance of becoming sick = base 1% + 5% per poop + 10% if hygiene < 20 +
-  10% if hunger < 20. Rolled using the injected RNG.
+  10% if hunger < 20 + 5% if overweight (§2.7). Rolled using the injected RNG.
 - While sick: health −1 per 10 min; happiness decays 1.5× faster. Cured by `medicine` (1–2 doses).
 - If any of hunger/happiness/hygiene is at 0, health −1 per 8 min.
-- Otherwise (not sick, no need at 0), health regenerates +1 per 10 min.
+- Otherwise (not sick, no need at 0), health regenerates +1 per 10 min, except while
+  underweight (§2.7), when it doesn't regenerate at all.
 - Health 0 → `DEAD`.
 - A **care mistake** is recorded when a need sits at 0 for > 15 consecutive minutes (once per
-  episode), or the pet is left with lights on while asleep for > 30 min.
+  episode), the pet is left with lights on while asleep for > 30 min, or its weight stays
+  outside the healthy band for > 12 h (once per episode, §2.7).
 
 ### 2.4 Sleep
 
@@ -108,7 +114,9 @@ put a pet **on holiday**: it is frozen in time until they resume it.
 - **Only a settled pet can go on holiday:** it must be hatched and alive, with no attention
   calls (§4): every need at 25 or more, not sick, no poop, not misbehaving, and lights off if
   it is asleep. Otherwise the request is refused with the reasons, so pausing can't be used
-  to dodge a need that is already low. Eggs and dead pets can't be paused.
+  to dodge a need that is already low. Eggs and dead pets can't be paused. The weight call
+  (§2.7) is the one exception: weight changes over days, so it doesn't stop a holiday (and
+  its 12-hour episode timer is frozen with everything else).
 - **Resuming is always explicit** (`h` again, or `tama --resume`), so opening tama to look
   doesn't wake a pet. On resume the pet picks up exactly where it was, re-anchored to now, and
   living time starts again; a pet paused during the night wakes on the normal schedule.
@@ -119,20 +127,118 @@ put a pet **on holiday**: it is frozen in time until they resume it.
 - **Events:** `PausedForHoliday` and `ResumedFromHoliday` (with the holiday's length) appear in
   toasts and the "While you were away" summary ("Was on holiday for 3d 2h").
 
+### 2.7 Weight
+
+Weight used to be a number on the status panel and nothing more. It now matters, so the
+choice between a meal and a snack is a real one.
+
+- **Gaining and losing:** a meal adds 1 g, a snack 2 g, a stuffed meal (§3) 3 g, and a won game
+  takes 1 g off. The pet also burns 1 g every 4 h awake (scaled by the stage multiplier, like
+  the other awake drift), never going below `min_weight`.
+- **Healthy band per stage** (in `Balance`; these starting values are tuned in the balance
+  pass, see below): baby 4–10 g, child 8–18 g, teen 14–28 g, adult 20–40 g, elder 18–36 g.
+  The bands rise from stage to stage, so a growing pet has to eat to stay in them.
+- **Overweight** (above the band): +5% hourly sickness chance (§2.3) and awake energy drift
+  ×1.25. **Underweight** (below the band): health doesn't regenerate (§2.3). Either one raises
+  a `weight` attention call (§4), and **12 h** outside the band in a row is a care mistake
+  (once per episode; the timer resets when weight is back in the band and is frozen on
+  holiday). A pet that grows up while overweight becomes a **chubby** adult (§2.2).
+- **Showing it:** the status panel shows the weight with its healthy band ("23 g (20–40)") and
+  marks it `▲` over or `▼` under in the warning colour; the header's attention reasons say
+  "overweight" or "underweight".
+- **Balance:** `tools/balance.py` reports time spent out of band and chubby adults. A diligent
+  or casual player (meals when hungry, the odd snack) stays in the band without trying; a
+  player who uses snacks to keep happiness up raises a chubby adult; an under-fed pet ends up
+  underweight. Tune the band and the burn rate, not the logic, until that holds.
+
+### 2.8 Generations
+
+A pet that dies of **old age** leaves an egg. Its heir starts a new life in the same family,
+so a well-kept line can go on as long as the player keeps it. A pet that dies of poor health
+leaves no egg.
+
+- **The egg** belongs to the dead pet until it is hatched (`heir_hatched` is false). The
+  memorial offers "Hatch Mochi's egg" (`e`) beside "New egg", and the pet select screen offers
+  `e` on a dead pet whose egg is waiting. An egg can be hatched once.
+- **Hatching the heir** opens the name prompt with the name filled in as the next in line
+  ("Mochi" → "Mochi II" → "Mochi III", counting from the parent's numeral; left empty if it
+  wouldn't fit in 16 characters) and the species fixed to the parent's (`↑`/`↓` do nothing).
+  The heir is a new pet with its own file and counts towards the 9-pet limit (refused at 9,
+  saying so; archiving another pet makes room).
+- **What it inherits:** the species; `generation` = parent's + 1; `ancestors` = the parent's
+  ancestors plus a record of the parent (name, generation, adult form, lifespan); and a head
+  start of discipline 25 if the parent was a good adult (`Balance.heir_discipline`), else 0.
+  Stats, weight and lifespan are fresh. The heir's RNG is seeded from the parent's, so a line
+  started with `--seed` is reproducible.
+- **Lineage travels with the heir:** the ancestor records are copied into the heir's save, so
+  archiving (or losing) an ancestor's file never breaks the family line.
+- **Archiving** a dead pet whose egg is still waiting says so in the confirmation ("Its egg
+  will be archived with it"); an archived egg can't be hatched.
+- **Showing it:** the status panel and the pet select details show "Generation 3 · founded by
+  Mochi" from generation 2 on; the memorial lists the family line (the last three ancestors,
+  then "…").
+- **Events:** `LaidEgg` (on the parent, at death of old age) and `HeirHatched(heir_name)` (on
+  the parent's journal, §2.9).
+
+### 2.9 Journal
+
+Each pet keeps a journal: a diary of its life written from the domain's events, so it records
+what happened while tama was closed as well as while it was open.
+
+- **Entries** have the local date and time, the pet's age and a line of text. They come in
+  three kinds:
+  - **Life:** hatched (and from whose egg, §2.8), evolved, its adult form, became an elder,
+    went on and came back from holiday, laid an egg, its heir hatched, died (with cause).
+  - **Firsts:** first meal, snack, tantrum, sickness, care mistake, game won (per game), visit
+    (§3.2) and trick learned (§2.10).
+  - **Moments:** recovered from sickness, care mistakes (with the reason), tantrums caught or
+    ignored, visits and their results, and round-number tallies (the 10th, 50th, 100th game won
+    or meal eaten).
+- **Tallies** are kept for the whole life: meals, snacks, games won/drawn/lost per game,
+  tantrums caught/ignored, sicknesses, medicine doses, poops cleaned, holidays, visits and care
+  mistakes.
+- **Bounded:** life and first entries are always kept; moments are kept for the last 100, so
+  a save stays small however long the pet lives.
+- **Showing it:** `j` opens the journal: the tallies at the top, then entries newest first
+  (`↑`/`↓`, `PgUp`/`PgDn`, `Home`/`End` scroll; `Esc` or `j` closes). It works on holiday and
+  for dead pets (from the memorial). The memorial shows **highlights**: the life entries, up to
+  three firsts and the tallies line. `tama journal` prints it from the shell (§8).
+- Looking at a journal never changes it: the pet select screen, `--status` and `tama journal`
+  build entries for the in-memory catch-up but don't save them; the pet's own session writes
+  them when it next catches up for real (the same events, so the same entries).
+
+### 2.10 Tricks
+
+A disciplined pet learns tricks. They are for show: nothing in the game depends on them.
+
+- **Known tricks follow current discipline:** 25 wave, 50 spin, 75 dance, 100 bow
+  (`Balance.trick_thresholds`), from CHILD stage on. Discipline lost to ignored tantrums can
+  drop the pet below a threshold, and it forgets that trick until it climbs back.
+- **Learning:** when discipline rises past a threshold, the pet shows the new trick at once
+  and a toast says "Mochi learned to spin!" (`LearnedTrick(trick)`; it is a journal first the
+  first time ever).
+- **Showing off:** an idle pet that is awake, content (happiness ≥ 75), not sick or
+  misbehaving and with the lights on now and then (every 1–3 min, chosen by the cosmetic UI
+  RNG, like blinking) performs one of its tricks in place of a blink. With reduced motion it
+  never does.
+- **Status panel:** lists the tricks it knows ("Tricks: wave, spin").
+
 ## 3. Actions (player verbs)
 
 | Key | Action | Effect | Refused when |
 | --- | --- | --- | --- |
-| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. | Asleep, egg, dead, misbehaving, (meal) hunger ≥ 95 |
+| `f` | Feed → submenu: **Meal** / **Snack** | Meal: hunger +30, weight +1g. At hunger ≥ 95 the pet eats it anyway but is **stuffed**: hunger 100, weight +3g, happiness −5. Snack: happiness +15, hunger +5, weight +2g. >3 snacks/hour → may get sick. Weight matters (§2.7). | Asleep, egg, dead, misbehaving |
 | `p` | Play → choose a mini-game (§3.1) | Win: happiness +20, energy −10, weight −1g. Draw: happiness +10, energy −10. Lose: happiness +5, energy −10. | Asleep, misbehaving, energy < 10 |
 | `c` | Clean | Removes all poop, hygiene → 100 | — |
 | `m` | Medicine | Cures one dose of sickness | Asleep, not sick |
 | `l` | Lights on/off | Toggles lights | — |
-| `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25 (+0 for a tantrum from being woken). Otherwise: happiness −20. | Asleep |
+| `d` | Discipline | If pet is "misbehaving" (random attention call with no real need): discipline +25 (+0 for a tantrum from being woken); passing a trick threshold teaches a trick (§2.10). Otherwise: happiness −20. | Asleep |
 | `w` | Wake | Wakes a sleeping pet early (§2.4): happiness −20, energy −20, a tantrum, stays up 30 min. Not shown in the footer (no room); listed in Help. | Awake, egg |
 | `s` | Status | Opens stats panel (hearts/bars, age, weight, stage) | — |
 | `h` | Holiday | Puts a settled pet on holiday (frozen in time), or brings it back (§2.6) | Egg, dead, (to pause) any attention call |
 | `t` | Tamas | Saves, then opens the pet select screen to switch pets (§6.1) | — |
+| `v` | Visit | Invites another of your pets over to play (§3.2). Not in the footer; listed in Help. | Asleep, egg, dead, on holiday, misbehaving, energy < 10, no other pets |
+| `j` | Journal | Opens the pet's journal (§2.9). Not in the footer; listed in Help. | — |
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
 
@@ -186,10 +292,46 @@ edges), ties broken at random. With a per-stage **mistake chance** it instead pl
 legal move, so young pets are easy and grown-ups put up a fight (defaults in `Balance`:
 baby 60%, child 40%, teen 25%, adult 15%, elder 20%: elders get a little rusty).
 
+### 3.2 Visits
+
+With several pets (§6.1), the open pet can invite another one round to play.
+
+- **Inviting:** `v` checks the host's refusals (§3), then opens a **visit picker** listing the
+  other pets. Those that can't come are greyed out with the reason: an egg, dead, asleep, on
+  holiday, misbehaving, too tired (energy < 10), can't be read, or open in another tama.
+  `↑`/`↓` + `Enter` or `1`–`9` invite one; `Esc` closes. With no other pets, `v` just says so.
+- **The guest** is loaded like any pet (capped catch-up; its events go into its own journal),
+  locked for the length of the visit, and lives in real time beside the host: both pets are
+  ticked every second and both save on the usual autosave policy.
+- **Visit screen:** both pets on the stage, host on the left, guest on the right, each with
+  its name under it; they greet each other (`happy`). Each pet's happiness rises by 10
+  (`Balance.visit_happiness`) unless it had a visit in the last 4 h (`Balance.visit_cooldown`),
+  so visits can't be farmed. Keys: `g` (or `Enter`) watch them play, `s` either pet's status,
+  `Esc` or `v` end the visit.
+- **Watching them play:** a choice of Four in a Row or Tic-Tac-Toe (Left or Right needs a
+  player). The host moves first; each pet picks its moves as in §3.1, with its own stage's
+  mistake chance and its own RNG, one move about every 0.8 s (`Space` skips to the end;
+  with reduced motion the game plays out at once). The board shows the host's pieces in
+  `$tama-piece-player` and the guest's in `$tama-piece-pet` (monochrome `●`/`○`). When it ends,
+  each pet gets the `p` row's effect from its own side (win/draw/loss, energy −10) and reacts.
+  `Esc` mid-game abandons it with no effect. They can play again while both have energy ≥ 10.
+- **Ending:** `Esc`/`v` ends the visit; the guest is saved, unlocked and "went home" (toast).
+  The visit also ends by itself, abandoning any game in progress, as soon as either pet can no
+  longer visit (falls asleep, gets sick, starts misbehaving, dies, runs out of energy), with a
+  toast saying why ("Pip got sleepy and went home"). `t`, `q` and SIGTERM/SIGHUP end the visit
+  first, saving both pets.
+- **Care during a visit:** the main-screen actions apply to the host only; to look after the
+  guest, end the visit and switch to it. The guest's attention calls count in the header's
+  `⚠ +N` as usual (§6.1).
+- **Events:** `Visited(friend)` on both pets (once per visit) and `PlayedWith(friend, game,
+  result)` per finished game, which the journal records ("Beat Pip at Four in a Row").
+- **Balance:** `tools/games.py` also plays pet against pet for every pair of stages, and the
+  result is reported (an adult should usually beat a baby).
+
 ## 4. Attention calls
 
 A pet on holiday raises no calls (§2.6). Otherwise, when a need drops below 25, the pet
-becomes sick, poops, or misbehaves, raise an
+becomes sick, poops, misbehaves, or its weight leaves the healthy band (§2.7), raise an
 **attention call**: an icon in the header blinks and a terminal bell (`\a`) sounds once
 (bell configurable / off by default via `--quiet`). Calls clear when resolved; a call that
 comes back later rings again. Calls already active when tama opens don't ring (the player is
@@ -215,14 +357,25 @@ there), and with reduced motion the icon is steady instead of blinking.
 - **Header:** name, stage, age, compact stat icons (colour-coded by level), attention indicator
   (plus `⚠ +N` when other pets need care, §6.1), or `⏸ on holiday since <date>` (§2.6).
 - **Stage:** the animated pet, poops, sickness skull/bubbles, Zzz when asleep; dimmed when
-  lights off (via Textual CSS class on the stage).
+  lights off (via Textual CSS class on the stage). Its background follows the player's local
+  time of day: **dawn** (the hour after `night_end`), **day**, **dusk** (the hour before
+  `night_start`) and **night**, using the UI colours `stage-dawn`, `stage-day`, `stage-dusk` and
+  `stage-night` (`assets/ui.toml`, dark and light; species may override). The phase is a pure
+  function of local time and the night window, re-checked every tick; lights-off dimming
+  applies on top, and with `NO_COLOR` there is no tint. It shows the player's time, so it
+  changes for a pet on holiday too.
+- **Two pets on stage** during a visit (§3.2): host left, guest right, each wandering in its
+  own half. Both must fit side by side at 60×20; when a half is too narrow for its sprite to
+  wander, the pets stand still instead.
 - **Footer:** key bindings (Textual `Footer`).
 - **Screens:** `PetSelectScreen` (§6.1), `NewPetScreen` (name entry + egg), `MainScreen`,
   `StatusScreen` (modal),
   `FeedMenu` (modal), `GameSelectScreen` (modal), one modal per mini-game (`LeftRightScreen`,
   `FourInARowScreen`, `TicTacToeScreen`), `AwaySummaryScreen` (modal), `MemorialScreen`,
-  `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery). Every game fits the minimum
-  60×20 terminal with the pet beside the board.
+  `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery), `JournalScreen` (modal, §2.9),
+  `VisitPickerScreen` (modal) and `VisitScreen` (§3.2). Every game fits the minimum
+  60×20 terminal with the pet beside the board; a pet-vs-pet game shows both pets, one each
+  side of the board, as small idle sprites.
 
 ### 5.2 Animation
 
@@ -232,11 +385,16 @@ there), and with reduced motion the icon is steady instead of blinking.
   animation)`; animations include at least
   `idle` (2–4 frames, ~2 fps), `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
   `clean`, `evolve`, `hatch`, `wobble` (egg), `dead`, `misbehave` (a tantrum loop: angry
-  brows, stamping and shouting), and the poses `look_left`/`look_right` (the Left/Right game). The feed menu shows small animated meal and snack sprites.
+  brows, stamping and shouting), the poses `look_left`/`look_right` (the Left/Right game),
+  and from CHILD on the tricks `trick_wave`, `trick_spin`, `trick_dance` and `trick_bow`
+  (one-shot, §2.10). Adults and elders have a third variant, `chubby` (§2.7), beside `good`
+  and `scruffy`: a rounder body, drawn by each species' generator. The feed menu shows small
+  animated meal and snack sprites.
 - Board games: while "thinking" the pet alternates `look_left`/`look_right` (~0.6 s); a dropped
   Four in a Row piece falls row by row (~40 ms per row). With reduced motion the pet's move
   appears at once and pieces land without falling.
-- Idle animation includes random blinks and small horizontal wandering across the stage.
+- Idle animation includes random blinks, small horizontal wandering across the stage and, for
+  a content pet that knows some, the odd trick (§2.10).
 - One-shot animations (eat, refuse, …) play once, then return to the state-appropriate loop.
 - Frame timing is driven by Textual `set_interval`; the animation *selection* is a pure
   function of pet state (testable without a UI).
@@ -246,7 +404,7 @@ there), and with reduced motion the icon is steady instead of blinking.
   flashes the new form.
 - Theme: uses Textual themes (config `theme`); must look good on both dark and light terminals.
   Respect `NO_COLOR` (monochrome sprites). A `--reduced-motion` flag (and config option) shows
-  static key frames only: no reactions, blinking or wandering.
+  static key frames only: no reactions, blinking, wandering or tricks.
 
 ## 6. Persistence
 
@@ -256,7 +414,12 @@ there), and with reduced motion the icon is steady instead of blinking.
   stands for any one pet's file.
 - Format: JSON, human-readable, Pydantic model with `schema_version: int` (v3 adds
   `paused_since`; the v2 → v3 migration sets it to empty, i.e. not on holiday. v4 adds
-  `stay_awake` and `woken_tantrum`; the v3 → v4 migration sets them to zero and false).
+  `stay_awake` and `woken_tantrum`; the v3 → v4 migration sets them to zero and false.
+  v5 adds `weight_episode` (migrated to zero). v6 adds the journal (§2.9); the v5 → v6
+  migration starts it with one life entry, "Journal started", and zero tallies, since the
+  past can't be reconstructed. v7 adds `generation`, `ancestors` and `heir_hatched` (migrated
+  to 1, none and false; a pet that already died of old age before v7 has no egg to hatch, so
+  `heir_hatched` is true for it). v8 adds `last_visit` (migrated to empty: never visited).
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
 - Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
   the backup (and tell the player it was recovered); if both fail, show `ErrorScreen`
@@ -291,7 +454,8 @@ the exception: they stay frozen until resumed.
   sprite (idle, asleep, or its gravestone) and details: full name, stage and species, and
   the `⚠` reasons, `⏸ on holiday since <date>`, "passed away (…) at <age>" or "can't be
   read". (One sprite beside the list, rather than one per row, fits nine pets in 60×20.) Keys: `↑`/`↓` or `1`–`9` select, `Enter` plays,
-  `n` hatches a new egg (name prompt; refused at 9 pets, saying so), `a` archives the
+  `n` hatches a new egg (name prompt; refused at 9 pets, saying so), `e` hatches a dead pet's
+  waiting egg (§2.8; the details say "left an egg"), `a` archives the
   selected pet (dead pets only, after a `y`/`n` confirmation), `Esc`/`q` quit. An unreadable
   pet opens the `ErrorScreen` for that file only; the other pets are unaffected.
 - **Switching while playing:** `t` on the main screen saves the current pet and opens the pet
@@ -299,8 +463,8 @@ the exception: they stay frozen until resumed.
 - **Other pets needing care:** while one pet is open, the header also shows `⚠ +N` when N
   other living pets need attention (re-checked every minute from their saves, read-only); the
   bell does not ring for other pets.
-- **Death:** the memorial's "new egg" adds a new pet; the dead one stays in the list as a
-  memorial until archived. **Archiving** moves its files to `pets/archive/` (never deleted),
+- **Death:** the memorial's "new egg" (or "hatch Mochi's egg", §2.8) adds a new pet; the dead
+  one stays in the list as a memorial until archived. **Archiving** moves its files to `pets/archive/` (never deleted),
   where tama no longer lists them.
 - **One window per pet:** opening a pet takes a lock (`pets/<file>.lock` holding the process
   id); a second tama asked for the same pet says it's already open elsewhere. Stale locks
@@ -341,6 +505,9 @@ tama --status              # one line per pet, as of now (read-only, no TUI): th
                            # with --pet, just that pet. Exit 0 ok, 1 no pets yet,
                            # 2 if any pet's save is unreadable (its line says so) / bad config
 tama --list-species        # the animals that have art
+tama journal               # the last-played pet's journal as plain text (§2.9), as of now
+                           # (read-only, like --status); --pet NAME for another pet.
+                           # Exit codes as --status
 tama --pause               # put every living pet on holiday without opening the TUI (§2.6);
                            # with --pet, just that pet. Prints one line per pet: paused, already
                            # paused, or refused with the reasons (exit 2 if any was refused or
