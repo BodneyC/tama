@@ -113,7 +113,7 @@ async def test_last_reaction_wins() -> None:
     view = still_view()
     events: list[Event] = [
         Ate(AGE, Action.MEAL),
-        Refused(AGE, Action.MEAL, RefusalReason.NOT_HUNGRY),
+        Refused(AGE, Action.MEAL, RefusalReason.MISBEHAVING),
     ]
     async with Host(view).run_test():
         view.show(CHILD)

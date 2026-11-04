@@ -27,12 +27,14 @@ from tama.domain.events import (
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    WeightLeftBand,
     Woken,
     WokeUp,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
+from tama.domain.weight import WeightStatus
 from tama.services.describe import (
     describe_event,
     format_age,
@@ -73,6 +75,11 @@ def test_format_age(age: timedelta, text: str) -> None:
             Evolved(AGE, LifeStage.TEEN, LifeStage.ADULT, Variant.SCRUFFY),
             "Grew into a scruffy adult",
         ),
+        (
+            Evolved(AGE, LifeStage.TEEN, LifeStage.ADULT, Variant.CHUBBY),
+            "Grew into a chubby adult",
+        ),
+        (Evolved(AGE, LifeStage.TEEN, LifeStage.ADULT, Variant.DEFAULT), "Grew into an adult"),
         (Evolved(AGE, LifeStage.ADULT, LifeStage.ELDER, Variant.GOOD), "Grew into an elder"),
         (Died(AGE, DeathCause.OLD_AGE), "Passed away peacefully of old age"),
         (Died(AGE, DeathCause.POOR_HEALTH), "Passed away from poor health"),
@@ -87,10 +94,14 @@ def test_format_age(age: timedelta, text: str) -> None:
         (CareMistake(AGE, MistakeReason.HAPPINESS), "Was left miserable"),
         (CareMistake(AGE, MistakeReason.HYGIENE), "Was left filthy"),
         (CareMistake(AGE, MistakeReason.LIGHTS), "Slept with the lights on"),
+        (CareMistake(AGE, MistakeReason.WEIGHT), "Was left at an unhealthy weight"),
+        (WeightLeftBand(AGE, WeightStatus.OVER), "Got overweight"),
+        (WeightLeftBand(AGE, WeightStatus.UNDER), "Got underweight"),
         (Misbehaved(AGE), "Misbehaved"),
         (MisbehaviourIgnored(AGE), "Got away with misbehaving"),
         (Ate(AGE, Action.MEAL), "Ate a meal"),
         (Ate(AGE, Action.SNACK), "Ate a snack"),
+        (Ate(AGE, Action.MEAL, stuffed=True), "Ate a meal anyway and is stuffed"),
         (Played(AGE, GameResult.WIN), "Won a game"),
         (Played(AGE, GameResult.DRAW), "Drew a game"),
         (Played(AGE, GameResult.LOSS), "Lost a game"),
@@ -101,7 +112,7 @@ def test_format_age(age: timedelta, text: str) -> None:
         (LightsToggled(AGE, on=False), "Lights off"),
         (Disciplined(AGE, effective=True), "Was disciplined"),
         (Disciplined(AGE, effective=False), "Was scolded for nothing"),
-        (Refused(AGE, Action.MEAL, RefusalReason.NOT_HUNGRY), "Refused a meal: not hungry"),
+        (Refused(AGE, Action.PLAY, RefusalReason.TOO_TIRED), "Refused to play: too tired"),
         (Refused(AGE, Action.PLAY, RefusalReason.ASLEEP), "Refused to play: asleep"),
         (
             Refused(AGE, Action.MEAL, RefusalReason.MISBEHAVING),

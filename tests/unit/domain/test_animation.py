@@ -63,7 +63,7 @@ def test_looping_animation_reflects_state(
         (Cleaned(AGE, poops_removed=1), AnimationKey.CLEAN),
         (MedicineGiven(AGE, cured=True), AnimationKey.HAPPY),
         (MedicineGiven(AGE, cured=False), None),
-        (Refused(AGE, Action.MEAL, RefusalReason.NOT_HUNGRY), AnimationKey.REFUSE),
+        (Refused(AGE, Action.PLAY, RefusalReason.TOO_TIRED), AnimationKey.REFUSE),
         (Disciplined(AGE, effective=False), AnimationKey.REFUSE),
         (Disciplined(AGE, effective=True), None),
         (FellAsleep(AGE), None),

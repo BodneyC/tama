@@ -31,6 +31,8 @@ def test_content_pet_needs_nothing() -> None:
             {"is_asleep": True, "updated_at": datetime(2026, 1, 1, 23, tzinfo=UTC)},
             AttentionReason.LIGHTS,
         ),
+        ({"weight": 200}, AttentionReason.OVERWEIGHT),
+        ({"weight": 1}, AttentionReason.UNDERWEIGHT),
     ],
 )
 def test_each_reason(overrides: dict[str, Any], reason: AttentionReason) -> None:

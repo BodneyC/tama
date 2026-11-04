@@ -8,7 +8,7 @@ from dataclasses import replace
 from datetime import datetime
 from enum import StrEnum
 
-from tama.domain.attention import attention_reasons
+from tama.domain.attention import AttentionReason, attention_reasons
 from tama.domain.balance import Balance
 from tama.domain.events import Outcome, PausedForHoliday, PauseRefused, ResumedFromHoliday
 from tama.domain.pet import Pet
@@ -30,6 +30,10 @@ class PauseBlocker(StrEnum):
     LIGHTS = "lights"
 
 
+_SLOW_CALLS = frozenset({AttentionReason.OVERWEIGHT, AttentionReason.UNDERWEIGHT})
+"""Weight changes over days, so a weight call doesn't stop a holiday (SPEC §2.6)."""
+
+
 def pause_blockers(pet: Pet, balance: Balance) -> tuple[PauseBlocker, ...]:
     """Every reason ``pet`` can't be paused, sorted; empty if it can.
 
@@ -42,7 +46,8 @@ def pause_blockers(pet: Pet, balance: Balance) -> tuple[PauseBlocker, ...]:
         return (PauseBlocker.DEAD,)
     if pet.on_holiday:
         return (PauseBlocker.ON_HOLIDAY,)
-    return tuple(sorted(PauseBlocker(reason.value) for reason in attention_reasons(pet, balance)))
+    reasons = attention_reasons(pet, balance) - _SLOW_CALLS
+    return tuple(sorted(PauseBlocker(reason.value) for reason in reasons))
 
 
 def pause(pet: Pet, balance: Balance) -> Outcome:

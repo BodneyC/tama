@@ -5,6 +5,7 @@ from enum import StrEnum
 from tama.domain.balance import Balance
 from tama.domain.pet import Pet
 from tama.domain.stage import LifeStage
+from tama.domain.weight import WeightStatus, weight_status
 
 
 class AttentionReason(StrEnum):
@@ -17,6 +18,8 @@ class AttentionReason(StrEnum):
     POOP = "poop"
     MISBEHAVING = "misbehaving"
     LIGHTS = "lights"
+    OVERWEIGHT = "overweight"
+    UNDERWEIGHT = "underweight"
 
 
 def attention_reasons(pet: Pet, balance: Balance) -> frozenset[AttentionReason]:
@@ -28,6 +31,7 @@ def attention_reasons(pet: Pet, balance: Balance) -> frozenset[AttentionReason]:
     if pet.stage in (LifeStage.EGG, LifeStage.DEAD) or pet.on_holiday:
         return frozenset()
     threshold = balance.attention_threshold
+    weight = weight_status(pet, balance)
     checks = {
         AttentionReason.HUNGRY: pet.stats.hunger < threshold,
         AttentionReason.UNHAPPY: pet.stats.happiness < threshold,
@@ -36,6 +40,8 @@ def attention_reasons(pet: Pet, balance: Balance) -> frozenset[AttentionReason]:
         AttentionReason.POOP: pet.poop_count > 0,
         AttentionReason.MISBEHAVING: pet.misbehaving,
         AttentionReason.LIGHTS: pet.is_asleep and pet.lights_on,
+        AttentionReason.OVERWEIGHT: weight is WeightStatus.OVER,
+        AttentionReason.UNDERWEIGHT: weight is WeightStatus.UNDER,
     }
     return frozenset(reason for reason, active in checks.items() if active)
 

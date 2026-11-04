@@ -94,8 +94,11 @@ class Balance:
     start_weight: int = 5
     min_weight: int = 1
     meal_hunger: int = 30
-    meal_weight: int = 1
-    meal_refuse_at_hunger: int = 95
+    meal_weight: int = 2  # tools/balance.py: at 1 g, won games kept every pet underweight
+    # A meal when this full is eaten anyway, but the pet is stuffed (SPEC §3).
+    stuffed_at_hunger: int = 95
+    stuffed_weight: int = 2  # on top of meal_weight
+    stuffed_happiness: int = -5
     snack_happiness: int = 15
     snack_hunger: int = 5
     snack_weight: int = 2
@@ -114,10 +117,10 @@ class Balance:
     weight_burn: Fraction = Fraction(1, 64)
     # Healthy band (lowest, highest grams) per stage; it rises as the pet grows.
     baby_weight: tuple[int, int] = (4, 10)
-    child_weight: tuple[int, int] = (4, 14)
+    child_weight: tuple[int, int] = (4, 16)
     teen_weight: tuple[int, int] = (7, 24)
-    adult_weight: tuple[int, int] = (12, 36)
-    elder_weight: tuple[int, int] = (14, 36)
+    adult_weight: tuple[int, int] = (12, 44)
+    elder_weight: tuple[int, int] = (18, 50)
     overweight_sickness_chance: float = 0.05
     overweight_energy_multiplier: Fraction = Fraction(5, 4)
     weight_episode_grace: timedelta = 12 * HOUR

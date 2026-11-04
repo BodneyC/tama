@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import UTC, datetime, time, timedelta, timezone, tzinfo
+from fractions import Fraction
 from typing import Any
 
 import pytest
@@ -17,12 +18,14 @@ from tama.domain.events import (
     NeedLow,
     Outcome,
     Pooped,
+    WeightLeftBand,
     WokeUp,
 )
 from tama.domain.pet import Pet, Timers
 from tama.domain.simulation import advance, is_night, sickness_chance, skip_to
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
+from tama.domain.weight import WeightStatus
 from tama.errors import InvalidArgumentError
 from tests.factories import FIXED_NOW, make_ctx, make_pet
 
@@ -575,6 +578,33 @@ def test_adult_variant_depends_on_care(discipline: int, mistakes: int, variant: 
     assert out.pet.variant is variant
 
 
+@pytest.mark.parametrize(
+    ("over_by", "variant"), [(0, Variant.GOOD), (1, Variant.CHUBBY)], ids=["at-limit", "over"]
+)
+def test_an_overweight_teen_grows_into_a_chubby_adult(over_by: int, variant: Variant) -> None:
+    heaviest = DEFAULT_BALANCE.weight_band(LifeStage.ADULT)[1]
+    pet = make_pet(
+        stage=LifeStage.TEEN,
+        age=DEFAULT_BALANCE.adult_age - MIN,
+        stats=Stats(discipline=100),
+        weight=heaviest + over_by,
+    )
+
+    out = run(pet, MIN, balance=replace(NO_RANDOM_EVENTS, weight_burn=Fraction(0)))
+
+    assert out.pet.variant is variant
+
+
+def test_a_chubby_adult_stays_chubby_as_an_elder() -> None:
+    pet = make_pet(
+        stage=LifeStage.ADULT, variant=Variant.CHUBBY, age=DEFAULT_BALANCE.elder_age - MIN
+    )
+
+    out = run(pet, MIN)
+
+    assert (out.pet.stage, out.pet.variant) == (LifeStage.ELDER, Variant.CHUBBY)
+
+
 def test_elder_dies_of_old_age_at_lifespan() -> None:
     pet = make_pet(stage=LifeStage.ELDER, lifespan=timedelta(days=15), age=timedelta(days=15) - MIN)
 
@@ -601,3 +631,129 @@ def test_skip_to_moves_the_clock_without_simulating(delta: timedelta) -> None:
 def test_skip_to_requires_aware_time() -> None:
     with pytest.raises(InvalidArgumentError, match="timezone-aware"):
         skip_to(make_pet(), FIXED_NOW.replace(tzinfo=None))
+
+
+# --- Weight (SPEC §2.7) ---------------------------------------------------------------------
+
+WIDE = Balance(
+    sickness_base_chance=0,
+    misbehave_chance=0,
+    weight_burn=Fraction(1, 64),
+    baby_weight=(1, 200),
+    child_weight=(1, 200),
+)
+"""Every weight is healthy, so only the burn itself is under test."""
+
+
+def test_an_awake_pet_burns_its_share_of_weight_each_hour() -> None:
+    pet = make_pet(weight=64)  # 64 g x 1/64 per hour = 1 g per hour
+
+    assert run(pet, 59 * MIN, balance=WIDE).pet.weight == 64
+    assert run(pet, HOUR, balance=WIDE).pet.weight == 63
+
+
+def test_burning_keeps_the_fraction_of_a_gram_already_burned() -> None:
+    pet = make_pet(weight=64, weight_progress=Fraction(1, 2))
+
+    out = run(pet, 30 * MIN, balance=WIDE)
+
+    assert out.pet.weight == 63
+    assert out.pet.weight_progress == 0
+
+
+def test_a_sleeping_pet_burns_nothing() -> None:
+    pet = make_pet(weight=64, is_asleep=True, lights_on=False, updated_at=NIGHT)
+
+    out = run(pet, HOUR, balance=WIDE)
+
+    assert out.pet.weight == 64
+    assert out.pet.weight_progress == 0
+
+
+def test_babies_burn_faster() -> None:
+    pet = make_pet(stage=LifeStage.BABY, weight=64)
+
+    assert run(pet, 40 * MIN, balance=WIDE).pet.weight == 63  # x1.5
+
+
+def test_burning_never_goes_below_the_minimum_weight() -> None:
+    balance = replace(WIDE, weight_burn=Fraction(60))  # a whole gram every step
+    pet = make_pet(weight=3)
+
+    assert run(pet, 10 * MIN, balance=balance).pet.weight == DEFAULT_BALANCE.min_weight
+
+
+def test_overweight_pets_tire_faster() -> None:
+    balance = Balance(sickness_base_chance=0, misbehave_chance=0, child_weight=(4, 14))
+    healthy, heavy = make_pet(weight=10), make_pet(weight=100)
+
+    assert run(healthy, 20 * MIN, balance=balance).pet.stats.energy == 100 - 4
+    assert run(heavy, 20 * MIN, balance=balance).pet.stats.energy == 100 - 5  # x1.25
+
+
+def test_underweight_pets_do_not_regenerate_health() -> None:
+    balance = Balance(sickness_base_chance=0, misbehave_chance=0, child_weight=(8, 14))
+    stats = Stats(health=50)
+
+    assert run(make_pet(weight=10, stats=stats), 10 * MIN, balance=balance).pet.stats.health == 51
+    assert run(make_pet(weight=5, stats=stats), 10 * MIN, balance=balance).pet.stats.health == 50
+
+
+def test_overweight_pets_fall_sick_more_often() -> None:
+    b = Balance(child_weight=(4, 14))
+
+    healthy = sickness_chance(make_pet(weight=14), b)
+
+    assert sickness_chance(make_pet(weight=15), b) == pytest.approx(healthy + 0.05)
+
+
+EPISODE = Balance(
+    sickness_base_chance=0,
+    misbehave_chance=0,
+    weight_burn=Fraction(0),
+    child_weight=(4, 14),
+    weight_episode_grace=30 * MIN,
+)
+
+
+def weight_mistakes(out: Outcome) -> list[CareMistake]:
+    return [e for e in out.events if e == CareMistake(e.age, MistakeReason.WEIGHT)]
+
+
+@pytest.mark.parametrize("weight", [2, 30], ids=["underweight", "overweight"])
+def test_leaving_the_band_is_announced_once(weight: int) -> None:
+    out = run(make_pet(weight=weight), 10 * MIN, balance=EPISODE)
+
+    status = WeightStatus.UNDER if weight == 2 else WeightStatus.OVER
+    assert [e for e in out.events if isinstance(e, WeightLeftBand)] == [
+        WeightLeftBand(make_pet().age + MIN, status)
+    ]
+
+
+@pytest.mark.parametrize("weight", [2, 30], ids=["underweight", "overweight"])
+def test_too_long_outside_the_band_is_one_care_mistake(weight: int) -> None:
+    pet = make_pet(weight=weight)
+
+    assert weight_mistakes(run(pet, 30 * MIN, balance=EPISODE)) == []
+    out = run(pet, 3 * HOUR, balance=EPISODE)
+    assert weight_mistakes(out) == [CareMistake(pet.age + 31 * MIN, MistakeReason.WEIGHT)]
+    assert out.pet.care_mistakes == 1
+    assert out.pet.timers.weight == 3 * HOUR
+
+
+def test_back_in_the_band_resets_the_episode() -> None:
+    pet = make_pet(weight=30, timers=Timers(weight=20 * MIN))
+
+    out = run(replace(pet, weight=10), MIN, balance=EPISODE)
+
+    assert out.pet.timers.weight == timedelta(0)
+    assert out.events == ()
+
+
+def test_growing_into_a_heavier_band_can_leave_a_pet_underweight() -> None:
+    balance = replace(EPISODE, teen_weight=(20, 30))
+    pet = make_pet(weight=10, age=DEFAULT_BALANCE.teen_age - MIN)
+
+    out = run(pet, MIN, balance=balance)
+
+    assert WeightLeftBand(DEFAULT_BALANCE.teen_age, WeightStatus.UNDER) in out.events

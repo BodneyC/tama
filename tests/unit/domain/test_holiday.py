@@ -180,3 +180,11 @@ def test_a_pet_on_holiday_never_calls_for_attention() -> None:
 
 def test_a_pet_on_holiday_is_shown_asleep() -> None:
     assert looping_animation(on_holiday()) is AnimationKey.SLEEP
+
+
+@pytest.mark.parametrize("weight", [1, 200], ids=["underweight", "overweight"])
+def test_a_weight_call_does_not_stop_a_holiday(weight: int) -> None:
+    pet = make_pet(weight=weight)
+    assert attention_reasons(pet, DEFAULT_BALANCE)  # it is calling about its weight
+
+    assert pause_blockers(pet, DEFAULT_BALANCE) == ()

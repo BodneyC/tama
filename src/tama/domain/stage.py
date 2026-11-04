@@ -21,11 +21,12 @@ class LifeStage(StrEnum):
 
 
 class Variant(StrEnum):
-    """Appearance variant. Pets are DEFAULT until adulthood, when care decides GOOD/SCRUFFY."""
+    """Appearance variant. Pets are DEFAULT until adulthood, when care decides the rest."""
 
     DEFAULT = "default"
     GOOD = "good"
     SCRUFFY = "scruffy"
+    CHUBBY = "chubby"
 
 
 class DeathCause(StrEnum):

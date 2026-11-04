@@ -38,11 +38,16 @@ def make_pet(
 ) -> Pet:
     """Return a live, awake, healthy pet (a CHILD by default) with optional overrides.
 
+    Its weight is the starting weight, moved into its stage's healthy band if need be.
+
     The pet's age is set to the entry age of ``stage`` unless ``age`` is overridden, so it
     won't immediately evolve on the next step.
     """
     pet = new_egg("Mochi", FIXED_NOW, Random(0))
     age = DEFAULT_BALANCE.stage_age(stage) if stage is not LifeStage.DEAD else timedelta(days=15)
     fields: dict[str, Any] = {"stage": stage, "age": age, "stats": stats or Stats()}
+    if stage not in (LifeStage.EGG, LifeStage.DEAD):  # a healthy weight for its stage
+        low, high = DEFAULT_BALANCE.weight_band(stage)
+        fields["weight"] = min(max(pet.weight, low), high)
     fields.update(overrides)
     return replace(pet, **fields)

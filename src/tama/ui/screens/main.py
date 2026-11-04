@@ -23,6 +23,7 @@ from tama.domain.events import (
     Outcome,
     PauseRefused,
     Refused,
+    WeightLeftBand,
     WokeUp,
 )
 from tama.domain.minigames import GameKind, GameResult
@@ -43,7 +44,16 @@ OTHERS_EVERY_SECONDS = 60
 MIN_WIDTH = 60
 MIN_HEIGHT = 20
 
-NOTABLE_EVENTS = (Evolved, Died, GotSick, Misbehaved, CareMistake, FellAsleep, WokeUp)
+NOTABLE_EVENTS = (
+    Evolved,
+    Died,
+    GotSick,
+    Misbehaved,
+    CareMistake,
+    FellAsleep,
+    WokeUp,
+    WeightLeftBand,
+)
 """Things worth a toast when they happen by themselves (the rest is visible on screen)."""
 
 
@@ -163,7 +173,7 @@ class MainScreen(Screen[None]):
         pet = self.session.pet
         for event in events:
             if isinstance(event, NOTABLE_EVENTS):
-                urgent = isinstance(event, Died | GotSick | CareMistake)
+                urgent = isinstance(event, Died | GotSick | CareMistake | WeightLeftBand)
                 severity: SeverityLevel = "warning" if urgent else "information"
                 self.notify(describe_event(event), title=pet.name, severity=severity)
         if any(isinstance(event, Died) for event in events):
@@ -221,7 +231,7 @@ class MainScreen(Screen[None]):
 
     def action_status(self) -> None:
         """Show detailed stats."""
-        self.app.push_screen(StatusScreen(self.session.pet))
+        self.app.push_screen(StatusScreen(self.session.pet, self.session.balance))
 
     def action_help(self) -> None:
         """Show key bindings."""

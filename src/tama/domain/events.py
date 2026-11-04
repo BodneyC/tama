@@ -13,6 +13,7 @@ from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
+from tama.domain.weight import WeightStatus
 
 
 class Action(StrEnum):
@@ -35,7 +36,6 @@ class RefusalReason(StrEnum):
     EGG = "egg"
     ASLEEP = "asleep"
     AWAKE = "awake"
-    NOT_HUNGRY = "not_hungry"
     TOO_TIRED = "too_tired"
     NOT_SICK = "not_sick"
     MISBEHAVING = "misbehaving"
@@ -49,6 +49,7 @@ class MistakeReason(StrEnum):
     HAPPINESS = "happiness"
     HYGIENE = "hygiene"
     LIGHTS = "lights"
+    WEIGHT = "weight"
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +117,13 @@ class CareMistake(Event):
 
 
 @dataclass(frozen=True, slots=True)
+class WeightLeftBand(Event):
+    """The pet's weight left the healthy band for its stage (SPEC §2.7)."""
+
+    status: WeightStatus
+
+
+@dataclass(frozen=True, slots=True)
 class Misbehaved(Event):
     """The pet is calling for attention without a real need."""
 
@@ -130,9 +138,10 @@ class MisbehaviourIgnored(Event):
 
 @dataclass(frozen=True, slots=True)
 class Ate(Event):
-    """The pet ate a meal or a snack."""
+    """The pet ate a meal or a snack; ``stuffed`` if it ate a meal when already full."""
 
     food: Action
+    stuffed: bool = False
 
 
 @dataclass(frozen=True, slots=True)

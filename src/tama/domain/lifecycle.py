@@ -6,6 +6,7 @@ from tama.domain.balance import Balance
 from tama.domain.events import Died, Event, Evolved
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.weight import WeightStatus, weight_status_at
 
 _NEXT_STAGE: dict[LifeStage, LifeStage] = {
     LifeStage.EGG: LifeStage.BABY,
@@ -17,7 +18,12 @@ _NEXT_STAGE: dict[LifeStage, LifeStage] = {
 
 
 def adult_variant(pet: Pet, balance: Balance) -> Variant:
-    """Choose the adult form a teen grows into, based on how well it was cared for."""
+    """Choose the adult form a teen grows into, based on how well it was cared for.
+
+    Too heavy for a healthy adult outweighs everything else (SPEC §2.2).
+    """
+    if weight_status_at(pet.weight, LifeStage.ADULT, balance) is WeightStatus.OVER:
+        return Variant.CHUBBY
     well_raised = (
         pet.care_mistakes <= balance.good_adult_max_care_mistakes
         and pet.stats.discipline >= balance.good_adult_min_discipline

@@ -91,14 +91,29 @@ def test_meal_fills_hunger_and_adds_weight() -> None:
     out = apply(pet, Action.MEAL, make_ctx())
 
     assert out.pet.stats.hunger == 80
-    assert out.pet.weight == pet.weight + 1
+    assert out.pet.weight == pet.weight + DEFAULT_BALANCE.meal_weight
     assert out.events == (Ate(pet.age, Action.MEAL),)
 
 
-def test_meal_refused_when_full() -> None:
-    pet = make_pet(stats=Stats(hunger=95))
+def test_a_full_pet_eats_a_meal_anyway_but_is_stuffed() -> None:
+    b = DEFAULT_BALANCE
+    pet = make_pet(stats=Stats(hunger=b.stuffed_at_hunger, happiness=50))
 
-    assert apply(pet, Action.MEAL, make_ctx()).refusal is RefusalReason.NOT_HUNGRY
+    out = apply(pet, Action.MEAL, make_ctx())
+
+    assert out.pet.stats.hunger == 100
+    assert out.pet.stats.happiness == 50 + b.stuffed_happiness
+    assert out.pet.weight == pet.weight + b.meal_weight + b.stuffed_weight
+    assert out.events == (Ate(pet.age, Action.MEAL, stuffed=True),)
+
+
+def test_a_meal_just_below_full_is_an_ordinary_meal() -> None:
+    pet = make_pet(stats=Stats(hunger=DEFAULT_BALANCE.stuffed_at_hunger - 1))
+
+    out = apply(pet, Action.MEAL, make_ctx())
+
+    assert out.events == (Ate(pet.age, Action.MEAL),)
+    assert out.pet.weight == pet.weight + DEFAULT_BALANCE.meal_weight
 
 
 def test_snack_cheers_up_and_adds_weight() -> None:
@@ -108,7 +123,7 @@ def test_snack_cheers_up_and_adds_weight() -> None:
 
     assert out.pet.stats.happiness == 65
     assert out.pet.stats.hunger == 55
-    assert out.pet.weight == pet.weight + 2
+    assert out.pet.weight == pet.weight + DEFAULT_BALANCE.snack_weight
     assert out.pet.recent_snacks == (pet.age,)
     assert out.events == (Ate(pet.age, Action.SNACK),)
 

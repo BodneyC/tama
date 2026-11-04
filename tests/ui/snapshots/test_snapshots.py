@@ -52,6 +52,12 @@ def test_status_screen(snap_compare: SnapCompare) -> None:
     assert snap_compare(child_app(), press=["s"])
 
 
+@pytest.mark.parametrize("weight", [60, 1], ids=["overweight", "underweight"])
+def test_status_screen_out_of_band(snap_compare: SnapCompare, weight: int) -> None:
+    """The weight line is marked, and the header calls about it (SPEC §2.7)."""
+    assert snap_compare(make_app(repo_with(weight=weight)), press=["s"])
+
+
 def test_help_screen(snap_compare: SnapCompare) -> None:
     assert snap_compare(child_app(), press=["question_mark"])
 

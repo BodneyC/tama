@@ -34,6 +34,7 @@ from tama.domain.events import (
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    WeightLeftBand,
     Woken,
     WokeUp,
 )
@@ -41,6 +42,7 @@ from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
+from tama.domain.weight import WeightStatus
 
 _NEED_LOW = {Stat.HUNGER: "Got hungry", Stat.HAPPINESS: "Got unhappy", Stat.HYGIENE: "Got dirty"}
 _PLAYED = {
@@ -59,6 +61,13 @@ _MISTAKES = {
     MistakeReason.HAPPINESS: "Was left miserable",
     MistakeReason.HYGIENE: "Was left filthy",
     MistakeReason.LIGHTS: "Slept with the lights on",
+    MistakeReason.WEIGHT: "Was left at an unhealthy weight",
+}
+_WEIGHT = {WeightStatus.OVER: "Got overweight", WeightStatus.UNDER: "Got underweight"}
+_ADULTS = {
+    Variant.GOOD: "a well-behaved adult",
+    Variant.SCRUFFY: "a scruffy adult",
+    Variant.CHUBBY: "a chubby adult",
 }
 _DEATHS = {
     DeathCause.OLD_AGE: "Passed away peacefully of old age",
@@ -90,7 +99,7 @@ def format_age(age: timedelta) -> str:
 
 def _stage_phrase(stage: LifeStage, variant: Variant) -> str:
     if stage is LifeStage.ADULT:
-        return "a well-behaved adult" if variant is Variant.GOOD else "a scruffy adult"
+        return _ADULTS.get(variant, "an adult")
     article = "an" if stage.value[0] in "aeiou" else "a"
     return f"{article} {stage.value}"
 
@@ -120,8 +129,12 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return "Misbehaved"
         case MisbehaviourIgnored():
             return "Got away with misbehaving"
+        case Ate(stuffed=True):
+            return "Ate a meal anyway and is stuffed"
         case Ate(food=food):
             return f"Ate a {food.value}"
+        case WeightLeftBand(status=status):
+            return _WEIGHT[status]
         case Played(result=result):
             return _PLAYED[result]
         case Cleaned():

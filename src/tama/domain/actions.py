@@ -57,8 +57,6 @@ def refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReason | None:
 
 
 def _specific_refusal(pet: Pet, action: Action, balance: Balance) -> RefusalReason | None:
-    if action is Action.MEAL and pet.stats.hunger >= balance.meal_refuse_at_hunger:
-        return RefusalReason.NOT_HUNGRY
     if action is Action.PLAY and pet.stats.energy < balance.play_min_energy:
         return RefusalReason.TOO_TIRED
     if action is Action.MEDICINE and not pet.is_sick:
@@ -103,12 +101,16 @@ def _weight(pet: Pet, delta: int, b: Balance) -> int:
 
 def _meal(pet: Pet, ctx: Context) -> Outcome:
     b = ctx.balance
-    fed = replace(
+    stats = pet.stats.adjust(Stat.HUNGER, b.meal_hunger)
+    if pet.stats.hunger < b.stuffed_at_hunger:
+        fed = replace(pet, stats=stats, weight=_weight(pet, b.meal_weight, b))
+        return Outcome(fed, (Ate(pet.age, Action.MEAL),))
+    stuffed = replace(
         pet,
-        stats=pet.stats.adjust(Stat.HUNGER, b.meal_hunger),
-        weight=_weight(pet, b.meal_weight, b),
+        stats=stats.adjust(Stat.HAPPINESS, b.stuffed_happiness),
+        weight=_weight(pet, b.meal_weight + b.stuffed_weight, b),
     )
-    return Outcome(fed, (Ate(pet.age, Action.MEAL),))
+    return Outcome(stuffed, (Ate(pet.age, Action.MEAL, stuffed=True),))
 
 
 def _snack(pet: Pet, ctx: Context) -> Outcome:

@@ -22,17 +22,20 @@ from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
 from tama.domain.events import (
     Action,
+    CareMistake,
     Died,
     Event,
     Evolved,
     GotSick,
     Misbehaved,
     MisbehaviourIgnored,
+    MistakeReason,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet, new_egg
 from tama.domain.simulation import advance
 from tama.domain.stage import LifeStage, Variant
+from tama.domain.weight import WeightStatus, weight_status
 
 START = datetime(2026, 1, 5, 9, tzinfo=UTC)  # a Monday morning
 TICK = timedelta(minutes=1)
@@ -48,6 +51,8 @@ class Player:
     awake_until: time = time(23)
     away: tuple[tuple[timedelta, timedelta], ...] = ()
     """(start, length) offsets from hatching when the player can't look at all."""
+    snacker: bool = False
+    """Cheers the pet up with snacks instead of games (it gets fat: SPEC §2.7)."""
 
     def present(self, now: datetime) -> bool:
         """Whether the player could check on the pet at ``now``."""
@@ -65,10 +70,11 @@ PLAYERS = (
         timedelta(minutes=30),
         away=((timedelta(days=4, hours=-2), timedelta(days=1)),),
     ),
+    Player("casual snacker (every 30 min)", timedelta(minutes=30), snacker=True),
 )
 
 
-def care(pet: Pet, ctx: Context) -> Pet:
+def care(pet: Pet, ctx: Context, *, snacker: bool = False) -> Pet:
     """What an ordinary player does when they look: fix whatever needs fixing."""
 
     def act(action: Action) -> None:
@@ -89,6 +95,9 @@ def care(pet: Pet, ctx: Context) -> Pet:
     for _ in range(3):  # a few games while it's unhappy and has the energy
         if pet.stats.happiness >= 70 or refusal(pet, Action.PLAY, ctx.balance) is not None:
             break
+        if snacker:  # a treat is quicker than a game
+            act(Action.SNACK)
+            continue
         pet = apply_game_outcome(
             pet, GameResult.WIN if ctx.rng.random() < 0.6 else GameResult.LOSS, ctx=ctx
         ).pet
@@ -113,6 +122,9 @@ class Life:
     ignored: int = 0
     discipline_at_adult: int | None = None
     mistakes_at_adult: int | None = None
+    weight_at_adult: int | None = None
+    out_of_band: timedelta = timedelta(0)
+    weight_mistakes: int = 0
     events: Counter[str] = field(default_factory=Counter)
 
 
@@ -130,8 +142,10 @@ def live(player: Player, seed: int, balance: Balance) -> Life:
         out = advance(pet, TICK, ctx)
         pet, now = out.pet, now + TICK
         record(life, pet, out.events)
+        if pet.is_alive and weight_status(pet, balance) is not WeightStatus.HEALTHY:
+            life.out_of_band += TICK
         if now >= next_check and player.present(now):
-            pet = care(pet, ctx)
+            pet = care(pet, ctx, snacker=player.snacker)
             gap = player.every * habits.uniform(0.5, 1.5)
             next_check = now + max(TICK, gap)
     life.age = pet.age
@@ -157,6 +171,9 @@ def record(life: Life, pet: Pet, events: tuple[Event, ...]) -> None:
         if isinstance(event, Evolved) and event.to_stage is LifeStage.ADULT:
             life.discipline_at_adult = pet.stats.discipline
             life.mistakes_at_adult = pet.care_mistakes
+            life.weight_at_adult = pet.weight
+        if isinstance(event, CareMistake) and event.reason is MistakeReason.WEIGHT:
+            life.weight_mistakes += 1
 
 
 def report(player: Player, lives: list[Life]) -> str:
@@ -170,6 +187,9 @@ def report(player: Player, lives: list[Life]) -> str:
     )
     caught = mean(1 - life.ignored / life.misbehaved for life in lives if life.misbehaved)
     good = sum(life.variant is Variant.GOOD for life in lives)
+    chubby = sum(life.variant is Variant.CHUBBY for life in lives)
+    out_of_band = mean(life.out_of_band / life.age for life in lives if life.age)
+    weights = [life.weight_at_adult for life in adults if life.weight_at_adult is not None]
     return "\n".join(
         [
             f"{player.name}",
@@ -184,6 +204,10 @@ def report(player: Player, lives: list[Life]) -> str:
             f" >= 50 in {disciplined}/{len(adults)}   mistakes by then:"
             f" {mean(life.mistakes_at_adult or 0 for life in adults) if adults else 0:.1f}"
             f"   good adults: {good}/{len(lives)}",
+            f"  weight: {out_of_band:.0%} of life out of band,"
+            f" {mean(life.weight_mistakes for life in lives):.1f} weight mistakes,"
+            f" at adulthood {min(weights, default=0)}-{max(weights, default=0)} g"
+            f" (mean {mean(weights) if weights else 0:.0f})   chubby adults: {chubby}/{len(lives)}",
         ]
     )
 

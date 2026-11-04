@@ -26,11 +26,13 @@ from tama.domain.events import (
     NeedLow,
     Outcome,
     Pooped,
+    WeightLeftBand,
     WokeUp,
 )
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import NEEDS, STAT_MAX, Stat
+from tama.domain.weight import WeightStatus, weight_status
 from tama.errors import InvalidArgumentError
 
 _MICROSECOND = timedelta(microseconds=1)
@@ -95,6 +97,8 @@ def sickness_chance(pet: Pet, balance: Balance) -> float:
         chance += balance.sickness_dirty_chance
     if pet.stats.hunger < balance.sickness_risk_threshold:
         chance += balance.sickness_hungry_chance
+    if weight_status(pet, balance) is WeightStatus.OVER:
+        chance += balance.overweight_sickness_chance
     return min(chance, 1.0)
 
 
@@ -108,6 +112,7 @@ def _step(pet: Pet, now: datetime, ctx: Context, events: list[Event]) -> Pet:
     if pet.stats.health == 0:
         return lifecycle.die(pet, DeathCause.POOR_HEALTH, events)
     pet = _update_poop(pet, balance, events)
+    pet = _burn_weight(pet, balance)
     if pet.age % HOUR == ZERO:
         pet = _hourly_rolls(pet, ctx, events)
     return _update_timers(pet, balance, events)
@@ -144,6 +149,8 @@ def _drift_rates(pet: Pet, b: Balance) -> dict[Stat, Fraction]:
         hunger = -_per_step(b, b.hunger_awake) * multiplier
         happiness = -_per_step(b, b.happiness_awake) * multiplier
         energy = -_per_step(b, b.energy_awake) * multiplier
+        if weight_status(pet, b) is WeightStatus.OVER:
+            energy *= b.overweight_energy_multiplier
         hygiene = -_per_step(b, b.hygiene_awake) * multiplier
     if pet.is_sick:
         happiness *= b.sick_happiness_multiplier
@@ -160,6 +167,8 @@ def _drift_rates(pet: Pet, b: Balance) -> dict[Stat, Fraction]:
 def _health_rate(pet: Pet, b: Balance) -> Fraction:
     neglected = any(pet.stats[need] == 0 for need in NEEDS)
     if not pet.is_sick and not neglected:
+        if weight_status(pet, b) is WeightStatus.UNDER:
+            return Fraction(0)  # too thin to recover
         return _per_step(b, b.health_regen)
     rate = Fraction(0)
     if pet.is_sick:
@@ -194,6 +203,19 @@ def _update_poop(pet: Pet, b: Balance, events: list[Event]) -> Pet:
     count = pet.poop_count + 1
     events.append(Pooped(pet.age, count))
     return replace(pet, poop_progress=progress, poop_count=count)
+
+
+def _burn_weight(pet: Pet, b: Balance) -> Pet:
+    """Burn a share of the pet's weight while it's awake, keeping the fraction of a gram."""
+    if pet.is_asleep:
+        return pet
+    burned = pet.weight_progress + (
+        pet.weight * b.weight_burn * _per_step(b, HOUR) * b.decay_multiplier(pet.stage)
+    )
+    grams = math.floor(burned)
+    return replace(
+        pet, weight=max(b.min_weight, pet.weight - grams), weight_progress=burned - grams
+    )
 
 
 def _hourly_rolls(pet: Pet, ctx: Context, events: list[Event]) -> Pet:
@@ -232,6 +254,16 @@ def _update_timers(pet: Pet, b: Balance, events: list[Event]) -> Pet:
         mistakes += 1
         events.append(CareMistake(pet.age, MistakeReason.LIGHTS))
     timers = replace(timers, lights_on_asleep=after)
+
+    status = weight_status(pet, b)
+    before = timers.weight
+    after = before + b.step if status is not WeightStatus.HEALTHY else ZERO
+    if before == ZERO < after:
+        events.append(WeightLeftBand(pet.age, status))
+    if before <= b.weight_episode_grace < after:
+        mistakes += 1
+        events.append(CareMistake(pet.age, MistakeReason.WEIGHT))
+    timers = replace(timers, weight=after)
 
     stats, misbehaving = pet.stats, pet.misbehaving
     ignored_for = timers.misbehaving + b.step if misbehaving else ZERO

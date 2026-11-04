@@ -27,7 +27,7 @@ from tama.services.session import CatchUp, SessionSettings
 from tama.ui.app import EXIT_ERROR, TamaApp
 from tama.ui.colours import Look, Mode
 from tama.ui.screens.away import AwaySummaryScreen, away_text
-from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen
+from tama.ui.screens.dialogs import FeedMenu, HelpScreen, StatusScreen, weight_content
 from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialScreen
@@ -507,13 +507,41 @@ async def test_feed_menu_can_be_cancelled() -> None:
 
 
 async def test_refused_action_is_explained() -> None:
-    app = make_app(repo_with(stats=Stats(hunger=100)))
+    app = make_app(repo_with(misbehaving=True))
     notes = Notes(app)
     async with app.run_test() as pilot:
         await pilot.press("f", "m")
         await pilot.pause()
 
-        assert "Refused a meal: not hungry" in notes
+        assert "Turned its nose up at a meal: misbehaving" in notes
+        assert "warning" in notes.severities()
+
+
+async def test_a_meal_when_full_is_eaten_but_the_pet_is_stuffed() -> None:
+    app = make_app(repo_with(stats=Stats(hunger=100)))
+    notes = Notes(app)
+    async with app.run_test() as pilot:
+        weight = app.session.pet.weight if app.session else 0
+        await pilot.press("f", "m")
+        await pilot.pause()
+
+        assert "Ate a meal anyway and is stuffed" in notes
+        assert app.session is not None
+        assert app.session.pet.weight == (
+            weight + DEFAULT_BALANCE.meal_weight + DEFAULT_BALANCE.stuffed_weight
+        )
+
+
+async def test_leaving_the_healthy_weight_band_is_announced() -> None:
+    clock = FakeClock(FIXED_NOW)
+    app = make_app(repo_with(weight=1), clock=clock)
+    notes = Notes(app)
+    async with app.run_test() as pilot:
+        clock.advance(timedelta(minutes=1))
+        app.tick()
+        await pilot.pause()
+
+        assert "Got underweight" in notes
         assert "warning" in notes.severities()
 
 
@@ -565,6 +593,31 @@ async def test_status_shows_stat_bars() -> None:
         await pilot.press("s")
 
         assert "Hunger     ██████████░░░░░░░░░░  50" in text(app, "#status-body")
+
+
+async def test_status_shows_the_weight_against_its_healthy_band() -> None:
+    low, high = DEFAULT_BALANCE.weight_band(LifeStage.CHILD)
+    app = make_app(repo_with(weight=low))
+    async with app.run_test() as pilot:
+        await pilot.press("s")
+
+        assert f"Weight     {low} g ({low}-{high})\n" in text(app, "#status-body")
+
+
+@pytest.mark.parametrize(("weight", "mark"), [(200, "▲"), (1, "▼")], ids=["over", "under"])
+def test_weight_outside_the_band_is_marked_in_the_warning_colour(weight: int, mark: str) -> None:
+    low, high = DEFAULT_BALANCE.weight_band(LifeStage.CHILD)
+
+    content = weight_content(make_pet(weight=weight), DEFAULT_BALANCE)
+
+    assert content.plain == f"{weight} g ({low}-{high}) {mark}"
+    warned = {content.plain[span.start : span.end] for span in content.spans}
+    assert warned == {f"{weight} g", f" {mark}"}
+    assert {str(span.style) for span in content.spans} == {"$tama-stat-warning"}
+
+
+def test_eggs_have_no_healthy_band_to_show() -> None:
+    assert weight_content(make_pet(stage=LifeStage.EGG), DEFAULT_BALANCE).plain == "5 g"
 
 
 # --- Time passing -------------------------------------------------------------------------
