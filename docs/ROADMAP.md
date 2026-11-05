@@ -457,7 +457,7 @@ night window, and is readable in both themes.
 
 ## M7 — Release readiness
 
-- [ ] README with screenshot/GIF (showing a visit and the journal too) (e.g. via `vhs` or `asciinema`), install instructions
+- [x] README with screenshot/GIF (showing a visit and the journal too) (e.g. via `vhs` or `asciinema`), install instructions
       (`uv tool install`, `pipx install`)
 - [ ] CHANGELOG.md (Keep a Changelog), version 1.0.0
 - [ ] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out

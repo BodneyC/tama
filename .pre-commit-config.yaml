@@ -2,11 +2,11 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
-      # Sprites and UI snapshots are whitespace-significant; never rewrite them.
+      # Sprites, UI snapshots and the README screenshots are whitespace-significant; never rewrite them.
       - id: trailing-whitespace
-        exclude: ^src/tama/assets/sprites/|/__snapshots__/
+        exclude: ^src/tama/assets/sprites/|/__snapshots__/|^docs/images/
       - id: end-of-file-fixer
-        exclude: /__snapshots__/
+        exclude: /__snapshots__/|^docs/images/
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
