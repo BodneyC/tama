@@ -444,6 +444,13 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 - [x] Snapshots: a trick key frame per species; the stage at each phase on dark and light
       themes; reviewed as images
 
+Deviations: save schema v9 (a no-op migration) so an older tama calls a save whose journal has
+a trick in it newer, not corrupt; an heir that starts with discipline learns its trick on
+growing into a child; the toast is titled with the pet's name and says "Learned to spin!"; the
+status panel is titled with the pet's name (not "Status") so an heir's fits 60×20; twilight is
+`Balance.twilight` (an hour); a species names its back (`skin`), front-only pixels (`front`)
+and waving limb (`limb`) for the generated tricks; `is_night` moved to `daylight.py`.
+
 **Accept:** disciplining a child from 40 to 65 teaches it to spin (toast, then it performs it
 now and then when content); the stage background changes at dusk and dawn at the configured
 night window, and is readable in both themes.
