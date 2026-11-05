@@ -299,6 +299,7 @@ L, F, M = EntryKind.LIFE, EntryKind.FIRST, EntryKind.MOMENT
         (journal_entry(F, Topic.TANTRUM), "First tantrum"),
         (journal_entry(F, Topic.SICKNESS), "Fell sick for the first time"),
         (journal_entry(F, Topic.WIN, "four_in_a_row"), "First win at Four in a Row"),
+        (journal_entry(F, Topic.TRICK, "spin"), "Learned to spin"),
         (journal_entry(F, Topic.CARE_MISTAKE, "hunger"), "First care mistake: was left starving"),
         (journal_entry(M, Topic.CARE_MISTAKE, "lights"), "Slept with the lights on"),
         (journal_entry(M, Topic.CURED, ""), "Got better"),

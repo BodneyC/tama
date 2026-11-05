@@ -6,12 +6,12 @@ from pydantic import ValidationError
 
 from tama.errors import CorruptSaveError
 from tama.persistence.migrations import migrate
-from tama.persistence.models import SaveFileV8, SaveGame
+from tama.persistence.models import SaveFileV9, SaveGame
 
 
 def encode(game: SaveGame) -> str:
     """Serialize ``game`` as indented, human-readable JSON."""
-    return SaveFileV8.from_domain(game).model_dump_json(indent=2) + "\n"
+    return SaveFileV9.from_domain(game).model_dump_json(indent=2) + "\n"
 
 
 def decode(text: str) -> SaveGame:
@@ -26,7 +26,7 @@ def decode(text: str) -> SaveGame:
     except json.JSONDecodeError as exc:
         raise CorruptSaveError(f"save file is not valid JSON: {exc}") from exc
     try:
-        model = SaveFileV8.model_validate(migrate(raw))
+        model = SaveFileV9.model_validate(migrate(raw))
     except ValidationError as exc:
         raise CorruptSaveError(f"save file has invalid data: {exc}") from exc
     return model.to_domain()

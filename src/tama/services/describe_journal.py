@@ -51,6 +51,8 @@ def describe_entry(entry: Entry) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return f"Came back from {format_age(timedelta(minutes=int(entry.detail)))} on holiday"
         case Topic.WIN:
             return f"First win at {GAME_NAMES[GameKind(entry.detail)]}"
+        case Topic.TRICK:
+            return f"Learned to {entry.detail}"
         case Topic.CARE_MISTAKE:
             mistake = MISTAKE_TEXT[MistakeReason(entry.detail)]
             if entry.kind is EntryKind.FIRST:

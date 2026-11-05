@@ -21,7 +21,7 @@ from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 9
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -201,15 +201,16 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV8(_Model):
-    """Version 8 of the save file.
+class SaveFileV9(_Model):
+    """Version 9 of the save file.
 
     v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4 + weight
     burn and the time out of the healthy weight band in v5 + the journal in v6 + the family
-    line and the egg a pet left in v7 + the last visit (and the journal's count of visits) in v8.
+    line and the egg a pet left in v7 + the last visit (and the journal's count of visits) in v8
+    + the journal's trick topic in v9.
     """
 
-    schema_version: Literal[8] = 8
+    schema_version: Literal[9] = 9
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel

@@ -24,6 +24,7 @@ from tama.domain.events import (
     GotSick,
     HeirHatched,
     LaidEgg,
+    LearnedTrick,
     MedicineGiven,
     Misbehaved,
     MisbehaviourIgnored,
@@ -75,6 +76,7 @@ class Topic(StrEnum):
     MILESTONE = "milestone"  # "<tally>:<count>", e.g. "meals:50"
     VISIT = "visit"  # the friend's name
     PLAYED_WITH = "played_with"  # "<game>/<result>/<friend>", the friend last (names have "/")
+    TRICK = "trick"  # the trick, the first time it is learned
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +235,8 @@ class _Writer:
                 self._add(EntryKind.MOMENT, Topic.PLAYED_WITH, event, f"{game}/{result}/{friend}")
             case Misbehaved():
                 self._first(Topic.TANTRUM, event)
+            case LearnedTrick(trick=trick):
+                self._first(Topic.TRICK, event, trick.value)
             case Disciplined(effective=True):
                 self._count(replace(t, tantrums_caught=t.tantrums_caught + 1))
                 self._add(EntryKind.MOMENT, Topic.TANTRUM_CAUGHT, event)

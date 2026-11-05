@@ -17,6 +17,7 @@ from tama.domain.events import (
     GotSick,
     HeirHatched,
     LaidEgg,
+    LearnedTrick,
     LightsToggled,
     MedicineGiven,
     Misbehaved,
@@ -41,7 +42,7 @@ from tama.domain.journal import (
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import AncestorRecord, Pet
 from tama.domain.simulation import advance
-from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.stage import DeathCause, LifeStage, Trick, Variant
 from tests.factories import FIXED_NOW, make_ctx, make_pet
 from tests.strategies import durations, pets
 
@@ -139,6 +140,19 @@ def test_the_first_win_is_written_for_each_game() -> None:
     )
 
     assert [e.detail for e in journal.entries] == ["four_in_a_row", "tic_tac_toe"]
+
+
+def test_the_first_time_each_trick_is_learned_is_a_first() -> None:
+    journal = write(
+        LearnedTrick(PET.age + MIN, Trick.WAVE),
+        LearnedTrick(PET.age + MIN, Trick.SPIN),
+        LearnedTrick(PET.age + MIN, Trick.WAVE),  # forgotten and learned again
+    )
+
+    assert journal.entries == (
+        entry(FIRST, Topic.TRICK, "wave"),
+        entry(FIRST, Topic.TRICK, "spin"),
+    )
 
 
 def test_games_that_were_not_won_are_not_firsts() -> None:

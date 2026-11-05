@@ -22,7 +22,7 @@ FIXTURES = Path(__file__).parents[2] / "fixtures" / "saves"
 def test_encode_is_indented_json_with_trailing_newline() -> None:
     text = encode(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert text.startswith('{\n  "schema_version": 8,')
+    assert text.startswith('{\n  "schema_version": 9,')
     assert text.endswith("}\n")
 
 
@@ -275,9 +275,28 @@ def test_v8_fixture_loads_a_visit() -> None:
     assert [e.topic for e in game.journal.entries[-2:]] == [Topic.VISIT, Topic.PLAYED_WITH]
 
 
-def test_v8_fixture_reencodes_identically() -> None:
-    """Guards the v8 format against accidental changes (which would need a migration)."""
-    text = (FIXTURES / "v8.json").read_text()
+def test_v8_fixture_migrates_losslessly() -> None:
+    """Only the version changes when a v8 save is upgraded."""
+    original: dict[str, Any] = json.loads((FIXTURES / "v8.json").read_text())
+
+    upgraded: dict[str, Any] = json.loads(encode(decode((FIXTURES / "v8.json").read_text())))
+
+    for raw in (original, upgraded):
+        raw.pop("app_version")
+    assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
+    assert {**upgraded, "schema_version": 8} == original
+
+
+def test_v9_fixture_loads_a_trick() -> None:
+    game = decode((FIXTURES / "v9.json").read_text())
+
+    last = game.journal.entries[-1]
+    assert (last.topic, last.detail) == (Topic.TRICK, "wave")
+
+
+def test_v9_fixture_reencodes_identically() -> None:
+    """Guards the v9 format against accidental changes (which would need a migration)."""
+    text = (FIXTURES / "v9.json").read_text()
     original: dict[str, Any] = json.loads(text)
 
     reencoded: dict[str, Any] = json.loads(encode(decode(text)))

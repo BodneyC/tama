@@ -106,6 +106,15 @@ def _v7_to_v8(raw: dict[str, Any]) -> dict[str, Any]:
     return raw  # anything malformed is left for validation to report
 
 
+def _v8_to_v9(raw: dict[str, Any]) -> dict[str, Any]:
+    """v9's journal can say a trick was learned (SPEC §2.10); a v8 save needs no change.
+
+    The version still moves on so that an older tama reports a save with tricks in its journal
+    as newer, rather than as corrupt.
+    """
+    return raw
+
+
 MIGRATIONS: dict[int, Migration] = {
     1: _v1_to_v2,
     2: _v2_to_v3,
@@ -114,6 +123,7 @@ MIGRATIONS: dict[int, Migration] = {
     5: _v5_to_v6,
     6: _v6_to_v7,
     7: _v7_to_v8,
+    8: _v8_to_v9,
 }
 """Key ``N`` upgrades a version-N save to version N+1."""
 

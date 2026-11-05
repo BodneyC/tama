@@ -179,6 +179,12 @@ def test_malformed_v7_saves_are_left_for_validation(raw: dict[str, object]) -> N
     assert migrate(raw, current=8) == {**raw, "schema_version": 8}
 
 
+def test_v8_saves_need_no_change() -> None:
+    raw = {"schema_version": 8, "pet": {"name": "Mochi"}, "journal": {"entries": []}}
+
+    assert migrate(raw, current=9) == {**raw, "schema_version": 9}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})

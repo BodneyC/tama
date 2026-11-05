@@ -426,7 +426,7 @@ saved and unlocked; a second tama can't open the guest during the visit.
 
 Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 
-- [ ] Domain: `Balance.trick_thresholds`; `known_tricks(pet, balance)`; `LearnedTrick(trick)`
+- [x] Domain: `Balance.trick_thresholds`; `known_tricks(pet, balance)`; `LearnedTrick(trick)`
       when discipline rises past a threshold (CHILD and older) — test-first
 - [ ] Sprites: one-shot `trick_wave`, `trick_spin`, `trick_dance`, `trick_bow` for every
       species, variant and stage from child to elder (recipes in `tools/sprites/kit.py`);
@@ -440,7 +440,7 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 - [ ] UI colours `stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` in `assets/ui.toml`
       (dark/light, theme refs allowed) and the `/add-sprite` UI colour list; the stage background
       follows the phase each tick; none under `NO_COLOR`; lights-off dimming still on top
-- [ ] Journal: a trick learned for the first time is a first
+- [x] Journal: a trick learned for the first time is a first
 - [ ] Snapshots: a trick key frame per species; the stage at each phase on dark and light
       themes; reviewed as images
 

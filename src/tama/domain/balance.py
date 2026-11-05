@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import time, timedelta
 from fractions import Fraction
 
-from tama.domain.stage import LifeStage
+from tama.domain.stage import LifeStage, Trick
 from tama.errors import InvalidArgumentError
 
 HOUR = timedelta(hours=1)
@@ -139,6 +139,17 @@ class Balance:
     visit_happiness: int = 10
     visit_cooldown: timedelta = 4 * HOUR
 
+    # Tricks (SPEC §2.10): the discipline each is known at, from CHILD on, in learning order.
+    trick_thresholds: tuple[tuple[Trick, int], ...] = (
+        (Trick.WAVE, 25),
+        (Trick.SPIN, 50),
+        (Trick.DANCE, 75),
+        (Trick.BOW, 100),
+    )
+    trick_min_stage: LifeStage = LifeStage.CHILD
+    # An idle pet at least this happy now and then shows off a trick it knows.
+    show_off_happiness: int = 75
+
     def __post_init__(self) -> None:
         """Validate constraints the simulation relies on."""
         if self.step <= timedelta(0) or HOUR % self.step:
@@ -149,6 +160,9 @@ class Balance:
                 raise InvalidArgumentError(
                     f"{stage.value} weight band must be min_weight <= low <= high, got {low}-{high}"
                 )
+        tricks = [trick for trick, _ in self.trick_thresholds]
+        if len(set(tricks)) != len(tricks):
+            raise InvalidArgumentError(f"each trick may have one threshold only once, got {tricks}")
 
     def stage_age(self, stage: LifeStage) -> timedelta:
         """Return the age at which the pet enters ``stage``."""

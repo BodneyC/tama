@@ -1,4 +1,4 @@
-"""Life-stage related enumerations."""
+"""Enumerations about the pet's life: its stage, form, death and the tricks it can learn."""
 
 from enum import StrEnum
 
@@ -34,3 +34,12 @@ class DeathCause(StrEnum):
 
     POOR_HEALTH = "poor_health"
     OLD_AGE = "old_age"
+
+
+class Trick(StrEnum):
+    """A trick a disciplined pet can perform, just for show (SPEC §2.10)."""
+
+    WAVE = "wave"
+    SPIN = "spin"
+    DANCE = "dance"
+    BOW = "bow"

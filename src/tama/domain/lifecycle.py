@@ -6,6 +6,7 @@ from tama.domain.balance import Balance
 from tama.domain.events import Died, Event, Evolved, LaidEgg
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.tricks import learned_tricks
 from tama.domain.weight import WeightStatus, weight_status_at
 
 _NEXT_STAGE: dict[LifeStage, LifeStage] = {
@@ -56,4 +57,7 @@ def progress(pet: Pet, balance: Balance, events: list[Event]) -> Pet:
         return pet
     variant = adult_variant(pet, balance) if next_stage is LifeStage.ADULT else pet.variant
     events.append(Evolved(pet.age, pet.stage, next_stage, variant))
-    return replace(pet, stage=next_stage, variant=variant)
+    grown = replace(pet, stage=next_stage, variant=variant)
+    # An heir starts with some discipline, so it knows a trick the moment it is old enough.
+    events.extend(learned_tricks(pet, grown, balance))
+    return grown

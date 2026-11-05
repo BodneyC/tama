@@ -31,6 +31,7 @@ from tama.domain.minigames import GameKind, GameResult, Side
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
+from tama.domain.tricks import learned_tricks
 
 _REFUSED_BY_EGG = frozenset(
     {Action.MEAL, Action.SNACK, Action.PLAY, Action.DISCIPLINE, Action.MEDICINE, Action.WAKE}
@@ -184,7 +185,9 @@ def _discipline(pet: Pet, ctx: Context) -> Outcome:
         stats=pet.stats.adjust(Stat.DISCIPLINE, gain),
         timers=replace(pet.timers, misbehaving=ZERO),
     )
-    return Outcome(behaved, (Disciplined(pet.age, effective=True),))
+    return Outcome(
+        behaved, (Disciplined(pet.age, effective=True), *learned_tricks(pet, behaved, b))
+    )
 
 
 def _wake(pet: Pet, ctx: Context) -> Outcome:

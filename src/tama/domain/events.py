@@ -11,7 +11,7 @@ from enum import StrEnum
 
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
-from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.stage import DeathCause, LifeStage, Trick, Variant
 from tama.domain.stats import Stat
 from tama.domain.weight import WeightStatus
 
@@ -143,6 +143,13 @@ class Misbehaved(Event):
 @dataclass(frozen=True, slots=True)
 class MisbehaviourIgnored(Event):
     """Misbehaviour went undisciplined for too long."""
+
+
+@dataclass(frozen=True, slots=True)
+class LearnedTrick(Event):
+    """The pet's discipline rose past ``trick``'s threshold, so it now knows it (SPEC §2.10)."""
+
+    trick: Trick
 
 
 # --- Action events ----------------------------------------------------------------------

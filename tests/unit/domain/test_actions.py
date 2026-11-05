@@ -10,6 +10,7 @@ from tama.domain.events import (
     Cleaned,
     Disciplined,
     GotSick,
+    LearnedTrick,
     LightsToggled,
     MedicineGiven,
     Played,
@@ -19,7 +20,7 @@ from tama.domain.events import (
 )
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Timers
-from tama.domain.stage import DeathCause, LifeStage
+from tama.domain.stage import DeathCause, LifeStage, Trick
 from tama.domain.stats import Stats
 from tests.factories import make_ctx, make_pet
 
@@ -310,7 +311,7 @@ def test_disciplining_misbehaviour_raises_discipline() -> None:
     assert not out.pet.misbehaving
     assert out.pet.stats.discipline == 35
     assert out.pet.timers.misbehaving == timedelta(0)
-    assert out.events == (Disciplined(pet.age, effective=True),)
+    assert out.events == (Disciplined(pet.age, effective=True), LearnedTrick(pet.age, Trick.WAVE))
 
 
 def test_unwarranted_discipline_upsets_the_pet() -> None:

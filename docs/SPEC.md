@@ -239,8 +239,10 @@ A disciplined pet learns tricks. They are for show: nothing in the game depends 
   drop the pet below a threshold, and it forgets that trick until it climbs back.
 - **Learning:** when discipline rises past a threshold, the pet shows the new trick at once
   and a toast says "Mochi learned to spin!" (`LearnedTrick(trick)`; it is a journal first the
-  first time ever).
-- **Showing off:** an idle pet that is awake, content (happiness ≥ 75), not sick or
+  first time ever, "Learned to spin"). An heir that starts with discipline (§2.8) learns its
+  trick the moment it grows into a child.
+- **Showing off:** an idle pet that is awake, content (happiness ≥ 75,
+  `Balance.show_off_happiness`), not sick or
   misbehaving and with the lights on now and then (every 1–3 min, chosen by the cosmetic UI
   RNG, like blinking) performs one of its tricks in place of a blink. With reduced motion it
   never does.
@@ -447,6 +449,8 @@ there), and with reduced motion the icon is steady instead of blinking.
   past can't be reconstructed. v7 adds `generation`, `ancestors` and `heir_hatched` (migrated
   to 1, none and false; a pet that already died of old age before v7 has no egg to hatch, so
   `heir_hatched` is true for it). v8 adds `last_visit` (migrated to empty: never visited).
+  v9 lets the journal say a trick was learned (§2.10); a v8 save needs no change, but the
+  version moves on so an older tama calls a v9 save newer rather than corrupt.
 - Autosave every 60 s, after every player action, on stage change, and on quit/SIGTERM/SIGHUP.
 - Atomic write + `save.json.bak` rotation. On a missing, corrupt or unreadable primary, try
   the backup (and tell the player it was recovered); if both fail, show `ErrorScreen`
