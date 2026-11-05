@@ -13,5 +13,10 @@ stat-bad = "$error"                 # below 25
 attention = "$warning"              # the "needs: ..." line
 accent = "$accent"                  # dialog borders and titles
 lights-off = { dark = "#000000", light = "#3a3a3a" }   # stage tint when the lights are off
+# The stage's background through the player's day (SPEC §5.1); lights-off still dims on top.
+stage-dawn = { dark = "#2b1f33", light = "#fbe4d8" }   # the hour after night ends: rosy
+stage-day = "$background"                              # plain, as the rest of the app
+stage-dusk = { dark = "#2c1c12", light = "#f7dcbc" }   # the hour before night: amber
+stage-night = { dark = "#0e1526", light = "#dbe1ef" }  # night: deep blue / pale blue-grey
 piece-player = { dark = "#ef5350", light = "#c62828" }  # the player's pieces in board games
 piece-pet = { dark = "#ffd54f", light = "#a66f00" }     # the pet's pieces in board games

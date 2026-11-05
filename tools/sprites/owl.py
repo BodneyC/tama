@@ -223,6 +223,7 @@ SPECIES = Species(
     elder_body=ELDER_BODY,
     looks=VARIANT_LOOKS,
     skin="u",  # feathers all round the back
+    front="bemrhcv",  # the face disc and speckled belly too
     limb="d",  # waves a wing
 )
 

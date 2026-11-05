@@ -437,11 +437,11 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 - [x] Domain: `daylight.py` — `phase(now, ctx)` → dawn / day / dusk / night from
       `Balance.night_start`/`night_end` and the context's time zone, incl. windows that cross
       midnight — test-first
-- [ ] UI colours `stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` in `assets/ui.toml`
+- [x] UI colours `stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` in `assets/ui.toml`
       (dark/light, theme refs allowed) and the `/add-sprite` UI colour list; the stage background
       follows the phase each tick; none under `NO_COLOR`; lights-off dimming still on top
 - [x] Journal: a trick learned for the first time is a first
-- [ ] Snapshots: a trick key frame per species; the stage at each phase on dark and light
+- [x] Snapshots: a trick key frame per species; the stage at each phase on dark and light
       themes; reviewed as images
 
 **Accept:** disciplining a child from 40 to 65 teaches it to spin (toast, then it performs it

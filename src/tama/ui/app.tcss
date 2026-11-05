@@ -61,6 +61,23 @@ PetStage {
   margin-top: 1;
 }
 
+/* The player's time of day (SPEC §5.1); never set under NO_COLOR. Before lights-off, which wins. */
+PetStage.-dawn {
+  background: $tama-stage-dawn;
+}
+
+PetStage.-day {
+  background: $tama-stage-day;
+}
+
+PetStage.-dusk {
+  background: $tama-stage-dusk;
+}
+
+PetStage.-night {
+  background: $tama-stage-night;
+}
+
 PetStage.lights-off {
   background: $tama-lights-off;
 }

@@ -70,6 +70,8 @@ pixels = """
 
 **UI colours** (`[ui]` keys, each becomes the CSS variable `$tama-<key>`): `header-background`,
 `header-text`, `stat-good`, `stat-warning`, `stat-bad`, `attention`, `accent`, `lights-off`,
+`stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` (the stage's background through the
+player's day; keep every species' sprites readable on all four, in both modes),
 and `piece-player`/`piece-pet` (the board-game pieces).
 Defaults are in `assets/ui.toml`; values there may be Textual theme variables (`$panel`,
 `$success`, ...) so they follow the active theme. A species overrides only what it wants.

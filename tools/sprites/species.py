@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from tools.sprites.kit import (
+    FRONT,
     Anim,
     Collection,
     Grid,
@@ -48,6 +49,7 @@ class Species:
         looks: Grid changes per variant for adults and elders (missing = unchanged, except
             ``chubby``, which defaults to the shared :func:`kit.chubby` widening).
         skin: The pixel its back is drawn in (seen when it spins round).
+        front: The pixels only seen from the front, drawn as ``skin`` from behind.
         limb: The pixel a raised paw or wing is drawn in (when it waves).
     """
 
@@ -67,6 +69,7 @@ class Species:
     elder_body: Mapping[str, Palette] = field(default_factory=dict)
     looks: Mapping[str, Look] = field(default_factory=dict)
     skin: str = "b"
+    front: str = FRONT
     limb: str = "b"
 
 
@@ -92,9 +95,9 @@ def build_species(species: Species) -> Collection:
         {"idle": Anim((place(egg, *baby_canvas),), 1), "wobble": wobble(egg, baby_canvas)},
     )
     add("default", "baby", living(Stage(species.baby, baby_canvas), sick=sick, hatch_from=egg))
-    skin, limb = species.skin, species.limb
+    skin, front, limb = species.skin, species.front, species.limb
     for stage, base in (("child", species.child), ("teen", species.teen)):
-        art = Stage(base, canvas_for(base), skin=skin, limb=limb)
+        art = Stage(base, canvas_for(base), skin=skin, front=front, limb=limb)
         add("default", stage, living(art, sick=sick))
     for variant in VARIANTS:
         look = species.looks.get(variant, chubby if variant == "chubby" else _unchanged)
@@ -105,7 +108,7 @@ def build_species(species: Species) -> Collection:
             drawn = look(base)
             # A variant without its own colours looks like the default one (e.g. faded elders).
             overrides = body.get(variant, body.get("default", {}))
-            art = Stage(drawn, canvas_for(drawn), overrides, skin=skin, limb=limb)
+            art = Stage(drawn, canvas_for(drawn), overrides, skin=skin, front=front, limb=limb)
             add(variant, stage, living(art, sick=sick))
     grave = species.gravestone
     add("default", "dead", {"idle": Anim((place(grave, *canvas_for(grave)),), 1)})

@@ -211,9 +211,13 @@ def narrow(g: Grid, by: int = 2) -> Grid:
     return paste(("." * width,) * len(g), 0, by, rows)
 
 
-def back_view(g: Grid, skin: str = "b") -> Grid:
-    """From behind: the face (eyes, mouth, cheeks, highlight), belly and body become ``skin``."""
-    return tuple("".join(skin if p in "bemrhc" else p for p in row) for row in g)
+FRONT = "bemrhc"
+"""Pixels seen only from the front by default: body, eyes, mouth, cheeks, highlight, belly."""
+
+
+def back_view(g: Grid, skin: str = "b", front: str = FRONT) -> Grid:
+    """From behind: every ``front`` pixel (face, belly, ...) becomes ``skin``."""
+    return tuple("".join(skin if p in front else p for p in row) for row in g)
 
 
 def eye_top(g: Grid) -> int:
@@ -291,6 +295,8 @@ class Stage:
     overrides: Palette = field(default_factory=dict)
     skin: str = "b"
     """What the pet looks like from behind (a trick spins it round)."""
+    front: str = FRONT
+    """Pixels hidden (drawn as ``skin``) when it is seen from behind."""
     limb: str = "b"
     """What a raised paw (or wing) is drawn in."""
 
@@ -386,7 +392,7 @@ def tricks(stage: Stage) -> dict[str, Anim]:
     wave = tuple(
         paw_raised(c(happy), on_canvas, high=high, limb=stage.limb) for high in (True, False)
     )
-    back = back_view(base, stage.skin)
+    back = back_view(base, stage.skin, stage.front)
 
     def bow(depth: int) -> Grid:
         return c(bowed(closed, eyes, depth))

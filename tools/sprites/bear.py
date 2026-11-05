@@ -221,6 +221,7 @@ SPECIES = Species(
     adult_body=ADULT_BODY,
     elder_body=ELDER_BODY,
     looks=VARIANT_LOOKS,
+    front="bemrhcniyw",  # the nose, bow tie and an elder's white muzzle too
 )
 
 

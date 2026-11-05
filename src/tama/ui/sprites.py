@@ -126,6 +126,10 @@ UI_KEYS = frozenset(
         "attention",
         "accent",
         "lights-off",
+        "stage-dawn",
+        "stage-day",
+        "stage-dusk",
+        "stage-night",
         "piece-player",
         "piece-pet",
     }

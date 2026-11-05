@@ -42,7 +42,7 @@ src/tama/
 ├── errors.py              # TamaError hierarchy
 ├── domain/
 │   ├── stats.py           # Stat enum, Stats value object, clamp helper
-│   ├── stage.py           # LifeStage, Variant, DeathCause enums
+│   ├── stage.py           # LifeStage, Variant, DeathCause, Trick enums
 │   ├── pet.py             # Pet (frozen dataclass) incl. Drift/Timers; new_egg()
 │   ├── balance.py         # Balance: all tunable rates/thresholds
 │   ├── context.py         # Context: injected RNG, Balance and local time zone
@@ -54,8 +54,8 @@ src/tama/
 │   ├── journal.py         # Journal + record(journal, events, before) (ADR 0009)
 │   ├── lineage.py         # heir_name, hatch_heir, is_heir_of, founder (ADR 0010)
 │   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)
-│   ├── tricks.py          # known_tricks from discipline (SPEC §2.10)  [M6.13]
-│   ├── daylight.py        # dawn/day/dusk/night phase from local time (SPEC §5.1)  [M6.13]
+│   ├── tricks.py          # known_tricks, learned_tricks, can_show_off (SPEC §2.10)
+│   ├── daylight.py        # is_night; dawn/day/dusk/night phase from local time (SPEC §5.1)
 │   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
 │   ├── attention.py       # attention_reasons(pet, balance) (SPEC §4)
 │   ├── minigames/         # pure game state machines (ADR 0006)

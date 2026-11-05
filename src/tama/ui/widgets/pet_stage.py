@@ -8,6 +8,7 @@ from textual.containers import Container
 from textual.widgets import Static
 
 from tama.domain.balance import DEFAULT_BALANCE, Balance
+from tama.domain.daylight import DayPhase
 from tama.domain.events import Event
 from tama.domain.pet import Pet
 from tama.domain.tricks import can_show_off, known_tricks
@@ -29,7 +30,11 @@ def overlay_names(pet: Pet) -> list[str]:
 
 
 class PetStage(Container):
-    """Centred, animated pet and indicators; dimmed when the lights are off or on holiday."""
+    """Centred, animated pet and indicators; dimmed when the lights are off or on holiday.
+
+    Its background follows the player's time of day (the ``-dawn``, ``-day``, ``-dusk`` and
+    ``-night`` classes).
+    """
 
     def __init__(self, options: ViewOptions | None = None) -> None:
         """Draw with the given view options."""
@@ -43,11 +48,16 @@ class PetStage(Container):
         yield Static(id="overlay", markup=False)
 
     def show(
-        self, pet: Pet, events: Iterable[Event] = (), balance: Balance = DEFAULT_BALANCE
+        self,
+        pet: Pet,
+        events: Iterable[Event] = (),
+        balance: Balance = DEFAULT_BALANCE,
+        day: DayPhase | None = None,
     ) -> None:
         """Update the stage for ``pet``, reacting to ``events`` that just happened.
 
-        ``balance`` decides which tricks a content pet knows to show off (SPEC §2.10).
+        ``balance`` decides which tricks a content pet knows to show off (SPEC §2.10). ``day``
+        is the player's time of day, which tints the background, except in monochrome.
         """
         view = self.query_one(PetView)
         view.show(pet, known_tricks(pet, balance) if can_show_off(pet, balance) else ())
@@ -55,3 +65,6 @@ class PetStage(Container):
         self.query_one("#overlay", Static).update(overlay_content(overlay_names(pet), view.look))
         self.set_class(not pet.lights_on, "lights-off")
         self.set_class(pet.on_holiday, "on-holiday")
+        tinted = None if self._options.monochrome else day
+        for each in DayPhase:
+            self.set_class(each is tinted, f"-{each}")

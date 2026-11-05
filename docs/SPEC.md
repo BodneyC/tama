@@ -389,7 +389,7 @@ there), and with reduced motion the icon is steady instead of blinking.
 - **Stage:** the animated pet, poops, sickness skull/bubbles, Zzz when asleep; dimmed when
   lights off (via Textual CSS class on the stage). Its background follows the player's local
   time of day: **dawn** (the hour after `night_end`), **day**, **dusk** (the hour before
-  `night_start`) and **night**, using the UI colours `stage-dawn`, `stage-day`, `stage-dusk` and
+  `night_start`; both an hour long, `Balance.twilight`) and **night**, using the UI colours `stage-dawn`, `stage-day`, `stage-dusk` and
   `stage-night` (`assets/ui.toml`, dark and light; species may override). The phase is a pure
   function of local time and the night window, re-checked every tick; lights-off dimming
   applies on top, and with `NO_COLOR` there is no tint. It shows the player's time, so it

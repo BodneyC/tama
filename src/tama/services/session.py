@@ -13,6 +13,7 @@ from typing import Self
 from tama.domain.actions import apply, apply_game_outcome
 from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.context import Context
+from tama.domain.daylight import DayPhase, phase
 from tama.domain.events import Action, Event, Outcome
 from tama.domain.holiday import pause, resume
 from tama.domain.journal import Journal, record
@@ -199,6 +200,13 @@ class GameSession:
     def balance(self) -> Balance:
         """The game's tunable constants."""
         return self._settings.balance
+
+    def day_phase(self) -> DayPhase:
+        """The player's time of day now, for the stage's background (SPEC §5.1).
+
+        It follows the wall clock, not the pet, so it moves on for a pet on holiday too.
+        """
+        return phase(self._clock.now(), self._ctx)
 
     def tick(self) -> CatchUp:
         """Bring the pet up to the current time, autosaving if due."""

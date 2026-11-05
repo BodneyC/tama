@@ -190,7 +190,8 @@ class MainScreen(Screen[None]):
     def _draw(self, events: Iterable[Event] = ()) -> None:
         pet = self.session.pet
         self.query_one(PetHeader).show(pet, self.session.balance, self.session.tz)
-        self.query_one(PetStage).show(pet, events, self.session.balance)
+        stage = self.query_one(PetStage)
+        stage.show(pet, events, self.session.balance, self.session.day_phase())
         calls = attention_reasons(pet, self.session.balance)
         if self._bell and new_attention_calls(self._calls, calls):
             self.app.bell()

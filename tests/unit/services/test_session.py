@@ -9,6 +9,7 @@ import pytest
 
 from tama.domain.balance import DEFAULT_BALANCE
 from tama.domain.context import Context
+from tama.domain.daylight import DayPhase
 from tama.domain.events import (
     Action,
     Ate,
@@ -48,6 +49,21 @@ def clock() -> FakeClock:
 def saved(seed: int = 0, **pet_overrides: Any) -> InMemorySaveRepository:
     pet = make_pet(**pet_overrides)
     return InMemorySaveRepository(SaveGame(pet, Random(seed).getstate()))
+
+
+# --- Time of day ------------------------------------------------------------------------------
+
+
+def test_day_phase_follows_the_players_clock_not_the_pet(clock: FakeClock) -> None:
+    plus_two = SessionSettings(tz=timezone(timedelta(hours=2)))
+    loaded = GameSession.load(repo=saved(paused_since=FIXED_NOW), clock=clock, settings=plus_two)
+    session = loaded.session
+
+    assert session.day_phase() is DayPhase.DAY  # midday UTC, 14:00 local
+    clock.set(FIXED_NOW.replace(hour=19, minute=30))  # 21:30 local
+    assert session.day_phase() is DayPhase.DUSK
+    clock.advance(timedelta(hours=1))
+    assert session.day_phase() is DayPhase.NIGHT
 
 
 # --- Creating ---------------------------------------------------------------------------------
