@@ -92,6 +92,11 @@ class PetLock:
         with os.fdopen(fd, "w", encoding="utf-8") as lock_file:
             lock_file.write(str(self.pid))
 
+    def held_elsewhere(self) -> bool:
+        """Whether another running process holds the lock (without taking it)."""
+        owner = self._owner()
+        return owner is not None and owner != self.pid and self._alive(owner)
+
     def release(self) -> None:
         """Give the lock up, if this process holds it."""
         if self._owner() == self.pid:

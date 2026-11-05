@@ -12,10 +12,18 @@ from pathlib import Path
 
 from tama.domain.balance import Balance
 from tama.domain.pet import DEFAULT_SPECIES
-from tama.errors import InvalidArgumentError, NoEggError, RosterFullError
+from tama.domain.visit import visit_refusals
+from tama.errors import (
+    InvalidArgumentError,
+    NoEggError,
+    RosterFullError,
+    SaveError,
+    VisitRefusedError,
+)
 from tama.infra.clock import Clock
 from tama.persistence.lock import PetLock
 from tama.persistence.roster import PetFile, PetRoster
+from tama.services.describe import visit_refusal_text
 from tama.services.roster import (
     PetSummary,
     can_add_pet,
@@ -24,6 +32,7 @@ from tama.services.roster import (
     pet_summaries,
 )
 from tama.services.session import GameSession, LoadedSession, SessionSettings
+from tama.services.visit import VisitCandidate, VisitSession, visit_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +151,46 @@ class PetLibrary:
             yield GameSession.load(
                 repo=file.repo(), clock=self._clock, settings=self._settings
             ).session
+
+    def visit_candidates(self) -> list[VisitCandidate]:
+        """Every pet but the open one, with why it can't come round (SPEC §3.2)."""
+        return visit_candidates(
+            self.summaries(),
+            host=self.open_file,
+            balance=self.balance,
+            locked_elsewhere=lambda file: PetLock(file.path).held_elsewhere(),
+        )
+
+    def borrow_for_visit(self, file: PetFile, host: GameSession) -> VisitSession:
+        """Lock and load ``file``'s pet (catching up) to visit ``host``, and start the visit.
+
+        The guest stays locked until ``VisitSession.close``, which every way out of a visit
+        calls (ADR 0011). Nothing is saved if the visit can't start.
+
+        Raises:
+            InvalidArgumentError: If ``file`` is the open pet itself.
+            PetLockedError: If it is open in another tama.
+            SaveError: If it can't be loaded.
+            VisitRefusedError: If either pet can't visit right now.
+        """
+        if file == self.open_file:
+            raise InvalidArgumentError(f"{host.pet.name} can't visit itself")
+        refusals = visit_refusals(host.pet, self.balance)
+        if refusals:
+            reason = visit_refusal_text(refusals[0])
+            raise VisitRefusedError(f"{host.pet.name} can't have a visit: {reason}")
+        lock = PetLock(file.path)
+        lock.acquire()
+        try:
+            guest = GameSession.load(
+                repo=file.repo(), clock=self._clock, settings=self._settings
+            ).session
+            visit = VisitSession(host, guest, release=lock.release)
+            visit.start()
+        except (SaveError, VisitRefusedError):
+            lock.release()
+            raise
+        return visit
 
     def set_aside(self) -> list[Path]:
         """Move the open, unreadable pet's files aside (``.corrupt-<time>``) and close it.

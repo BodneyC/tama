@@ -17,11 +17,12 @@ from tama.domain.events import Action, Event, Outcome
 from tama.domain.holiday import pause, resume
 from tama.domain.journal import Journal, record
 from tama.domain.lineage import hatch_heir
-from tama.domain.minigames import GameKind, GameResult
+from tama.domain.minigames import GameKind, GameResult, Side
 from tama.domain.minigames.left_right import Direction, LeftRightGame
 from tama.domain.minigames.opponent import BoardGame, pet_move
 from tama.domain.pet import DEFAULT_SPECIES, ZERO, Pet, new_egg
 from tama.domain.simulation import advance, skip_to
+from tama.domain.visit import start_visit
 from tama.errors import SaveWriteError
 from tama.infra.clock import Clock
 from tama.infra.config import Config
@@ -216,9 +217,30 @@ class GameSession:
         """
         return self._commit(apply(self._pet, action, self._ctx))
 
-    def finish_game(self, result: GameResult, game: GameKind) -> Outcome:
-        """Apply a finished mini-game's result, saving if it was accepted."""
-        return self._commit(apply_game_outcome(self._pet, result, game=game, ctx=self._ctx))
+    def finish_game(
+        self,
+        result: GameResult,
+        game: GameKind,
+        *,
+        side: Side = Side.PLAYER,
+        friend: str | None = None,
+    ) -> Outcome:
+        """Apply a finished mini-game's result, saving if it was accepted.
+
+        In a game against another pet, ``friend``, this pet played ``side`` (SPEC §3.2).
+        """
+        outcome = apply_game_outcome(
+            self._pet, result, game=game, ctx=self._ctx, side=side, friend=friend
+        )
+        return self._commit(outcome)
+
+    def start_visit(self, friend: str) -> Outcome:
+        """Meet ``friend`` (SPEC §3.2), saving at once.
+
+        Raises:
+            VisitRefusedError: If this pet can't visit right now.
+        """
+        return self._commit(start_visit(self._pet, friend, self._settings.balance))
 
     def hatch_heir(self, name: str) -> tuple[Pet, Random]:
         """Hatch the egg this (dead) pet left: the heir called ``name``, and its own RNG.
@@ -268,9 +290,10 @@ class GameSession:
         """Play a mini-game round using the session's RNG (so it is saved and reproducible)."""
         return game.guess(direction, self._ctx.rng)
 
-    def pet_move[G: BoardGame](self, game: G) -> G:
-        """Make the pet's move in a board game, using the session's RNG like ``guess``."""
-        return game.play(pet_move(game, self._pet.stage, self._ctx.balance, self._ctx.rng))
+    def pet_move[G: BoardGame](self, game: G, *, side: Side = Side.PET) -> G:
+        """Make the pet's move (as ``side``) in a board game, using the session's RNG."""
+        move = pet_move(game, self._pet.stage, self._ctx.balance, self._ctx.rng, side=side)
+        return game.play(move)
 
     def save(self) -> None:
         """Save now.

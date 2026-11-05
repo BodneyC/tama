@@ -79,3 +79,16 @@ def test_this_process_is_alive() -> None:
 
 def test_a_finished_process_is_not_alive() -> None:
     assert not process_alive(2**22 + 12345)  # above Linux's pid_max default; never in use
+
+
+def test_whether_another_tama_holds_a_lock_can_be_checked_without_taking_it(
+    tmp_path: Path,
+) -> None:
+    assert not lock(tmp_path).held_elsewhere()  # nobody holds it
+
+    lock(tmp_path, OTHER).acquire()
+
+    assert lock(tmp_path).held_elsewhere()
+    assert not lock(tmp_path, others_alive=False).held_elsewhere()  # a stale lock
+    assert not lock(tmp_path, OTHER).held_elsewhere()  # it's ours
+    assert (tmp_path / "mochi.json.lock").read_text(encoding="utf-8") == str(OTHER)
