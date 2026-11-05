@@ -74,6 +74,8 @@ class Balance:
     sleepy_energy: int = 20
     night_start: time = time(22)
     night_end: time = time(7)
+    # Dawn is this long after night_end and dusk this long before night_start (SPEC §5.1).
+    twilight: timedelta = HOUR
     # Waking the pet early (SPEC §2.4): it stays up a while, grumpy and more tired.
     wake_happiness: int = -20
     wake_energy: int = -20
@@ -160,6 +162,10 @@ class Balance:
                 raise InvalidArgumentError(
                     f"{stage.value} weight band must be min_weight <= low <= high, got {low}-{high}"
                 )
+        if not timedelta(0) < self.twilight <= HOUR * 12:
+            raise InvalidArgumentError(
+                f"twilight must be between 0 and 12 hours, got {self.twilight}"
+            )
         tricks = [trick for trick, _ in self.trick_thresholds]
         if len(set(tricks)) != len(tricks):
             raise InvalidArgumentError(f"each trick may have one threshold only once, got {tricks}")

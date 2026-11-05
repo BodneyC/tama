@@ -1,5 +1,5 @@
 from dataclasses import replace
-from datetime import UTC, datetime, time, timedelta, timezone, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 from fractions import Fraction
 from typing import Any
 
@@ -23,7 +23,7 @@ from tama.domain.events import (
     WokeUp,
 )
 from tama.domain.pet import Pet, Timers
-from tama.domain.simulation import advance, is_night, sickness_chance, skip_to
+from tama.domain.simulation import advance, sickness_chance, skip_to
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
 from tama.domain.weight import WeightStatus
@@ -279,31 +279,6 @@ def test_lights_off_while_asleep_is_fine() -> None:
 
 
 # --- Sleep --------------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("hour", "night"),
-    [(21, False), (22, True), (3, True), (6, True), (7, False), (12, False)],
-)
-def test_is_night_with_window_wrapping_midnight(hour: int, night: bool) -> None:
-    when = datetime(2026, 1, 1, hour, tzinfo=UTC)
-
-    assert is_night(when, make_ctx()) is night
-
-
-@pytest.mark.parametrize(("hour", "night"), [(0, False), (1, True), (4, True), (5, False)])
-def test_is_night_with_window_within_a_day(hour: int, night: bool) -> None:
-    ctx = make_ctx(balance=Balance(night_start=time(1), night_end=time(5)))
-
-    assert is_night(datetime(2026, 1, 1, hour, tzinfo=UTC), ctx) is night
-
-
-def test_is_night_uses_local_time_zone() -> None:
-    plus_two = timezone(timedelta(hours=2))
-    utc_evening = datetime(2026, 1, 1, 20, 30, tzinfo=UTC)  # 22:30 at UTC+2
-
-    assert is_night(utc_evening, make_ctx(tz=plus_two))
-    assert not is_night(utc_evening, make_ctx(tz=UTC))
 
 
 def test_pet_falls_asleep_at_night() -> None:

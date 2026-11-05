@@ -15,6 +15,7 @@ from fractions import Fraction
 from tama.domain import lifecycle
 from tama.domain.balance import HOUR, Balance
 from tama.domain.context import Context
+from tama.domain.daylight import is_night
 from tama.domain.events import (
     CareMistake,
     Event,
@@ -79,15 +80,6 @@ def skip_to(pet: Pet, when: datetime) -> Pet:
         InvalidArgumentError: If ``when`` is naive.
     """
     return replace(pet, updated_at=when)
-
-
-def is_night(when: datetime, ctx: Context) -> bool:
-    """Whether ``when`` falls in the night window, in the player's time zone."""
-    local = when.astimezone(ctx.tz).time()
-    start, end = ctx.balance.night_start, ctx.balance.night_end
-    if start <= end:
-        return start <= local < end
-    return local >= start or local < end
 
 
 def sickness_chance(pet: Pet, balance: Balance) -> float:

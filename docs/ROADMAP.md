@@ -434,7 +434,7 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 - [ ] UI: `PetView` swaps the odd blink for a known trick when the pet is content (UI RNG,
       every 1–3 min), never with reduced motion; a new trick plays at once with a toast;
       status panel lists known tricks
-- [ ] Domain: `daylight.py` — `phase(now, ctx)` → dawn / day / dusk / night from
+- [x] Domain: `daylight.py` — `phase(now, ctx)` → dawn / day / dusk / night from
       `Balance.night_start`/`night_end` and the context's time zone, incl. windows that cross
       midnight — test-first
 - [ ] UI colours `stage-dawn`, `stage-day`, `stage-dusk`, `stage-night` in `assets/ui.toml`
