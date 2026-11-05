@@ -463,4 +463,13 @@ night window, and is readable in both themes.
 - [x] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out
       macOS matrix entry in `.github/workflows/ci.yml`)
 - [x] Build wheel (`uv build`) and smoke-test the installed `tama` entry point in CI
-- [ ] Final review against SPEC; open issues for anything deferred
+- [x] Final review against SPEC; open issues for anything deferred
+
+Deviations: the README shows static SVG screenshots, retaken by `uv run python -m
+tools.screenshots`, rather than a GIF (no `vhs`/`asciinema` here; a recording was not wanted
+as an issue). Install is from git (`uv tool install git+…`, `pipx install git+…`) until a
+release workflow exists. Smoke-testing the wheel on Windows found that redirected output
+crashed on characters the legacy code page lacks; the CLI now replaces them.
+
+Deferred (issues): visit stage tint and tricks (#2), a release workflow and PyPI (#3),
+friendlier config errors (#4).
