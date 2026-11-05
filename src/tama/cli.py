@@ -4,6 +4,8 @@ By default tama keeps several pets in the user data directory (SPEC §6.1). ``--
 (or ``TAMA_SAVE_PATH``) plays exactly one save file instead, as tama always used to.
 """
 
+import io
+import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -350,6 +352,18 @@ def journal(
         raise typer.BadParameter(str(exc), param_hint="--pet") from exc
 
 
+def tolerate_unencodable(stream: object) -> None:
+    """Print ``?`` for characters ``stream``'s encoding lacks, rather than crash.
+
+    A Windows pipe or redirect uses the legacy code page, which has no ``→`` or ``⚠``; losing a
+    glyph in ``tama --status > file`` beats a ``UnicodeEncodeError``.
+    """
+    if isinstance(stream, io.TextIOWrapper):
+        stream.reconfigure(errors="replace")
+
+
 def main() -> None:
     """Run the CLI."""
+    for stream in (sys.stdout, sys.stderr):
+        tolerate_unencodable(stream)
     app()
