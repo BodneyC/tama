@@ -59,9 +59,15 @@ class PetVsPetScreen(ModalScreen[GameResult | None]):
         view: ViewOptions | None = None,
         *,
         game: PetGame | None = None,
+        autoplay: bool = True,
     ) -> None:
-        """Start ``kind`` between ``visit``'s pets (or carry on from ``game``, for tests)."""
+        """Start ``kind`` between ``visit``'s pets.
+
+        ``game`` carries on from a position, and without ``autoplay`` moves come only from
+        ``step`` and ``Space`` (both for snapshots of a game in progress).
+        """
         super().__init__()
+        self._autoplay = autoplay
         self.kind = kind
         self.game: PetGame = game or new_game(kind)
         self._visit = visit
@@ -92,6 +98,8 @@ class PetVsPetScreen(ModalScreen[GameResult | None]):
         self.query_one("#guest-pet", PetView).show(self._visit.guest.pet)
         if self.game.result is not None:
             self._finish()
+        elif not self._autoplay:
+            self.redraw()
         elif not self.animated:
             self.action_skip()
         else:
