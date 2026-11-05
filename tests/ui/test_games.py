@@ -251,8 +251,13 @@ async def test_four_in_a_row_thinks_and_drops_with_motion(monkeypatch: pytest.Mo
 
         assert sum(len(column) for column in screen.game.columns) == 2
         assert screen.ghost is None
-        idle = load_sprite("tama", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.IDLE)
-        assert screen.query_one(PetView).current == idle
+        # Back to idle; with motion on it may be mid-blink (cosmetic, unseeded, every 3-7 s),
+        # which a slow, loaded machine can reach while waiting for the pet's move.
+        resting = [
+            load_sprite("tama", Variant.DEFAULT, LifeStage.CHILD, key)
+            for key in (AnimationKey.IDLE, AnimationKey.BLINK)
+        ]
+        assert any(screen.query_one(PetView).current is sprite for sprite in resting)
 
 
 async def test_reduced_motion_answers_at_once() -> None:

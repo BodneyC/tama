@@ -17,6 +17,7 @@ from tama.persistence.lock import PetLock
 from tama.persistence.roster import PetFile
 from tama.services.library import PetLibrary
 from tama.ui.app import TamaApp
+from tama.ui.screens.games import pet_vs_pet
 from tama.ui.screens.games.pet_vs_pet import PetVsPetScreen
 from tama.ui.screens.games.select import GameSelectScreen
 from tama.ui.screens.main import MainScreen
@@ -247,7 +248,11 @@ async def test_a_single_save_file_has_no_one_to_invite() -> None:
         assert NO_OTHER_PETS in notes
 
 
-async def test_a_watched_game_moves_by_itself_and_space_skips_to_the_end(tmp_path: Path) -> None:
+async def test_a_watched_game_moves_by_itself_and_space_skips_to_the_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The test steps the game itself; a real 0.8 s timer could move first on a slow machine.
+    monkeypatch.setattr(pet_vs_pet, "MOVE_SECONDS", 60.0)
     library, files = library_with(tmp_path, pet("Mochi"), pet("Pip"))
     app = make_library_app(library, open_pet=files[0], view=ViewOptions())
     async with app.run_test() as pilot:
