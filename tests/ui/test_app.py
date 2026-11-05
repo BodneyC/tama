@@ -144,6 +144,14 @@ async def test_status_shows_the_species() -> None:
         assert "Species    tama" in text(app, "#status-body")
 
 
+async def test_status_lists_the_tricks_it_knows() -> None:
+    app = make_app(repo_with(stats=Stats(discipline=60)))
+    async with app.run_test() as pilot:
+        await pilot.press("s")
+
+        assert "Tricks     wave, spin" in text(app, "#status-body")
+
+
 async def test_start_new_hatches_even_when_a_save_exists() -> None:
     app = make_app(repo_with(), start_new=True)
     async with app.run_test():

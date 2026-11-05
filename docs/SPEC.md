@@ -238,7 +238,7 @@ A disciplined pet learns tricks. They are for show: nothing in the game depends 
   (`Balance.trick_thresholds`), from CHILD stage on. Discipline lost to ignored tantrums can
   drop the pet below a threshold, and it forgets that trick until it climbs back.
 - **Learning:** when discipline rises past a threshold, the pet shows the new trick at once
-  and a toast says "Mochi learned to spin!" (`LearnedTrick(trick)`; it is a journal first the
+  and a toast titled with its name says "Learned to spin!" (`LearnedTrick(trick)`; it is a journal first the
   first time ever, "Learned to spin"). An heir that starts with discipline (§2.8) learns its
   trick the moment it grows into a child.
 - **Showing off:** an idle pet that is awake, content (happiness ≥ 75,
@@ -246,7 +246,8 @@ A disciplined pet learns tricks. They are for show: nothing in the game depends 
   misbehaving and with the lights on now and then (every 1–3 min, chosen by the cosmetic UI
   RNG, like blinking) performs one of its tricks in place of a blink. With reduced motion it
   never does.
-- **Status panel:** lists the tricks it knows ("Tricks: wave, spin").
+- **Status panel:** lists the tricks it knows ("Tricks     wave, spin"; "none yet" from CHILD
+  on, no line before). The panel is titled with the pet's name so an heir's still fits 60×20.
 
 ## 3. Actions (player verbs)
 

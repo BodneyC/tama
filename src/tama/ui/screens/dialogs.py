@@ -15,7 +15,7 @@ from tama.domain.pet import Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
 from tama.domain.weight import WeightStatus, weight_status
-from tama.services.describe import format_age, lineage_text
+from tama.services.describe import format_age, lineage_text, tricks_text
 from tama.ui.sprites import load_overlay
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
@@ -69,7 +69,7 @@ def weight_content(pet: Pet, balance: Balance) -> Content:
 
 
 def status_text(pet: Pet, balance: Balance) -> Content:
-    """The body of the status dialog."""
+    """The body of the status dialog (its title is the pet's name)."""
     bars = [
         f"{label:<11}{stat_bar(pet.stats[stat])} {pet.stats[stat]:>3}"
         for stat, label in _STAT_LABELS.items()
@@ -83,10 +83,13 @@ def status_text(pet: Pet, balance: Balance) -> Content:
     if lineage is not None:
         before_weight.append(f"{'Family':<11}{lineage}")
     lines = [
-        *map(Content, [pet.name, "", *bars, "", *before_weight]),
+        *map(Content, [*bars, "", *before_weight]),
         Content(f"{'Weight':<11}") + weight_content(pet, balance),
         Content(f"{'Mistakes':<11}{pet.care_mistakes}"),
     ]
+    tricks = tricks_text(pet, balance)
+    if tricks is not None:
+        lines.append(Content(f"{'Tricks':<11}{tricks}"))
     return Content("\n").join(lines)
 
 
@@ -124,7 +127,8 @@ class StatusScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         """Build the dialog."""
         with Vertical(classes="dialog"):
-            yield Static("Status", classes="dialog-title")
+            # Titled with the name rather than "Status", so an heir's fits 60x20 (SPEC §5.1).
+            yield Static(self._pet.name, classes="dialog-title", markup=False)
             yield Static(status_text(self._pet, self._balance), id="status-body")
 
 

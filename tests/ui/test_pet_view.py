@@ -1,5 +1,6 @@
 """PetView playback, driven step by step."""
 
+import itertools
 from datetime import timedelta
 from random import Random
 from typing import ClassVar, override
@@ -10,11 +11,27 @@ from textual.binding import BindingType
 from textual.containers import Container
 
 from tama.domain.animation import AnimationKey
-from tama.domain.events import Action, Ate, Event, Evolved, FellAsleep, RefusalReason, Refused
+from tama.domain.events import (
+    Action,
+    Ate,
+    Event,
+    Evolved,
+    FellAsleep,
+    LearnedTrick,
+    RefusalReason,
+    Refused,
+)
 from tama.domain.pet import DEFAULT_SPECIES
-from tama.domain.stage import LifeStage, Variant
+from tama.domain.stage import LifeStage, Trick, Variant
+from tama.domain.stats import Stats
 from tama.ui.sprites import Sprite, load_sprite
-from tama.ui.widgets.pet_view import PetView, ViewOptions, steps_per_frame
+from tama.ui.widgets.pet_view import (
+    BLINK_EVERY,
+    TRICK_EVERY,
+    PetView,
+    ViewOptions,
+    steps_per_frame,
+)
 from tests.factories import make_pet
 
 AGE = timedelta(hours=1)
@@ -178,6 +195,69 @@ async def test_idle_pet_blinks_now_and_then() -> None:
         assert view.reaction is sprite(LifeStage.CHILD, AnimationKey.BLINK)
 
 
+async def test_a_pet_showing_off_swaps_the_odd_blink_for_a_trick() -> None:
+    view = still_view()
+    async with Host(view).run_test():
+        view.show(CHILD, tricks=(Trick.WAVE, Trick.SPIN))
+        view._next_blink = view._next_trick = 1
+
+        view.step()
+
+        known = (AnimationKey.TRICK_WAVE, AnimationKey.TRICK_SPIN)
+        assert any(view.reaction is sprite(LifeStage.CHILD, key) for key in known)
+        assert view._next_trick >= TRICK_EVERY[0]
+
+
+async def test_tricks_come_only_every_few_minutes() -> None:
+    view = still_view()
+    async with Host(view).run_test():
+        view.show(CHILD, tricks=(Trick.WAVE,))
+        view._next_blink = 1
+        view._next_trick = TRICK_EVERY[0]
+
+        view.step()
+
+        assert view.reaction is sprite(LifeStage.CHILD, AnimationKey.BLINK)
+
+
+async def test_a_pet_not_showing_off_just_blinks() -> None:
+    view = still_view()
+    async with Host(view).run_test():
+        view.show(CHILD)
+        view._next_blink = view._next_trick = 1
+
+        view.step()
+
+        assert view.reaction is sprite(LifeStage.CHILD, AnimationKey.BLINK)
+
+
+async def test_a_trick_comes_every_one_to_three_minutes_of_idling() -> None:
+    view = still_view()
+    async with Host(view).run_test():
+        view.show(CHILD, tricks=(Trick.BOW,))
+        bow = sprite(LifeStage.CHILD, AnimationKey.TRICK_BOW)
+        started: list[int] = []
+
+        for step in range(10 * 60 * 10):  # ten minutes of steps
+            before = view.reaction
+            view.step()
+            if view.reaction is bow and before is not bow:
+                started.append(step)
+
+        gaps = [b - a for a, b in itertools.pairwise(started)]
+        assert len(started) >= 3
+        assert all(TRICK_EVERY[0] <= gap <= TRICK_EVERY[1] + BLINK_EVERY[1] + 100 for gap in gaps)
+
+
+async def test_a_newly_learned_trick_plays_at_once() -> None:
+    view = still_view()
+    async with Host(view).run_test():
+        view.show(make_pet(stats=Stats(discipline=65)))
+        view.react([LearnedTrick(AGE, Trick.SPIN)])
+
+        assert view.current is sprite(LifeStage.CHILD, AnimationKey.TRICK_SPIN)
+
+
 async def test_sleeping_pet_does_not_fidget() -> None:
     view = still_view()
     async with Host(view).run_test():
@@ -209,8 +289,8 @@ async def test_idle_pet_wanders_within_the_stage() -> None:
 async def test_reduced_motion_shows_still_key_frames_only() -> None:
     view = PetView(ViewOptions(reduced_motion=True), rng=Random(0))
     async with Host(view).run_test() as pilot:
-        view.show(CHILD)
-        view.react([Ate(AGE, Action.MEAL)])
+        view.show(CHILD, tricks=(Trick.WAVE,))
+        view.react([Ate(AGE, Action.MEAL), LearnedTrick(AGE, Trick.WAVE)])
         await pilot.pause(0.3)
 
         assert view.still

@@ -431,7 +431,7 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 - [x] Sprites: one-shot `trick_wave`, `trick_spin`, `trick_dance`, `trick_bow` for every
       species, variant and stage from child to elder (recipes in `tools/sprites/kit.py`);
       `test_sprites.py` requires them; `/add-sprite` lists them
-- [ ] UI: `PetView` swaps the odd blink for a known trick when the pet is content (UI RNG,
+- [x] UI: `PetView` swaps the odd blink for a known trick when the pet is content (UI RNG,
       every 1–3 min), never with reduced motion; a new trick plays at once with a toast;
       status panel lists known tricks
 - [x] Domain: `daylight.py` — `phase(now, ctx)` → dawn / day / dusk / night from

@@ -19,6 +19,7 @@ from tama.domain.events import (
     Evolved,
     FellAsleep,
     GotSick,
+    LearnedTrick,
     Misbehaved,
     Outcome,
     PauseRefused,
@@ -54,6 +55,7 @@ NOTABLE_EVENTS = (
     FellAsleep,
     WokeUp,
     WeightLeftBand,
+    LearnedTrick,  # an heir growing into a child
 )
 """Things worth a toast when they happen by themselves (the rest is visible on screen)."""
 
@@ -188,7 +190,7 @@ class MainScreen(Screen[None]):
     def _draw(self, events: Iterable[Event] = ()) -> None:
         pet = self.session.pet
         self.query_one(PetHeader).show(pet, self.session.balance, self.session.tz)
-        self.query_one(PetStage).show(pet, events)
+        self.query_one(PetStage).show(pet, events, self.session.balance)
         calls = attention_reasons(pet, self.session.balance)
         if self._bell and new_attention_calls(self._calls, calls):
             self.app.bell()

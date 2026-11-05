@@ -24,6 +24,7 @@ from tama.domain.events import (
     GotSick,
     HeirHatched,
     LaidEgg,
+    LearnedTrick,
     LightsToggled,
     MedicineGiven,
     Misbehaved,
@@ -48,6 +49,7 @@ from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
+from tama.domain.tricks import known_tricks
 from tama.domain.visit import VisitRefusal
 from tama.domain.weight import WeightStatus
 
@@ -167,6 +169,8 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return "Already awake"
         case Woken():
             return "Was woken up and threw a tantrum"
+        case LearnedTrick(trick=trick):
+            return f"Learned to {trick.value}!"
         case PausedForHoliday():
             return "Went on holiday"
         case ResumedFromHoliday(length=length):
@@ -202,6 +206,13 @@ def played_with_text(friend: str, game: GameKind, result: GameResult) -> str:
 
 FAMILY_SHOWN = 3
 """How many ancestors the family line shows before the pet; older ones become "…"."""
+
+
+def tricks_text(pet: Pet, balance: Balance) -> str | None:
+    """``wave, spin``: the tricks it knows (SPEC §2.10); ``None`` while too young to learn any."""
+    if not pet.is_alive or pet.stage.order < balance.trick_min_stage.order:
+        return None
+    return ", ".join(known_tricks(pet, balance)) or "none yet"
 
 
 def lineage_text(pet: Pet) -> str | None:

@@ -7,8 +7,10 @@ from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import Static
 
+from tama.domain.balance import DEFAULT_BALANCE, Balance
 from tama.domain.events import Event
 from tama.domain.pet import Pet
+from tama.domain.tricks import can_show_off, known_tricks
 from tama.ui.sprites import overlay_content
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
@@ -40,10 +42,15 @@ class PetStage(Container):
         yield PetView(self._options, id="sprite")
         yield Static(id="overlay", markup=False)
 
-    def show(self, pet: Pet, events: Iterable[Event] = ()) -> None:
-        """Update the stage for ``pet``, reacting to ``events`` that just happened."""
+    def show(
+        self, pet: Pet, events: Iterable[Event] = (), balance: Balance = DEFAULT_BALANCE
+    ) -> None:
+        """Update the stage for ``pet``, reacting to ``events`` that just happened.
+
+        ``balance`` decides which tricks a content pet knows to show off (SPEC §2.10).
+        """
         view = self.query_one(PetView)
-        view.show(pet)
+        view.show(pet, known_tricks(pet, balance) if can_show_off(pet, balance) else ())
         view.react(events)
         self.query_one("#overlay", Static).update(overlay_content(overlay_names(pet), view.look))
         self.set_class(not pet.lights_on, "lights-off")

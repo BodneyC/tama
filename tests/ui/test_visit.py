@@ -201,7 +201,7 @@ async def test_status_for_either_pet(tmp_path: Path) -> None:
         await pilot.press("2")
         await pilot.pause()
 
-        assert "Pip" in str(app.screen.query_one("#status-body").render())
+        assert "Pip" in str(app.screen.query_one(".dialog-title").render())
 
 
 async def test_a_pet_that_cant_come_is_greyed_out_and_says_why(tmp_path: Path) -> None:

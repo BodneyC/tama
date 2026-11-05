@@ -1,25 +1,32 @@
 """Animated sprite playback (SPEC §5.2).
 
 ``PetView`` loops the animation that suits the pet's state and plays one-shot reactions
-(eating, refusing, hatching...) before returning to the loop. While idle it blinks now and then
-and wanders a little. *Which* animation to play is decided by the pure ``tama.domain.animation``
-functions; this widget only handles timing.
+(eating, refusing, hatching...) before returning to the loop. While idle it blinks now and then,
+wanders a little and, if it is in the mood to show off, swaps the odd blink for a trick.
+*Which* animation to play is decided by the pure ``tama.domain.animation`` functions; this
+widget only handles timing.
 
 Animation advances in steps of ``STEP_SECONDS``. A timer calls ``step()`` while mounted,
 unless animation is off (tests, snapshots) or the player asked for reduced motion, in which
 case the first frame of the loop is shown and nothing moves.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from random import Random
 
 from textual.widget import Widget
 from textual.widgets import Static
 
-from tama.domain.animation import AnimationKey, looping_animation, reaction_animation
+from tama.domain.animation import (
+    AnimationKey,
+    looping_animation,
+    reaction_animation,
+    trick_animation,
+)
 from tama.domain.events import Event
 from tama.domain.pet import DEFAULT_SPECIES, Pet
+from tama.domain.stage import Trick
 from tama.ui.colours import Look, Mode
 from tama.ui.sprites import PLACEHOLDER, Sprite, load_sprite, species_of
 
@@ -28,6 +35,8 @@ BLINK_EVERY = (30, 70)
 """Steps between blinks while idle (3-7 s)."""
 WANDER_EVERY = (20, 45)
 """Steps between small moves while idle (2-4.5 s)."""
+TRICK_EVERY = (600, 1800)
+"""Idle steps before the next blink may be a trick instead (1-3 min, SPEC §2.10)."""
 WANDER_MARGIN = 2
 """Cells kept clear between the wandering pet and the edge of the stage."""
 
@@ -83,6 +92,8 @@ class PetView(Static):
         self.offset_x = 0
         self._next_blink = self._rng.randint(*BLINK_EVERY)
         self._next_wander = self._rng.randint(*WANDER_EVERY)
+        self._next_trick = self._rng.randint(*TRICK_EVERY)
+        self._tricks: tuple[Trick, ...] = ()
 
     @property
     def still(self) -> bool:
@@ -112,9 +123,14 @@ class PetView(Static):
                 self.frame = self._steps = 0
         self._draw()
 
-    def show(self, pet: Pet) -> None:
-        """Loop the animation that suits ``pet``'s state."""
+    def show(self, pet: Pet, tricks: Sequence[Trick] = ()) -> None:
+        """Loop the animation that suits ``pet``'s state.
+
+        ``tricks`` are the ones it may show off now and then while idle (none unless it is in
+        the mood, ``tama.domain.tricks.can_show_off``).
+        """
         self._pet = pet
+        self._tricks = tuple(tricks)
         key = looping_animation(pet)
         self._species = species_of(pet)
         self.set_loop(self.sprite(pet, key), key)
@@ -152,15 +168,22 @@ class PetView(Static):
 
     def _idle_fidgets(self, pet: Pet) -> None:
         self._next_blink -= 1
+        self._next_trick -= 1
         if self._next_blink <= 0:
             self._next_blink = self._rng.randint(*BLINK_EVERY)
-            self._start_reaction(pet, AnimationKey.BLINK)
+            self._start_reaction(pet, self._blink_or_trick())
         self._next_wander -= 1
         if self._next_wander <= 0:
             self._next_wander = self._rng.randint(*WANDER_EVERY)
             limit = self._wander_limit()
             step = self._rng.choice((-2, -1, 1, 2))
             self.offset_x = max(-limit, min(limit, self.offset_x + step))
+
+    def _blink_or_trick(self) -> AnimationKey:
+        if self._next_trick > 0 or not self._tricks:
+            return AnimationKey.BLINK
+        self._next_trick = self._rng.randint(*TRICK_EVERY)
+        return trick_animation(self._rng.choice(self._tricks))
 
     def _wander_limit(self) -> int:
         frame_width = len(self.current.cells(self.look)[0][0])

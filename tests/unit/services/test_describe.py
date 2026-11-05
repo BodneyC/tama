@@ -17,6 +17,7 @@ from tama.domain.events import (
     GotSick,
     HeirHatched,
     LaidEgg,
+    LearnedTrick,
     LightsToggled,
     MedicineGiven,
     Misbehaved,
@@ -39,7 +40,7 @@ from tama.domain.events import (
 from tama.domain.journal import Entry, EntryKind, GameTally, Tallies, Topic
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import AncestorRecord
-from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.stage import DeathCause, LifeStage, Trick, Variant
 from tama.domain.stats import Stat, Stats
 from tama.domain.visit import VisitRefusal
 from tama.domain.weight import WeightStatus
@@ -53,6 +54,7 @@ from tama.services.describe import (
     status_line,
     status_segments,
     summarize,
+    tricks_text,
     visit_ended_text,
     visit_refusal_text,
 )
@@ -148,6 +150,7 @@ def test_format_age(age: timedelta, text: str) -> None:
         (Refused(AGE, Action.WAKE, RefusalReason.AWAKE), "Already awake"),
         (Refused(AGE, Action.WAKE, RefusalReason.EGG), "Refused to be woken: egg"),
         (Woken(AGE), "Was woken up and threw a tantrum"),
+        (LearnedTrick(AGE, Trick.SPIN), "Learned to spin!"),
         (PausedForHoliday(AGE), "Went on holiday"),
         (ResumedFromHoliday(AGE, timedelta(days=3, hours=2)), "Was on holiday for 3d 2h"),
         (PauseRefused(AGE, ("hungry", "lights")), "Can't go on holiday: hungry, lights on"),
@@ -383,6 +386,20 @@ def line_of(*names: str) -> tuple[AncestorRecord, ...]:
         AncestorRecord(name, FIXED_NOW, n, Variant.GOOD, timedelta(days=15))
         for n, name in enumerate(names, start=1)
     )
+
+
+@pytest.mark.parametrize(
+    ("discipline", "text"), [(0, "none yet"), (25, "wave"), (100, "wave, spin, dance, bow")]
+)
+def test_tricks_text_lists_the_tricks_it_knows(discipline: int, text: str) -> None:
+    pet = make_pet(stats=Stats(discipline=discipline))
+
+    assert tricks_text(pet, DEFAULT_BALANCE) == text
+
+
+@pytest.mark.parametrize("stage", [LifeStage.EGG, LifeStage.BABY])
+def test_too_young_for_tricks_has_no_tricks_line(stage: LifeStage) -> None:
+    assert tricks_text(make_pet(stage=stage, stats=Stats(discipline=100)), DEFAULT_BALANCE) is None
 
 
 def test_a_founder_has_no_lineage_to_show() -> None:
