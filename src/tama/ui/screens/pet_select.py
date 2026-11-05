@@ -26,6 +26,10 @@ from tama.ui.widgets.pet_view import PetView, ViewOptions
 
 NAME_WIDTH = 11
 """Longer names are cut short in the list; the preview shows them in full."""
+AGE_WIDTH = 7
+"""The longest age under 100 days: ``15h 16m``, ``12d 23h``."""
+ROW_WIDTH = 1 + 1 + NAME_WIDTH + 1 + 6 + 1 + AGE_WIDTH + 1 + 1
+"""Number, name, stage, age and mark, space-separated; ``#pets`` in app.tcss is this wide."""
 
 
 class PetAction(StrEnum):
@@ -57,12 +61,13 @@ def mark(row: PetSummary) -> str:
 
 
 def row_text(number: int, row: PetSummary) -> str:
-    """``1 Mochi       child   1d 2h ⚠``."""
+    """``1 Mochi       child    1d 2h ⚠``."""
     name = row.name if len(row.name) <= NAME_WIDTH else row.name[: NAME_WIDTH - 1] + "…"
     if row.pet is None:
-        return f"{number} {name:<{NAME_WIDTH}} {'':<6} {'':>6} {mark(row)}"
+        return f"{number} {name:<{NAME_WIDTH}} {'':<6} {'':>{AGE_WIDTH}} {mark(row)}"
     stage = "egg" if row.pet.stage is LifeStage.EGG else row.pet.stage.value
-    return f"{number} {name:<{NAME_WIDTH}} {stage:<6} {format_age(row.pet.age):>6} {mark(row)}"
+    age = format_age(row.pet.age)
+    return f"{number} {name:<{NAME_WIDTH}} {stage:<6} {age:>{AGE_WIDTH}} {mark(row)}"
 
 
 def detail_text(row: PetSummary, tz: tzinfo = UTC) -> str:
@@ -110,12 +115,14 @@ class PetSelectScreen(Screen[PetChoice | None]):
         tz: tzinfo = UTC,
         selected: PetFile | None = None,
     ) -> None:
-        """List ``rows`` with ``selected`` (else the first, i.e. the last played) highlighted."""
+        """List ``rows`` with ``selected`` (else the last played, else the first) highlighted."""
         super().__init__()
         self.rows = list(rows)
         self._view = view or ViewOptions()
         self._tz = tz
         keys = [row.file for row in self.rows]
+        if selected not in keys:
+            selected = next((row.file for row in self.rows if row.last), None)
         self._start = keys.index(selected) if selected in keys else 0
 
     @override

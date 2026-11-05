@@ -475,7 +475,9 @@ the exception: they stay frozen until resumed.
 - **Launching:** with no pets, `tama` shows the name prompt. With exactly one pet, it opens
   it. With several, it shows the **pet select** screen with the last-played pet pre-selected,
   so `Enter` continues where you left off. `tama --pet NAME` skips the screen.
-- **Pet select screen:** one row per pet, each simulated up to now in memory (not saved):
+- **Pet select screen:** one row per pet, each simulated up to now in memory (not saved), the
+  last played first, then by name, and pets that have passed away after all the rest (the
+  last-played pet stays pre-selected even then):
   name (cut short with `…` past 11 characters), stage, age and a mark: `⚠` needs care, `⏸`
   on holiday, `✝` passed away, `?` can't be read. Beside the list, the highlighted pet's
   sprite (idle, asleep, or its gravestone) and details: full name, stage and species, and

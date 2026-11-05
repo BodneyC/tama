@@ -66,6 +66,20 @@ def test_the_last_pet_played_comes_first_then_by_name(tmp_path: Path) -> None:
     assert [s.last for s in summaries(roster)] == [True, False, False]
 
 
+def test_pets_that_have_passed_away_come_last_even_if_played_last(tmp_path: Path) -> None:
+    roster = PetRoster(tmp_path)
+    add(roster, "Aldo", **DEAD)
+    add(roster, "Zed", **DEAD)
+    add(roster, "Mochi")
+    add(roster, "Bao")
+    roster.set_last(next(p for p in roster.files() if p.key.startswith("zed")))
+
+    rows = summaries(roster)
+
+    assert [s.name for s in rows] == ["Bao", "Mochi", "Zed", "Aldo"]
+    assert rows[2].last
+
+
 def test_an_unreadable_pet_is_listed_with_its_error(tmp_path: Path) -> None:
     roster = PetRoster(tmp_path)
     add(roster, "Mochi")

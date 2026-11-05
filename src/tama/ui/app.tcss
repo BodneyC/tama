@@ -213,7 +213,7 @@ PetSelectScreen {
 }
 
 #pets {
-  width: 29;
+  width: 30;
   height: auto;
   max-height: 11;
   border: none;

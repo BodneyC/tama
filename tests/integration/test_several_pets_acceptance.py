@@ -75,9 +75,9 @@ async def test_three_pets_one_dead_one_from_an_old_save(monkeypatch: pytest.Monk
         await pilot.press("t")
         await pilot.pause()
         assert isinstance(app.screen, PetSelectScreen)
-        assert [row.name for row in app.screen.rows] == ["Bao", "Old Pip", "Veteran"]
+        assert [row.name for row in app.screen.rows] == ["Bao", "Veteran", "Old Pip"]
 
-        await pilot.press("3")
+        await pilot.press("2")
         await pilot.pause()
         assert app.session is not None
         assert app.session.pet.name == "Veteran"

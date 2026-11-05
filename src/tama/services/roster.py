@@ -68,7 +68,7 @@ def summarize(
 def pet_summaries(
     roster: PetRoster, *, clock: Clock, settings: SessionSettings
 ) -> list[PetSummary]:
-    """Every pet, the last one played first and then by name."""
+    """Every pet: the last one played first, then by name, and those that have passed away last."""
     last = roster.last()
     rows = [
         summarize(file, clock=clock, settings=settings, last=file == last)
@@ -79,7 +79,13 @@ def pet_summaries(
         replace(row, egg_waiting=row.pet is not None and _egg_waiting(row.pet, pets))
         for row in rows
     ]
-    return sorted(rows, key=lambda row: (not row.last, row.name.casefold(), row.file.key))
+    return sorted(rows, key=_order)
+
+
+def _order(row: PetSummary) -> tuple[bool, bool, str, str]:
+    """Sort key: the living (and unreadable) before the dead, the last played first in each."""
+    dead = row.pet is not None and not row.pet.is_alive
+    return (dead, not row.last, row.name.casefold(), row.file.key)
 
 
 def _egg_waiting(pet: Pet, pets: Sequence[Pet]) -> bool:

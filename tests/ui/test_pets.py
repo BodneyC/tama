@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
 from textual.widgets import Input
 
 from tama.domain.pet import Pet
@@ -13,13 +14,14 @@ from tama.domain.stage import DeathCause, LifeStage
 from tama.domain.stats import Stats
 from tama.infra.clock import FakeClock
 from tama.persistence.lock import PetLock
-from tama.services.roster import MAX_PETS
+from tama.persistence.roster import PetFile
+from tama.services.roster import MAX_PETS, PetSummary
 from tama.ui.screens.confirm import ConfirmScreen
 from tama.ui.screens.error import PetErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialScreen
 from tama.ui.screens.new_pet import NewPetScreen
-from tama.ui.screens.pet_select import PetSelectScreen
+from tama.ui.screens.pet_select import ROW_WIDTH, PetSelectScreen, row_text
 from tests.factories import FIXED_NOW, make_pet
 from tests.ui.helpers import Notes, library_with, make_library_app, text
 
@@ -70,6 +72,32 @@ async def test_several_pets_offer_the_list_with_the_last_played_first(tmp_path: 
 
         assert app.session is not None
         assert app.session.pet.name == "Pip"
+
+
+async def test_the_dead_are_listed_last_and_the_last_played_stays_highlighted(
+    tmp_path: Path,
+) -> None:
+    library, files = library_with(tmp_path, pet("Aldo", **DEAD), pet("Mochi"), pet("Pip"))
+    library.roster.set_last(files[0])
+    app = make_library_app(library)
+    async with app.run_test():
+        screen = app.screen
+        assert isinstance(screen, PetSelectScreen)
+        assert [row.name for row in screen.rows] == ["Mochi", "Pip", "Aldo"]
+        assert screen.selected.name == "Aldo"
+
+
+@pytest.mark.parametrize(
+    "age",
+    [timedelta(minutes=5), timedelta(hours=15, minutes=16), timedelta(days=99, hours=23)],
+    ids=["minutes", "hours-and-minutes", "days-and-hours"],
+)
+def test_a_row_fits_the_list_with_its_mark_whatever_the_age(age: timedelta) -> None:
+    dead = replace(pet("Bartholomew", **DEAD), age=age)
+    text = row_text(9, PetSummary(PetFile(Path("bart.json")), dead))
+
+    assert len(text) == ROW_WIDTH
+    assert text.endswith(" ✝")
 
 
 async def test_number_keys_pick_a_pet(tmp_path: Path) -> None:

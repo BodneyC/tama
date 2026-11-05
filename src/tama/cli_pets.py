@@ -89,7 +89,7 @@ def status_report(library: PetLibrary, query: str | None = None, *, color: bool 
     rows = library.summaries()
     if not rows:
         return Report([NO_PET], code=EXIT_NO_PET)
-    chosen = [find_pet(rows, query)] if query is not None else sorted(rows, key=_dead)
+    chosen = [find_pet(rows, query)] if query is not None else rows
     out = []
     for row in chosen:
         marker = "" if query is not None else ("* " if row.last else "  ")
@@ -112,7 +112,7 @@ def journal_report(library: PetLibrary, query: str | None = None) -> Report:
     rows = library.summaries()
     if not rows:
         return Report([NO_PET], code=EXIT_NO_PET)
-    row = find_pet(rows, query) if query is not None else rows[0]  # last played comes first
+    row = find_pet(rows, query) if query is not None else _last_played(rows)
     if row.pet is None:
         return Report(err=[f"tama: {row.name} can't be read ({row.error})"], code=EXIT_ERROR)
     return Report(journal_lines(row.pet.name, row.journal, library.tz))
@@ -155,11 +155,6 @@ def _pause_or_resume(library: PetLibrary, row: PetSummary, *, pausing: bool) -> 
         return f"can't be read ({exc})", True
 
 
-def _dead(row: PetSummary) -> bool:
-    """Sort key: the dead after everyone else (a stable sort keeps the order otherwise)."""
-    return row.pet is not None and not row.pet.is_alive
-
-
 def _status(library: PetLibrary, row: PetSummary, *, color: bool) -> str:
     if row.pet is None:
         segments: list[Segment] = [
@@ -169,3 +164,8 @@ def _status(library: PetLibrary, row: PetSummary, *, color: bool) -> str:
     else:
         segments = status_segments(row.pet, library.balance, library.tz)
     return styled(segments, color=color)
+
+
+def _last_played(rows: list[PetSummary]) -> PetSummary:
+    """The pet played last, else the first listed."""
+    return next((row for row in rows if row.last), rows[0])
