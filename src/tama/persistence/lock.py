@@ -20,24 +20,15 @@ logger = logging.getLogger(__name__)
 
 def process_alive(pid: int) -> bool:
     """Whether a process with id ``pid`` is running."""
-    if pid <= 0:
-        return False
-    if sys.platform == "win32":  # os.kill(pid, 0) would send Ctrl-C on Windows
-        return _windows_process_alive(pid)
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:  # it exists, it just isn't ours
-        return True
-    except OSError:
-        return False
-    return True
+    return pid > 0 and _process_alive(pid)
 
 
+# Chosen once, here: mypy checks only the branch for the platform it runs on, so neither
+# platform's code reads as unreachable to it (a check inside a function would).
 if sys.platform == "win32":  # pragma: no cover - exercised on Windows CI
 
-    def _windows_process_alive(pid: int) -> bool:
+    def _process_alive(pid: int) -> bool:
+        # os.kill(pid, 0) would send Ctrl-C on Windows, so ask the kernel instead.
         import ctypes  # noqa: PLC0415 - Windows only
 
         query_limited_information, still_active = 0x1000, 259
@@ -51,6 +42,19 @@ if sys.platform == "win32":  # pragma: no cover - exercised on Windows CI
             return code.value == still_active
         finally:
             kernel32.CloseHandle(handle)
+
+else:
+
+    def _process_alive(pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:  # it exists, it just isn't ours
+            return True
+        except OSError:
+            return False
+        return True
 
 
 class PetLock:
