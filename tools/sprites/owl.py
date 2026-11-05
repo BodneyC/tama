@@ -222,6 +222,8 @@ SPECIES = Species(
     adult_body=ADULT_BODY,
     elder_body=ELDER_BODY,
     looks=VARIANT_LOOKS,
+    skin="u",  # feathers all round the back
+    limb="d",  # waves a wing
 )
 
 

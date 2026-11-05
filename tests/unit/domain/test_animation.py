@@ -8,6 +8,7 @@ from tama.domain.animation import (
     looping_animation,
     reaction_animation,
     select_animation,
+    trick_animation,
 )
 from tama.domain.events import (
     Action,
@@ -18,6 +19,7 @@ from tama.domain.events import (
     Event,
     Evolved,
     FellAsleep,
+    LearnedTrick,
     MedicineGiven,
     Played,
     PlayedWith,
@@ -26,7 +28,7 @@ from tama.domain.events import (
     Visited,
 )
 from tama.domain.minigames import GameKind, GameResult
-from tama.domain.stage import DeathCause, LifeStage, Variant
+from tama.domain.stage import DeathCause, LifeStage, Trick, Variant
 from tests.factories import make_pet
 
 AGE = timedelta(hours=2)
@@ -74,10 +76,16 @@ def test_looping_animation_reflects_state(
         (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.WIN), AnimationKey.HAPPY),
         (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.DRAW), AnimationKey.PLAY),
         (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.LOSS), AnimationKey.PLAY),
+        (LearnedTrick(AGE, Trick.SPIN), AnimationKey.TRICK_SPIN),  # shown off at once
     ],
 )
 def test_reaction_animation_for_events(event: Event, expected: AnimationKey | None) -> None:
     assert reaction_animation(event) is expected
+
+
+@pytest.mark.parametrize("trick", list(Trick))
+def test_every_trick_has_its_animation(trick: Trick) -> None:
+    assert trick_animation(trick).value == f"trick_{trick.value}"
 
 
 def test_select_prefers_reaction_over_loop() -> None:

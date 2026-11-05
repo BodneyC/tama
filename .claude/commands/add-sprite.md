@@ -22,7 +22,11 @@ tools/sprites/overlays.py, generate.py                    # overlays; the entry 
 
 `<variant>` is `default`, `good`, `scruffy` or `chubby` (adults and elders). `<stage>` is `egg` …
 `dead`. Every species needs every variant (`test_sprites.py`).
-Required animations per stage are in SPEC §5.2 and enforced by `tests/unit/test_sprites.py`.
+Required animations per stage are in SPEC §5.2 and enforced by `tests/unit/test_sprites.py`:
+every living stage has `idle`, `blink`, `eat`, `play`, `happy`, `refuse`, `sleep`, `sick`,
+`clean`, `look_left`, `look_right` and `misbehave`; the baby has `hatch` and the others `evolve`;
+and from child to elder, the one-shot tricks `trick_wave`, `trick_spin`, `trick_dance` and
+`trick_bow` (SPEC §2.10; `kit.tricks()`).
 
 ## Colours
 
@@ -125,7 +129,10 @@ or a recipe in `kit.py` (`living()`, `hatch()`, `wobble()`, transformations), th
    `looks` that redraw good/scruffy adults (owl: scholar's cap; bear: bow tie). `chubby`
    defaults to `kit.chubby()`, which widens the grid by repeating the plain columns nearest the
    centre; override it if that stretches a feature (owl: evens out belly feathers; bear:
-   `chubby(g, at=8)` widens the cheeks, not the snout).
+   `chubby(g, at=8)` widens the cheeks, not the snout). The tricks need two more pixels:
+   `skin`, what its back is drawn in when it spins round, and `limb`, what a raised paw is
+   drawn in when it waves (both default to body `b`; the owl turns to `u` feathers and waves a
+   `d` wing).
 2. Add its `build` to `COLLECTIONS` in `tools/sprites/generate.py`.
 3. Regenerate. The tests require every SPEC §5.2 animation for every species directory; update
    `test_shipped_species` in `tests/unit/test_sprites.py`.

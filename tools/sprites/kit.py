@@ -203,6 +203,60 @@ def sparkles(g: Grid, phase: int) -> Grid:
     return set_pixels(g, [(y, x, "x") for y, x in spots if g[y][x] == "."])
 
 
+def narrow(g: Grid, by: int = 2) -> Grid:
+    """Seen half-turned: drop ``by`` columns each side of the middle, then re-centre."""
+    width = len(g[0])
+    left = width // 2 - by
+    rows = tuple(row[:left] + row[left + 2 * by :] for row in g)
+    return paste(("." * width,) * len(g), 0, by, rows)
+
+
+def back_view(g: Grid, skin: str = "b") -> Grid:
+    """From behind: the face (eyes, mouth, cheeks, highlight), belly and body become ``skin``."""
+    return tuple("".join(skin if p in "bemrhc" else p for p in row) for row in g)
+
+
+def eye_top(g: Grid) -> int:
+    """The highest row any eye pixel is on (``g`` must have its eyes open)."""
+    runs = eye_runs(g)
+    if not runs:
+        raise ValueError("no eyes to find")
+    return min(run[0][0] for run in runs)
+
+
+def _right_edge(g: Grid, y: int) -> int:
+    """The column of the last opaque pixel in row ``y``."""
+    return max(x for x, p in enumerate(g[y]) if p != ".")
+
+
+PAW = grid("""
+.k.
+kbk
+kbk
+.k.
+""")
+
+
+def paw_raised(g: Grid, eyes: int, *, high: bool, limb: str = "b") -> Grid:
+    """A paw held up beside the body, level with the eyes on row ``eyes`` (``high``) or lower.
+
+    Its left column sits on the body's outline so it looks attached; ``g`` needs two columns
+    of margin on the right (a stage canvas has them).
+    """
+    top = max(0, eyes - (2 if high else 0))
+    paw = tuple(row.replace("b", limb) for row in PAW)
+    return paste(g, top, _right_edge(g, min(len(g) - 1, top + 2)), paw)
+
+
+def bowed(g: Grid, eyes: int, depth: int) -> Grid:
+    """The head dipped by ``depth`` rows: rows just above the eyes (row ``eyes``) are dropped.
+
+    Feet stay planted; only the top of the head comes down, which reads as a bow or a nod.
+    """
+    cut = max(1, eyes - depth)
+    return ("." * len(g[0]),) * depth + g[:cut] + g[cut + depth :]
+
+
 def crack(g: Grid, row: int) -> Grid:
     """A zig-zag crack across the egg shell at ``row``."""
     return set_pixels(
@@ -235,6 +289,10 @@ class Stage:
     base: Grid
     canvas: tuple[int, int]
     overrides: Palette = field(default_factory=dict)
+    skin: str = "b"
+    """What the pet looks like from behind (a trick spins it round)."""
+    limb: str = "b"
+    """What a raised paw (or wing) is drawn in."""
 
     def on_canvas(self, g: Grid) -> Grid:
         """Place a grid the size of ``base`` onto this stage's canvas."""
@@ -311,9 +369,69 @@ def living(stage: Stage, *, sick: Palette, hatch_from: Grid | None = None) -> di
         anims["evolve"] = Anim(
             frames(flash(base), base, flash(base), base, flash(base), base), 6, o, loop=False
         )
+        anims |= tricks(stage)  # from CHILD on (SPEC §2.10)
     else:
         anims["hatch"] = hatch(stage, hatch_from)
     return anims
+
+
+def tricks(stage: Stage) -> dict[str, Anim]:
+    """The one-shot tricks a disciplined pet performs: wave, spin, dance and bow (SPEC §2.10)."""
+    o, c, base = stage.overrides, stage.on_canvas, stage.base
+    happy = eyes_happy(base)
+    closed = eyes_closed(base)
+    cheer = mouth_open(happy)
+    eyes = eye_top(base)
+    on_canvas = eye_top(c(base))
+    wave = tuple(
+        paw_raised(c(happy), on_canvas, high=high, limb=stage.limb) for high in (True, False)
+    )
+    back = back_view(base, stage.skin)
+
+    def bow(depth: int) -> Grid:
+        return c(bowed(closed, eyes, depth))
+
+    return {
+        "trick_wave": Anim((*wave, *wave, c(happy)), 4, o, loop=False),
+        "trick_spin": Anim(
+            tuple(
+                c(g)
+                for g in (
+                    base,
+                    narrow(base),
+                    narrow(back, 1),
+                    back,
+                    narrow(back, 1),
+                    narrow(base),
+                    happy,
+                )
+            ),
+            6,
+            o,
+            loop=False,
+        ),
+        "trick_dance": Anim(
+            (
+                shift(c(cheer), dx=-1, dy=-1),
+                sparkles(c(happy), 0),
+                shift(c(cheer), dx=1, dy=-1),
+                sparkles(c(happy), 1),
+                shift(c(cheer), dx=-1, dy=-1),
+                sparkles(c(happy), 0),
+                shift(c(cheer), dx=1, dy=-1),
+                c(happy),
+            ),
+            5,
+            o,
+            loop=False,
+        ),
+        "trick_bow": Anim(
+            (c(base), bow(1), bow(2), bow(2), bow(1), c(happy)),
+            3,
+            o,
+            loop=False,
+        ),
+    }
 
 
 def hatch(baby: Stage, egg: Grid) -> Anim:

@@ -1,7 +1,8 @@
 """Which animation the pet should be showing (SPEC §5.2).
 
-This decides *what* to play; frame playback and timing live in the UI. Blinking and
-wandering are cosmetic variations of ``IDLE`` chosen by the UI.
+This decides *what* to play; frame playback and timing live in the UI. Blinking, wandering
+and showing off a trick (``tama.domain.tricks.can_show_off``) are cosmetic variations of
+``IDLE`` chosen by the UI.
 """
 
 from enum import StrEnum
@@ -12,6 +13,7 @@ from tama.domain.events import (
     Disciplined,
     Event,
     Evolved,
+    LearnedTrick,
     MedicineGiven,
     Played,
     PlayedWith,
@@ -20,7 +22,7 @@ from tama.domain.events import (
 )
 from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
-from tama.domain.stage import LifeStage
+from tama.domain.stage import LifeStage, Trick
 
 
 class AnimationKey(StrEnum):
@@ -42,6 +44,15 @@ class AnimationKey(StrEnum):
     LOOK_LEFT = "look_left"
     LOOK_RIGHT = "look_right"
     MISBEHAVE = "misbehave"
+    TRICK_WAVE = "trick_wave"
+    TRICK_SPIN = "trick_spin"
+    TRICK_DANCE = "trick_dance"
+    TRICK_BOW = "trick_bow"
+
+
+def trick_animation(trick: Trick) -> AnimationKey:
+    """The one-shot animation of ``trick`` (SPEC §2.10)."""
+    return AnimationKey(f"trick_{trick.value}")
 
 
 def looping_animation(pet: Pet) -> AnimationKey:
@@ -79,6 +90,8 @@ def reaction_animation(event: Event) -> AnimationKey | None:  # noqa: PLR0911 - 
             return AnimationKey.PLAY
         case Cleaned():
             return AnimationKey.CLEAN
+        case LearnedTrick(trick=trick):
+            return trick_animation(trick)
         case Refused() | Disciplined(effective=False):
             return AnimationKey.REFUSE
         case _:

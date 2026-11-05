@@ -428,7 +428,7 @@ Two small touches that make the pet feel alive (SPEC §2.10, §5.1).
 
 - [x] Domain: `Balance.trick_thresholds`; `known_tricks(pet, balance)`; `LearnedTrick(trick)`
       when discipline rises past a threshold (CHILD and older) — test-first
-- [ ] Sprites: one-shot `trick_wave`, `trick_spin`, `trick_dance`, `trick_bow` for every
+- [x] Sprites: one-shot `trick_wave`, `trick_spin`, `trick_dance`, `trick_bow` for every
       species, variant and stage from child to elder (recipes in `tools/sprites/kit.py`);
       `test_sprites.py` requires them; `/add-sprite` lists them
 - [ ] UI: `PetView` swaps the odd blink for a known trick when the pet is content (UI RNG,

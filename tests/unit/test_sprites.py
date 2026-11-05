@@ -5,9 +5,9 @@ import pytest
 from pydantic import ValidationError
 from tools.sprites import generate
 
-from tama.domain.animation import AnimationKey
+from tama.domain.animation import AnimationKey, trick_animation
 from tama.domain.pet import DEFAULT_SPECIES
-from tama.domain.stage import LifeStage, Variant
+from tama.domain.stage import LifeStage, Trick, Variant
 from tama.ui import sprites
 from tama.ui.colours import LOOKS, Look, Mode
 from tama.ui.sprites import (
@@ -302,13 +302,15 @@ LIVING = (
     AnimationKey.LOOK_RIGHT,
     AnimationKey.MISBEHAVE,
 )
+TRICKS = tuple(trick_animation(trick) for trick in Trick)
+"""One-shot tricks, from CHILD on (SPEC §2.10)."""
 REQUIRED: dict[LifeStage, tuple[AnimationKey, ...]] = {
     LifeStage.EGG: (AnimationKey.IDLE, AnimationKey.WOBBLE),
     LifeStage.BABY: (*LIVING, AnimationKey.HATCH),
-    LifeStage.CHILD: (*LIVING, AnimationKey.EVOLVE),
-    LifeStage.TEEN: (*LIVING, AnimationKey.EVOLVE),
-    LifeStage.ADULT: (*LIVING, AnimationKey.EVOLVE),
-    LifeStage.ELDER: (*LIVING, AnimationKey.EVOLVE),
+    LifeStage.CHILD: (*LIVING, AnimationKey.EVOLVE, *TRICKS),
+    LifeStage.TEEN: (*LIVING, AnimationKey.EVOLVE, *TRICKS),
+    LifeStage.ADULT: (*LIVING, AnimationKey.EVOLVE, *TRICKS),
+    LifeStage.ELDER: (*LIVING, AnimationKey.EVOLVE, *TRICKS),
     LifeStage.DEAD: (AnimationKey.IDLE,),
 }
 """Every animation SPEC §5.2 needs, per stage, for every species."""
