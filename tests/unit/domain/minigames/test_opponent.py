@@ -121,6 +121,47 @@ def test_refuses_to_move_once_the_game_is_over() -> None:
         move(game)
 
 
+# --- Playing the player's side (pet vs pet, SPEC §3.2) -----------------------------------
+
+
+def host_move(game: BoardGame, seed: int = 0, balance: Balance = SHARP) -> int:
+    return pet_move(game, LifeStage.ADULT, balance, Random(seed), side=P)
+
+
+def test_can_open_the_game_as_the_first_player() -> None:
+    assert {host_move(FourInARow(), seed) for seed in range(20)} == {3}
+
+
+def test_playing_first_it_takes_its_own_win() -> None:
+    game = drops(0, 6, 0, 6, 0, 5)  # the first player has three up column 0
+
+    assert host_move(game) == 0
+
+
+def test_playing_first_it_blocks_the_other_pet() -> None:
+    game = drops(0, 6, 1, 6, 5, 6)  # the second player threatens the top of column 6
+
+    assert host_move(game) == 6
+
+
+def test_playing_first_it_wont_hand_the_other_side_a_win() -> None:
+    # The second player has (1,1), (2,1) and (4,1); a drop into column 3 lets them win at (3,1).
+    game = FourInARow(((P,), (P, T), (T, T), (), (P, T), (P,), ()))
+    assert game.to_move is P
+
+    for seed in range(20):
+        assert host_move(game, seed) != 3
+
+
+def test_refuses_to_move_for_the_side_not_on_turn() -> None:
+    with pytest.raises(IllegalMoveError, match="turn"):
+        host_move(drops(3))
+
+
+def test_tic_tac_toe_as_the_first_player_takes_the_centre() -> None:
+    assert host_move(TicTacToe()) == 4
+
+
 # --- Tic-Tac-Toe --------------------------------------------------------------------------
 
 

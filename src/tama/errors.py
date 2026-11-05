@@ -58,5 +58,9 @@ class RosterFullError(TamaError):
     """There are nine pets already; one that has passed away must be archived first."""
 
 
+class VisitRefusedError(TamaError):
+    """A pet can't visit or be visited right now (asleep, on holiday, too tired, ...)."""
+
+
 class UnknownPetError(TamaError):
     """``--pet NAME`` matched no pet, or several."""

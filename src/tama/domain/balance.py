@@ -135,6 +135,10 @@ class Balance:
     elder_mistake_chance: float = 0.2  # a little rusty
     discipline_unwarranted_happiness: int = -20
 
+    # Visits (SPEC §3.2): the happiness a visit gives, at most once per cooldown of pet age.
+    visit_happiness: int = 10
+    visit_cooldown: timedelta = 4 * HOUR
+
     def __post_init__(self) -> None:
         """Validate constraints the simulation relies on."""
         if self.step <= timedelta(0) or HOUR % self.step:

@@ -165,6 +165,23 @@ class Played(Event):
 
 
 @dataclass(frozen=True, slots=True)
+class Visited(Event):
+    """The pet spent time with ``friend`` (SPEC §3.2); ``cheered`` if it gave happiness."""
+
+    friend: str
+    cheered: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PlayedWith(Event):
+    """A ``game`` against ``friend`` finished, with ``result`` from this pet's side."""
+
+    friend: str
+    game: GameKind
+    result: GameResult
+
+
+@dataclass(frozen=True, slots=True)
 class Cleaned(Event):
     """The player cleaned up."""
 

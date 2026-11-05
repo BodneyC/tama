@@ -22,11 +22,12 @@ from tama.domain.events import (
     MedicineGiven,
     Outcome,
     Played,
+    PlayedWith,
     RefusalReason,
     Refused,
     Woken,
 )
-from tama.domain.minigames import GameKind, GameResult
+from tama.domain.minigames import GameKind, GameResult, Side
 from tama.domain.pet import ZERO, Pet
 from tama.domain.stage import LifeStage
 from tama.domain.stats import STAT_MAX, Stat
@@ -74,8 +75,20 @@ def apply(pet: Pet, action: Action, ctx: Context) -> Outcome:
     return _HANDLERS[action](pet, ctx)
 
 
-def apply_game_outcome(pet: Pet, result: GameResult, *, game: GameKind, ctx: Context) -> Outcome:
+def apply_game_outcome(  # noqa: PLR0913 - keyword-only details of the game
+    pet: Pet,
+    result: GameResult,
+    *,
+    game: GameKind,
+    ctx: Context,
+    side: Side = Side.PLAYER,
+    friend: str | None = None,
+) -> Outcome:
     """Apply the result of a finished mini-game, ``game``.
+
+    ``result`` is the game's own (the first player's side); ``pet`` played ``side``, so the
+    pet that moved second in a pet-vs-pet game gets it mirrored. A game against another pet,
+    ``friend``, is a ``PlayedWith`` event rather than ``Played`` (SPEC §3.2).
 
     Only death refuses this: the game was already accepted, so a pet that dozed off
     mid-game still gets the result.
@@ -84,6 +97,7 @@ def apply_game_outcome(pet: Pet, result: GameResult, *, game: GameKind, ctx: Con
         reason = RefusalReason.DEAD if not pet.is_alive else RefusalReason.ON_HOLIDAY
         return Outcome(pet, (Refused(pet.age, Action.PLAY, reason),))
     b = ctx.balance
+    result = result.for_side(side)
     happiness = {
         GameResult.WIN: b.play_win_happiness,
         GameResult.DRAW: b.play_draw_happiness,
@@ -92,7 +106,12 @@ def apply_game_outcome(pet: Pet, result: GameResult, *, game: GameKind, ctx: Con
     weight_change = b.play_win_weight if result is GameResult.WIN else 0
     stats = pet.stats.adjust(Stat.HAPPINESS, happiness).adjust(Stat.ENERGY, b.play_energy)
     played = replace(pet, stats=stats, weight=_weight(pet, weight_change, b))
-    return Outcome(played, (Played(pet.age, result, game),))
+    event = (
+        Played(pet.age, result, game)
+        if friend is None
+        else PlayedWith(pet.age, friend, game, result)
+    )
+    return Outcome(played, (event,))
 
 
 def _weight(pet: Pet, delta: int, b: Balance) -> int:

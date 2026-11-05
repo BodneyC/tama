@@ -23,6 +23,21 @@ class GameResult(StrEnum):
     DRAW = "draw"
     LOSS = "loss"
 
+    @property
+    def mirrored(self) -> "GameResult":
+        """The same game's result for the other side."""
+        match self:
+            case GameResult.WIN:
+                return GameResult.LOSS
+            case GameResult.LOSS:
+                return GameResult.WIN
+            case _:
+                return GameResult.DRAW
+
+    def for_side(self, side: "Side") -> "GameResult":
+        """This result (from the player's side) as ``side`` saw it."""
+        return self if side is Side.PLAYER else self.mirrored
+
 
 class Side(StrEnum):
     """Who a piece or mark belongs to. The player always moves first."""

@@ -107,6 +107,7 @@ class Pet:
         generation: 1 for a pet hatched from a new egg; its parent's + 1 for an heir.
         ancestors: The family line, oldest (the founder) first, parent last.
         heir_hatched: Whether the egg it left (dying of old age) has been hatched.
+        last_visit: Its age at its last visit with another pet (SPEC §3.2), or ``None``.
     """
 
     name: str
@@ -138,6 +139,7 @@ class Pet:
     generation: int = 1
     ancestors: tuple[AncestorRecord, ...] = ()
     heir_hatched: bool = False
+    last_visit: timedelta | None = None
 
     def __post_init__(self) -> None:
         """Validate invariants."""
