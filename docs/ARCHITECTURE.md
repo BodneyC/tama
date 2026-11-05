@@ -53,7 +53,7 @@ src/tama/
 │   ├── weight.py          # healthy band per stage, weight_status (SPEC §2.7)
 │   ├── journal.py         # Journal + record(journal, events, before) (ADR 0009)
 │   ├── lineage.py         # heir_name, hatch_heir, is_heir_of, founder (ADR 0010)
-│   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)  [M6.12]
+│   ├── visit.py           # visit refusals, start_visit, visit events (ADR 0011)
 │   ├── tricks.py          # known_tricks from discipline (SPEC §2.10)  [M6.13]
 │   ├── daylight.py        # dawn/day/dusk/night phase from local time (SPEC §5.1)  [M6.13]
 │   ├── actions.py         # apply(pet, action, ctx) / apply_game_outcome() -> Outcome
@@ -71,8 +71,10 @@ src/tama/
 │   ├── roster.py          # PetSummary per pet "as of now" (read-only catch-up), find_pet
 │   ├── library.py         # PetLibrary: the UI's entry point to several pets (open + lock,
 │   │                      # hatch, archive, borrow for --pause, others needing care)
-│   ├── visit.py           # VisitSession: host + guest sessions, pet-vs-pet games  [M6.12]
-│   └── describe.py        # plain-text status line, event summaries and journal entries
+│   ├── visit.py           # VisitSession: host + guest sessions, pet-vs-pet games;
+│   │                      # visit_candidates for the picker
+│   ├── describe.py        # plain-text status line, event summaries, visit wording
+│   └── describe_journal.py  # journal entries and tallies in words
 ├── persistence/
 │   ├── models.py          # Pydantic SaveFileV<N>, SaveGame(pet, rng_state), to/from_domain()
 │   ├── codec.py           # encode()/decode(): JSON text <-> SaveGame (incl. migration)
@@ -89,20 +91,23 @@ src/tama/
 ├── ui/
 │   ├── app.py             # TamaApp(App): load/hatch, tick timer, quit + signal saves
 │   ├── library_flow.py    # several pets: launch into the right pet, pet list, archive
+│   ├── visit_flow.py      # v: the visit picker, borrowing the guest, seeing it home
 │   ├── app.tcss           # Textual CSS (theme variables only)
 │   ├── screens/
 │   │   ├── main.py        # MainScreen: header, stage, footer bindings for every action
 │   │   ├── pet_select.py  # PetSelectScreen: every pet as of now; play, hatch, archive
 │   │   ├── new_pet.py     # NewPetScreen: name prompt with domain-matching validator
 │   │   ├── dialogs.py     # Help, Status, FeedMenu modals
-│   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget)
+│   │   ├── games/         # GameSelectScreen + one modal per mini-game (shared board widget);
+│   │   │                  # pet_vs_pet.py: watching two pets play during a visit
 │   │   ├── away.py        # AwaySummaryScreen: "While you were away"
 │   │   ├── memorial.py    # MemorialScreen: gravestone, life story, new egg, heir's egg
 │   │   ├── journal.py     # JournalScreen: tallies + entries, scrollable
-│   │   ├── visit.py       # VisitPickerScreen, VisitScreen  [M6.12]
+│   │   ├── visit.py       # VisitPickerScreen, VisitScreen, WhoseStatusScreen
 │   │   └── error.py       # ErrorScreen: unreadable save → new pet or quit
 │   ├── widgets/           # pet_header, pet_stage (pet + overlay sprites), pet_view (playback)
 │   ├── sprites.py         # load, validate and render pixel sprites per Look; species_of(pet)
+│   ├── sprite_scale.py    # halve(): half-size pixel art for the pets beside a pet-vs-pet board
 │   ├── colours.py         # dark/light colour values, Mode, Look
 │   └── theme.py           # UI colours -> $tama-* CSS variables for the active theme
 └── assets/
@@ -247,7 +252,19 @@ A visit is two ordinary `GameSession`s, the guest borrowed through `PetLibrary` 
 (ADR 0011). `VisitSession` ticks both, moves each pet in a pet-vs-pet game with its own RNG and
 mistake chance, and ends the visit when either pet can't go on. The domain only ever sees one
 pet at a time; the other appears as a name in events. One `close()` path saves and unlocks the
-guest whichever way the visit ends.
+guest whichever way the visit ends: `TamaApp` calls it before quitting, on a termination signal,
+before switching pets or showing a memorial, and in `on_unmount`, which also runs when the UI
+crashes.
+
+The same `visit_refusals` rule decides who may be invited and when a visit must end, so a visit
+ends exactly when either pet couldn't have started it. The main screen keeps ticking the host
+underneath the visit screen (Textual keeps a suspended screen's timers running), so the host's
+toasts still come from there; `VisitSession.tick` ticking it again is a no-op.
+
+The pets beside a pet-vs-pet board are drawn at half size so Four in a Row fits 60 columns:
+`load_sprite(..., small=True)` shrinks each frame's pixel grid with `sprite_scale.halve` before
+rendering (inside the body the rarest colour in each 2×2 block wins, so one-pixel faces survive).
+No extra art is needed.
 
 ### Error handling
 

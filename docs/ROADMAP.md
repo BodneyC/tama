@@ -388,29 +388,35 @@ parent; a pet that died of poor health offers no egg.
 The open pet invites another of your pets to play; you watch them play a board game (SPEC §3.2,
 ADR 0011).
 
-- [ ] Domain: `visit.py` — `visit_refusals(pet, balance)` (egg, dead, asleep, on holiday,
-      misbehaving, too tired); `start_visit(host, guest, ctx)` with happiness +10 unless within
-      `visit_cooldown`; `Pet.last_visit`; `Visited(friend)` and `PlayedWith(friend, game, result)`
-      events — test-first
-- [ ] Domain: `apply_game_outcome` from either side of a pet-vs-pet game (the guest's result is
+- [x] Domain: `visit.py` — `visit_refusals(pet, balance)` (egg, dead, on holiday, asleep,
+      sick, misbehaving, too tired); `start_visit(pet, friend, balance)`, called for each pet,
+      with happiness +10 unless within `visit_cooldown`; `Pet.last_visit`;
+      `Visited(friend, cheered)` and `PlayedWith(friend, game, result)` events — test-first
+- [x] Domain: `apply_game_outcome` from either side of a pet-vs-pet game (the guest's result is
       the host's mirrored); opponent move selection works for either piece
-- [ ] Persistence: save schema v8 with `last_visit` (v7 → v8 migration, a v8 fixture, older
+- [x] Persistence: save schema v8 with `last_visit` (v7 → v8 migration, a v8 fixture, older
       fixtures still loading)
-- [ ] Services: `PetLibrary.borrow_for_visit(name)` (loads with capped catch-up, takes the
+- [x] Services: `PetLibrary.borrow_for_visit(file, host)` (loads with capped catch-up, takes the
       lock, refuses pets open elsewhere); `VisitSession` ticking both `GameSession`s, moving
       each pet with its own RNG, ending the visit when either can't go on; saves and unlocks
       the guest on every exit path (end, `t`, `q`, SIGTERM/SIGHUP, crash in the UI)
-- [ ] UI: `VisitPickerScreen` (greyed-out pets with reasons; `↑`/`↓`, `1`–`9`, `Enter`, `Esc`)
-- [ ] UI: `VisitScreen` (two pets on the stage, names, greeting; `g`/`Enter` game choice,
+- [x] UI: `VisitPickerScreen` (greyed-out pets with reasons; `↑`/`↓`, `1`–`9`, `Enter`, `Esc`)
+- [x] UI: `VisitScreen` (two pets on the stage, names, greeting; `g`/`Enter` game choice,
       `s` status for either pet, `Esc`/`v` end; toasts for "went home" and why)
-- [ ] UI: pet-vs-pet board games reusing the board widgets: a move every ~0.8 s, `Space`
+- [x] UI: pet-vs-pet board games reusing the board widgets: a move every ~0.8 s, `Space`
       skips to the end, `Esc` abandons; both pets beside the board; instant with reduced
       motion
-- [ ] `v` on the main screen (Help, not footer); refusals and "no other pets" toasts
-- [ ] `tools/games.py`: pet vs pet win rates for every pair of stages
-- [ ] Journal: visits and game results on both pets; "first visit" first
-- [ ] Snapshots: visit picker (one pet asleep, one on holiday); visit screen (dark, light,
+- [x] `v` on the main screen (Help, not footer); refusals and "no other pets" toasts
+- [x] `tools/games.py`: pet vs pet win rates for every pair of stages
+- [x] Journal: visits and game results on both pets; "first visit" first
+- [x] Snapshots: visit picker (one pet asleep, one on holiday); visit screen (dark, light,
       monochrome); each board game mid-game and finished, pet vs pet; all fit 60×20
+
+Deviations: a sick pet can't visit either (one rule, `visit_refusals`, both invites and ends a
+visit); `start_visit` takes one pet and the other's name, as ADR 0011 has the domain see one
+pet at a time; `borrow_for_visit` takes the pet's file and the host session and starts the visit;
+the pets beside a pet-vs-pet board are the pets' own sprites at half size
+(`ui/sprite_scale.py`), so Four in a Row fits 60 columns.
 
 **Accept:** with two awake pets, `v` invites one, both gain happiness once, a watched game of
 Four in a Row ends with the right effect on each pet, and ending the visit leaves the guest

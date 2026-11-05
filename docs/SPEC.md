@@ -260,7 +260,7 @@ A disciplined pet learns tricks. They are for show: nothing in the game depends 
 | `s` | Status | Opens stats panel (hearts/bars, age, weight, stage) | — |
 | `h` | Holiday | Puts a settled pet on holiday (frozen in time), or brings it back (§2.6) | Egg, dead, (to pause) any attention call |
 | `t` | Tamas | Saves, then opens the pet select screen to switch pets (§6.1) | — |
-| `v` | Visit | Invites another of your pets over to play (§3.2). Not in the footer; listed in Help. | Asleep, egg, dead, on holiday, misbehaving, energy < 10, no other pets |
+| `v` | Visit | Invites another of your pets over to play (§3.2). Not in the footer; listed in Help. | Asleep, egg, dead, on holiday, sick, misbehaving, energy < 10, no other pets |
 | `j` | Journal | Opens the pet's journal (§2.9). Not in the footer; listed in Help. | — |
 | `?` | Help | Key bindings overlay | — |
 | `q` / `ctrl+c` | Quit | Saves and exits | — |
@@ -320,8 +320,9 @@ baby 60%, child 40%, teen 25%, adult 15%, elder 20%: elders get a little rusty).
 With several pets (§6.1), the open pet can invite another one round to play.
 
 - **Inviting:** `v` checks the host's refusals (§3), then opens a **visit picker** listing the
-  other pets. Those that can't come are greyed out with the reason: an egg, dead, asleep, on
-  holiday, misbehaving, too tired (energy < 10), can't be read, or open in another tama.
+  other pets. Those that can't come are greyed out with the reason: an egg, dead, on holiday,
+  asleep, sick, misbehaving, too tired (energy < 10), can't be read, or open in another tama.
+  The same rule ends a visit (below), so a sick pet stays home rather than leaving at once.
   `↑`/`↓` + `Enter` or `1`–`9` invite one; `Esc` closes. With no other pets, `v` just says so.
 - **The guest** is loaded like any pet (capped catch-up; its events go into its own journal),
   locked for the length of the visit, and lives in real time beside the host: both pets are
@@ -329,8 +330,8 @@ With several pets (§6.1), the open pet can invite another one round to play.
 - **Visit screen:** both pets on the stage, host on the left, guest on the right, each with
   its name under it; they greet each other (`happy`). Each pet's happiness rises by 10
   (`Balance.visit_happiness`) unless it had a visit in the last 4 h (`Balance.visit_cooldown`),
-  so visits can't be farmed. Keys: `g` (or `Enter`) watch them play, `s` either pet's status,
-  `Esc` or `v` end the visit.
+  so visits can't be farmed. Keys: `g` (or `Enter`) watch them play, `s` either pet's status
+  (it asks whose: `1` host, `2` guest), `Esc` or `v` end the visit.
 - **Watching them play:** a choice of Four in a Row or Tic-Tac-Toe (Left or Right needs a
   player). The host moves first; each pet picks its moves as in §3.1, with its own stage's
   mistake chance and its own RNG, one move about every 0.8 s (`Space` skips to the end;
@@ -341,12 +342,15 @@ With several pets (§6.1), the open pet can invite another one round to play.
 - **Ending:** `Esc`/`v` ends the visit; the guest is saved, unlocked and "went home" (toast).
   The visit also ends by itself, abandoning any game in progress, as soon as either pet can no
   longer visit (falls asleep, gets sick, starts misbehaving, dies, runs out of energy), with a
-  toast saying why ("Pip got sleepy and went home"). `t`, `q` and SIGTERM/SIGHUP end the visit
-  first, saving both pets.
-- **Care during a visit:** the main-screen actions apply to the host only; to look after the
-  guest, end the visit and switch to it. The guest's attention calls count in the header's
+  toast saying why ("Pip got sleepy and went home", or "Mochi got sleepy, so Pip went home"
+  when it's the host). `t`, `q` and SIGTERM/SIGHUP end the visit first, saving both pets; so
+  does tama stopping for any other reason, a crash included.
+- **Care during a visit:** the visit screen has only the keys above; the care actions wait on
+  the main screen, where they apply to the host once the visit ends. To look after the guest,
+  end the visit and switch to it. The guest's attention calls count in the header's
   `⚠ +N` as usual (§6.1).
-- **Events:** `Visited(friend)` on both pets (once per visit) and `PlayedWith(friend, game,
+- **Events:** `Visited(friend, cheered)` on both pets (once per visit; `cheered` if it gave
+  happiness) and `PlayedWith(friend, game,
   result)` per finished game, which the journal records ("Beat Pip at Four in a Row").
 - **Balance:** `tools/games.py` also plays pet against pet for every pair of stages, and the
   result is reported (an adult should usually beat a baby).
@@ -398,7 +402,7 @@ there), and with reduced motion the icon is steady instead of blinking.
   `HelpScreen` (modal), `ErrorScreen` (corrupt save recovery), `JournalScreen` (modal, §2.9),
   `VisitPickerScreen` (modal) and `VisitScreen` (§3.2). Every game fits the minimum
   60×20 terminal with the pet beside the board; a pet-vs-pet game shows both pets, one each
-  side of the board, as small idle sprites.
+  side of the board, as small idle sprites (the pet's own art at half size).
 
 ### 5.2 Animation
 
