@@ -527,7 +527,12 @@ tama --new                 # hatch an additional egg (refused at 9 pets)
 tama --species owl         # which animal the name prompt starts on; a pet can't change
                            # species (with --pet, naming another species is an error). Default: tama
 tama --status              # one line per pet, as of now (read-only, no TUI): the status line
-                           # below, last-played pet first and marked `*`, then by name;
+                           # below, last-played pet first and marked `*`, then by name, and
+                           # pets that have passed away last (even the last played). On a
+                           # terminal it is coloured (names bold; needs green ≥ 50, yellow
+                           # ≥ 25, red below; "needs:" bold red; holiday cyan; the dead
+                           # dimmed) in the terminal's own ANSI colours; plain when piped or
+                           # with NO_COLOR;
                            # pets on holiday read "Mochi · adult owl · on holiday since 3 Nov";
                            # with --pet, just that pet. Exit 0 ok, 1 no pets yet,
                            # 2 if any pet's save is unreadable (its line says so) / bad config

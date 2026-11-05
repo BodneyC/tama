@@ -7,6 +7,7 @@ so neither has to know the full event vocabulary.
 from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta, tzinfo
+from enum import StrEnum
 
 from tama.domain.attention import AttentionReason, attention_reasons
 from tama.domain.balance import Balance
@@ -263,28 +264,68 @@ def holiday_since(when: datetime, tz: tzinfo = UTC) -> str:
     return f"{local.day} {local:%b}"
 
 
-def status_line(pet: Pet, balance: Balance, tz: tzinfo = UTC) -> str:
-    """One line describing the pet, suitable for a shell prompt."""
+class Tone(StrEnum):
+    """How a part of the status line should look; the CLI picks the actual styling."""
+
+    NAME = "name"
+    PLAIN = "plain"
+    GOOD = "good"  # a need at half or more
+    FAIR = "fair"  # getting low, not yet calling for attention
+    LOW = "low"  # below the attention threshold
+    ALERT = "alert"  # what the pet needs
+    AWAY = "away"  # on holiday
+    GONE = "gone"  # passed away
+
+
+type Segment = tuple[str, Tone]
+
+_GOOD_AT = 50
+
+
+def _need(label: str, value: int, balance: Balance) -> Segment:
+    if value >= _GOOD_AT:
+        tone = Tone.GOOD
+    elif value >= balance.attention_threshold:
+        tone = Tone.FAIR
+    else:
+        tone = Tone.LOW
+    return f"{label} {value}", tone
+
+
+def status_segments(pet: Pet, balance: Balance, tz: tzinfo = UTC) -> list[Segment]:
+    """The status line in parts, each with how it should look (``status_line`` joins them)."""
     if pet.stage is LifeStage.DEAD:
         cause = str(pet.cause_of_death).replace("_", " ")
-        return f"{pet.name} · {pet.species} · passed away ({cause}) at {format_age(pet.age)}"
+        parts = [pet.name, pet.species, f"passed away ({cause}) at {format_age(pet.age)}"]
+        return [(part, Tone.GONE) for part in parts]
     if pet.stage is LifeStage.EGG:
-        return f"{pet.name} · {pet.species} egg · about to hatch"
+        return [
+            (pet.name, Tone.NAME),
+            (f"{pet.species} egg", Tone.PLAIN),
+            ("about to hatch", Tone.PLAIN),
+        ]
+    kind = (f"{pet.stage.value} {pet.species}", Tone.PLAIN)
     if pet.paused_since is not None:
         since = holiday_since(pet.paused_since, tz)
-        return f"{pet.name} · {pet.stage.value} {pet.species} · on holiday since {since}"
+        return [(pet.name, Tone.NAME), kind, (f"on holiday since {since}", Tone.AWAY)]
     s = pet.stats
-    parts = [
-        pet.name,
-        f"{pet.stage.value} {pet.species}",
-        format_age(pet.age),
-        f"hunger {s.hunger}",
-        f"happy {s.happiness}",
-        f"energy {s.energy}",
-        f"clean {s.hygiene}",
-        f"health {s.health}",
+    segments: list[Segment] = [
+        (pet.name, Tone.NAME),
+        kind,
+        (format_age(pet.age), Tone.PLAIN),
+        _need("hunger", s.hunger, balance),
+        _need("happy", s.happiness, balance),
+        _need("energy", s.energy, balance),
+        _need("clean", s.hygiene, balance),
+        _need("health", s.health, balance),
     ]
     reasons = attention_reasons(pet, balance)
     if reasons:
-        parts.append("needs: " + ", ".join(r.value for r in AttentionReason if r in reasons))
-    return " · ".join(parts)
+        needs = ", ".join(r.value for r in AttentionReason if r in reasons)
+        segments.append((f"needs: {needs}", Tone.ALERT))
+    return segments
+
+
+def status_line(pet: Pet, balance: Balance, tz: tzinfo = UTC) -> str:
+    """One line describing the pet, suitable for a shell prompt."""
+    return " · ".join(text for text, _ in status_segments(pet, balance, tz))

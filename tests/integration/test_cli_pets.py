@@ -93,6 +93,42 @@ def test_status_lists_every_pet_last_played_first(tmp_path: Path) -> None:
     assert lines[2].startswith("  Old · tama · passed away")
 
 
+def test_status_lists_the_dead_last_even_if_played_last() -> None:
+    old = add("Aldo", **DEAD)
+    add("Bao")
+    add("Cy")
+    PetRoster(data_dir()).set_last(old)
+
+    lines = runner.invoke(app, ["--status"]).stdout.splitlines()
+
+    assert [line[2:].split(" · ")[0] for line in lines] == ["Bao", "Cy", "Aldo"]
+    assert lines[2].startswith("* Aldo · tama · passed away")
+
+
+def test_status_is_coloured_on_a_terminal() -> None:
+    add("Bao", stats=Stats(hunger=10))
+    add("Old", **DEAD)
+
+    out = runner.invoke(app, ["--status"], color=True).stdout
+
+    assert "\x1b[1mBao\x1b[0m" in out  # names in bold
+    assert "\x1b[31mhunger 10\x1b[0m" in out  # a low need in red
+    assert "\x1b[2mOld\x1b[0m" in out  # the dead dimmed
+
+
+def test_status_respects_no_color(monkeypatch: pytest.MonkeyPatch) -> None:
+    add("Bao")
+    monkeypatch.setenv("NO_COLOR", "1")
+
+    assert "\x1b[" not in runner.invoke(app, ["--status"], color=True).stdout
+
+
+def test_status_is_plain_when_piped() -> None:
+    add("Bao")
+
+    assert "\x1b[" not in runner.invoke(app, ["--status"]).stdout
+
+
 def test_status_is_also_a_subcommand() -> None:
     add("Bao")
 

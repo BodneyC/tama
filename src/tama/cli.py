@@ -22,6 +22,7 @@ from tama.cli_pets import (
     journal_report,
     pause_or_resume,
     status_report,
+    styled,
 )
 from tama.domain.pet import DEFAULT_SPECIES
 from tama.errors import (
@@ -44,7 +45,7 @@ from tama.infra.paths import (
 )
 from tama.persistence.repository import JsonSaveRepository
 from tama.persistence.roster import PetRoster
-from tama.services.describe import status_line
+from tama.services.describe import status_segments
 from tama.services.library import PetLibrary
 from tama.services.roster import PetSummary, find_pet
 from tama.services.session import GameSession, SessionSettings
@@ -240,16 +241,21 @@ def _report(report: Report) -> NoReturn:
 
 
 def _print_status(options: _Options) -> NoReturn:
-    """Print each pet's status line as of now; never changes a save."""
+    """Print each pet's status line as of now; never changes a save.
+
+    Coloured unless ``NO_COLOR`` is set; ``typer.echo`` drops the colour when piped.
+    """
+    color = not no_color_requested()
     settings = _settings(_load_config())
     single = single_save_path(options.save_path)
     if single is not None:
         session = _load_single(single, settings)
-        typer.echo(status_line(session.pet, session.balance, session.tz))
+        segments = status_segments(session.pet, session.balance, session.tz)
+        typer.echo(styled(segments, color=color))
         raise typer.Exit
     library = _library(SystemClock(), settings)
     try:
-        _report(status_report(library, options.pet))
+        _report(status_report(library, options.pet, color=color))
     except UnknownPetError as exc:
         raise typer.BadParameter(str(exc), param_hint="--pet") from exc
 

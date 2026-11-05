@@ -44,12 +44,14 @@ from tama.domain.stats import Stat, Stats
 from tama.domain.visit import VisitRefusal
 from tama.domain.weight import WeightStatus
 from tama.services.describe import (
+    Tone,
     describe_event,
     family_line,
     format_age,
     holiday_since,
     lineage_text,
     status_line,
+    status_segments,
     summarize,
     visit_ended_text,
     visit_refusal_text,
@@ -206,6 +208,41 @@ def test_status_line_for_egg_and_dead_pets() -> None:
 
     assert status_line(egg, DEFAULT_BALANCE) == "Mochi · tama egg · about to hatch"
     assert status_line(dead, DEFAULT_BALANCE) == "Mochi · tama · passed away (old age) at 15d 0h"
+
+
+def test_status_segments_say_how_each_part_should_look() -> None:
+    pet = make_pet(stats=Stats(hunger=80, happiness=30, energy=10, hygiene=50, health=100))
+
+    assert status_segments(pet, DEFAULT_BALANCE) == [
+        ("Mochi", Tone.NAME),
+        ("child tama", Tone.PLAIN),
+        ("1h 0m", Tone.PLAIN),
+        ("hunger 80", Tone.GOOD),
+        ("happy 30", Tone.FAIR),
+        ("energy 10", Tone.LOW),
+        ("clean 50", Tone.GOOD),
+        ("health 100", Tone.GOOD),
+    ]
+
+
+def test_needs_are_an_alert() -> None:
+    segments = status_segments(make_pet(poop_count=1), DEFAULT_BALANCE)
+
+    assert segments[-1] == ("needs: poop", Tone.ALERT)
+
+
+def test_eggs_holidays_and_the_dead_have_their_own_tones() -> None:
+    egg = make_pet(stage=LifeStage.EGG)
+    away = make_pet(paused_since=FIXED_NOW)
+    dead = make_pet(stage=LifeStage.DEAD, cause_of_death=DeathCause.OLD_AGE)
+
+    assert [tone for _, tone in status_segments(egg, DEFAULT_BALANCE)] == [
+        Tone.NAME,
+        Tone.PLAIN,
+        Tone.PLAIN,
+    ]
+    assert status_segments(away, DEFAULT_BALANCE)[-1][1] is Tone.AWAY
+    assert {tone for _, tone in status_segments(dead, DEFAULT_BALANCE)} == {Tone.GONE}
 
 
 def test_status_line_names_the_species() -> None:

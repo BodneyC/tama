@@ -6,11 +6,20 @@ only parses options and echoes.
 
 from dataclasses import dataclass, field
 from datetime import tzinfo
+from typing import Any
+
+import typer
 
 from tama.domain.events import PauseRefused
 from tama.domain.journal import Journal
 from tama.errors import PetLockedError, SaveError
-from tama.services.describe import describe_event, holiday_since, status_line
+from tama.services.describe import (
+    Segment,
+    Tone,
+    describe_event,
+    holiday_since,
+    status_segments,
+)
 from tama.services.describe_journal import journal_entries, tally_lines
 from tama.services.library import PetLibrary
 from tama.services.roster import PetSummary, find_pet
@@ -20,6 +29,27 @@ EXIT_OK = 0
 EXIT_NO_PET = 1
 EXIT_ERROR = 2
 NO_PET = "No pet yet. Run `tama` to hatch one."
+
+# ANSI colour names rather than RGB: they follow the user's own terminal palette, light or dark.
+_STYLES: dict[Tone, dict[str, Any]] = {
+    Tone.NAME: {"bold": True},
+    Tone.PLAIN: {},
+    Tone.GOOD: {"fg": "green"},
+    Tone.FAIR: {"fg": "yellow"},
+    Tone.LOW: {"fg": "red"},
+    Tone.ALERT: {"fg": "red", "bold": True},
+    Tone.AWAY: {"fg": "cyan"},
+    Tone.GONE: {"dim": True},
+}
+_SEPARATOR = " · "
+
+
+def styled(segments: list[Segment], *, color: bool) -> str:
+    """Join status segments, styled with ANSI colours when ``color`` (else plain text)."""
+    if not color:
+        return _SEPARATOR.join(text for text, _ in segments)
+    sep = typer.style(_SEPARATOR, dim=True)
+    return sep.join(typer.style(text, **_STYLES[tone]) for text, tone in segments)
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,8 +78,10 @@ def pause_or_resume(session: GameSession, *, pausing: bool) -> tuple[str, bool]:
     return line, failed
 
 
-def status_report(library: PetLibrary, query: str | None = None) -> Report:
-    """One line per pet as of now, the last played first and marked ``*`` (read-only).
+def status_report(library: PetLibrary, query: str | None = None, *, color: bool = False) -> Report:
+    """One line per pet as of now (read-only), coloured if ``color``.
+
+    The last played comes first and is marked ``*``; pets that have passed away come last.
 
     Raises:
         UnknownPetError: If ``query`` doesn't name exactly one pet.
@@ -57,11 +89,11 @@ def status_report(library: PetLibrary, query: str | None = None) -> Report:
     rows = library.summaries()
     if not rows:
         return Report([NO_PET], code=EXIT_NO_PET)
-    chosen = [find_pet(rows, query)] if query is not None else rows
+    chosen = [find_pet(rows, query)] if query is not None else sorted(rows, key=_dead)
     out = []
     for row in chosen:
         marker = "" if query is not None else ("* " if row.last else "  ")
-        out.append(marker + _status(library, row))
+        out.append(marker + _status(library, row, color=color))
     unreadable = any(row.pet is None for row in chosen)
     return Report(out, code=EXIT_ERROR if unreadable else EXIT_OK)
 
@@ -123,7 +155,17 @@ def _pause_or_resume(library: PetLibrary, row: PetSummary, *, pausing: bool) -> 
         return f"can't be read ({exc})", True
 
 
-def _status(library: PetLibrary, row: PetSummary) -> str:
+def _dead(row: PetSummary) -> bool:
+    """Sort key: the dead after everyone else (a stable sort keeps the order otherwise)."""
+    return row.pet is not None and not row.pet.is_alive
+
+
+def _status(library: PetLibrary, row: PetSummary, *, color: bool) -> str:
     if row.pet is None:
-        return f"{row.name} · can't be read ({row.error})"
-    return status_line(row.pet, library.balance, library.tz)
+        segments: list[Segment] = [
+            (row.name, Tone.NAME),
+            (f"can't be read ({row.error})", Tone.LOW),
+        ]
+    else:
+        segments = status_segments(row.pet, library.balance, library.tz)
+    return styled(segments, color=color)
