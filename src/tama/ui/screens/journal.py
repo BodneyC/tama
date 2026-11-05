@@ -10,7 +10,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 
 from tama.domain.journal import Journal
-from tama.services.describe import journal_entries, tally_lines
+from tama.services.describe_journal import journal_entries, tally_lines
 
 HINT = "↑↓ PgUp PgDn scroll · Esc close"
 

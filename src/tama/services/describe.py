@@ -32,20 +32,22 @@ from tama.domain.events import (
     PausedForHoliday,
     PauseRefused,
     Played,
+    PlayedWith,
     Pooped,
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    Visited,
     WeightLeftBand,
     Woken,
     WokeUp,
 )
-from tama.domain.journal import Entry, EntryKind, Journal, Tallies, Topic
 from tama.domain.lineage import founder
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat
+from tama.domain.visit import VisitRefusal
 from tama.domain.weight import WeightStatus
 
 _NEED_LOW = {Stat.HUNGER: "Got hungry", Stat.HAPPINESS: "Got unhappy", Stat.HYGIENE: "Got dirty"}
@@ -60,7 +62,7 @@ _BLOCKERS = {
     "egg": "still an egg",
     "dead": "no longer alive",
 }
-_MISTAKES = {
+MISTAKE_TEXT = {
     MistakeReason.HUNGER: "Was left starving",
     MistakeReason.HAPPINESS: "Was left miserable",
     MistakeReason.HYGIENE: "Was left filthy",
@@ -73,7 +75,7 @@ _ADULTS = {
     Variant.SCRUFFY: "a scruffy adult",
     Variant.CHUBBY: "a chubby adult",
 }
-_DEATHS = {
+DEATH_TEXT = {
     DeathCause.OLD_AGE: "Passed away peacefully of old age",
     DeathCause.POOR_HEALTH: "Passed away from poor health",
 }
@@ -101,7 +103,8 @@ def format_age(age: timedelta) -> str:
     return f"{minutes}m"
 
 
-def _stage_phrase(stage: LifeStage, variant: Variant) -> str:
+def stage_phrase(stage: LifeStage, variant: Variant) -> str:
+    """``a chubby adult``: the stage (and adult form) as a noun phrase."""
     if stage is LifeStage.ADULT:
         return _ADULTS.get(variant, "an adult")
     article = "an" if stage.value[0] in "aeiou" else "a"
@@ -114,9 +117,9 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
         case Evolved(from_stage=LifeStage.EGG):
             return "Hatched"
         case Evolved(to_stage=stage, variant=variant):
-            return f"Grew into {_stage_phrase(stage, variant)}"
+            return f"Grew into {stage_phrase(stage, variant)}"
         case Died(cause=cause):
-            return _DEATHS[cause]
+            return DEATH_TEXT[cause]
         case LaidEgg():
             return "Left an egg"
         case HeirHatched(heir=heir):
@@ -132,7 +135,7 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
         case NeedLow(stat=stat):
             return _NEED_LOW[stat]
         case CareMistake(reason=reason):
-            return _MISTAKES[reason]
+            return MISTAKE_TEXT[reason]
         case Misbehaved():
             return "Misbehaved"
         case MisbehaviourIgnored():
@@ -169,6 +172,10 @@ def describe_event(event: Event) -> str:  # noqa: PLR0911, PLR0912 - one arm per
             return f"Was on holiday for {format_age(length)}"
         case PauseRefused(blockers=blockers):
             return "Can't go on holiday: " + ", ".join(_BLOCKERS.get(b, b) for b in blockers)
+        case Visited(friend=friend):
+            return f"Spent time with {friend}"
+        case PlayedWith(friend=friend, game=game, result=result):
+            return played_with_text(friend, game, result)
         case Refused(action=action, reason=reason):
             return f"Refused {_REFUSED_ACTIONS[action]}: {reason.value.replace('_', ' ')}"
         case _:
@@ -180,95 +187,16 @@ GAME_NAMES = {
     GameKind.FOUR_IN_A_ROW: "Four in a Row",
     GameKind.TIC_TAC_TOE: "Tic-Tac-Toe",
 }
-_JOURNAL_TEXT = {
-    Topic.JOURNAL_STARTED: "Started keeping a journal",
-    Topic.LAID_EGG: "Left an egg",
-    Topic.HOLIDAY: "Went on holiday",
-    Topic.MEAL: "First meal",
-    Topic.SNACK: "First snack",
-    Topic.TANTRUM: "First tantrum",
-    Topic.SICKNESS: "Fell sick for the first time",
-    Topic.CURED: "Got better",
-    Topic.TANTRUM_CAUGHT: "Was disciplined for a tantrum",
-    Topic.TANTRUM_IGNORED: "Got away with a tantrum",
+_PLAYED_WITH = {
+    GameResult.WIN: "Beat {friend} at {game}",
+    GameResult.DRAW: "Drew with {friend} at {game}",
+    GameResult.LOSS: "Lost to {friend} at {game}",
 }
-_MILESTONES = {"meals": "Ate its {n} meal", "games_won": "Won its {n} game"}
 
 
-def _ordinal(n: int) -> str:
-    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suffix}"
-
-
-def describe_entry(entry: Entry) -> str:  # noqa: PLR0911 - one arm per topic with a detail
-    """A journal entry as a short sentence (SPEC §2.9)."""
-    match entry.topic:
-        case Topic.HATCHED:
-            return f"Hatched from {entry.detail}'s egg" if entry.detail else "Hatched"
-        case Topic.HEIR_HATCHED:
-            return f"Its egg hatched as {entry.detail}"
-        case Topic.EVOLVED:
-            stage, variant = entry.detail.split("/")
-            return f"Grew into {_stage_phrase(LifeStage(stage), Variant(variant))}"
-        case Topic.DIED:
-            return _DEATHS[DeathCause(entry.detail)]
-        case Topic.BACK:
-            return f"Came back from {format_age(timedelta(minutes=int(entry.detail)))} on holiday"
-        case Topic.WIN:
-            return f"First win at {GAME_NAMES[GameKind(entry.detail)]}"
-        case Topic.CARE_MISTAKE:
-            mistake = _MISTAKES[MistakeReason(entry.detail)]
-            if entry.kind is EntryKind.FIRST:
-                return f"First care mistake: {mistake[0].lower()}{mistake[1:]}"
-            return mistake
-        case Topic.MILESTONE:
-            tally, count = entry.detail.split(":")
-            return _MILESTONES[tally].format(n=_ordinal(int(count)))
-        case topic:
-            return _JOURNAL_TEXT[topic]
-
-
-def entry_line(entry: Entry, tz: tzinfo = UTC) -> str:
-    """``3 Nov 14:05  1h 0m   Hatched``: when (local time), the pet's age, and what happened."""
-    local = entry.at.astimezone(tz)
-    when = f"{local.day} {local:%b %H:%M}"
-    return f"{when:<12} {format_age(entry.age):<8}{describe_entry(entry)}"
-
-
-EMPTY_JOURNAL = "Nothing written yet."
-
-
-def journal_entries(journal: Journal, tz: tzinfo = UTC) -> list[str]:
-    """Every entry as an ``entry_line``, newest first (or a line saying there are none)."""
-    return [entry_line(entry, tz) for entry in reversed(journal.entries)] or [EMPTY_JOURNAL]
-
-
-def tally_lines(tallies: Tallies) -> list[str]:
-    """A life in numbers: what the journal has counted (SPEC §2.9)."""
-    t = tallies
-    games = [
-        f"{GAME_NAMES[kind]}: won {g.won}, drew {g.drawn}, lost {g.lost}" for kind, g in t.games
-    ]
-    return [
-        f"Meals {t.meals} · snacks {t.snacks} · poops cleaned {t.poops_cleaned}",
-        f"Tantrums {t.tantrums_caught} caught, {t.tantrums_ignored} ignored"
-        f" · sick {t.sicknesses} times, {t.doses} doses",
-        f"Care mistakes {t.care_mistakes} · holidays {t.holidays}",
-        *(games or ["No games played yet"]),
-    ]
-
-
-def life_in_numbers(tallies: Tallies) -> str:
-    """One short line for the memorial: ``82 meals, 1 snack, 40 wins``."""
-    t = tallies
-    return ", ".join(
-        _plural(n, word)
-        for n, word in ((t.meals, "meal"), (t.snacks, "snack"), (t.games_won, "win"))
-    )
-
-
-def _plural(n: int, word: str) -> str:
-    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+def played_with_text(friend: str, game: GameKind, result: GameResult) -> str:
+    """``Beat Pip at Four in a Row``: a game against another pet, from this pet's side."""
+    return _PLAYED_WITH[result].format(friend=friend, game=GAME_NAMES[game])
 
 
 FAMILY_SHOWN = 3
@@ -288,6 +216,39 @@ def family_line(pet: Pet) -> str | None:
     names = [a.name for a in pet.ancestors] + [pet.name]
     shown = names[-(FAMILY_SHOWN + 1) :]
     return " → ".join((["…"] if len(names) > len(shown) else []) + shown)
+
+
+_VISIT_REFUSALS = {
+    VisitRefusal.EGG: "still an egg",
+    VisitRefusal.DEAD: "no longer alive",
+    VisitRefusal.ON_HOLIDAY: "on holiday",
+    VisitRefusal.TOO_TIRED: "too tired",
+}
+_LEFT = {
+    VisitRefusal.ASLEEP: "got sleepy",
+    VisitRefusal.SICK: "felt poorly",
+    VisitRefusal.MISBEHAVING: "threw a tantrum",
+    VisitRefusal.TOO_TIRED: "was worn out",
+    VisitRefusal.DEAD: "passed away",
+    VisitRefusal.ON_HOLIDAY: "went on holiday",
+}
+_GONE = frozenset({VisitRefusal.DEAD, VisitRefusal.ON_HOLIDAY})
+
+
+def visit_refusal_text(reason: VisitRefusal) -> str:
+    """Why a pet can't visit, as shown greyed out in the visit picker (SPEC §3.2)."""
+    return _VISIT_REFUSALS.get(reason, reason.value)
+
+
+def visit_ended_text(*, host: str, guest: str, leaver: str, reason: VisitRefusal) -> str:
+    """Why a visit ended by itself: ``Pip got sleepy and went home`` (SPEC §3.2).
+
+    ``leaver`` is whichever pet could no longer carry on, the host or the guest.
+    """
+    what = _LEFT.get(reason, "had to stop")
+    if leaver == host:
+        return f"{host} {what}, so {guest} went home"
+    return f"{guest} {what}" if reason in _GONE else f"{guest} {what} and went home"
 
 
 def summarize(events: Iterable[Event]) -> list[str]:

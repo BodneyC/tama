@@ -26,10 +26,12 @@ from tama.domain.events import (
     PausedForHoliday,
     PauseRefused,
     Played,
+    PlayedWith,
     Pooped,
     RefusalReason,
     Refused,
     ResumedFromHoliday,
+    Visited,
     WeightLeftBand,
     Woken,
     WokeUp,
@@ -39,20 +41,20 @@ from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import AncestorRecord
 from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stat, Stats
+from tama.domain.visit import VisitRefusal
 from tama.domain.weight import WeightStatus
 from tama.services.describe import (
-    describe_entry,
     describe_event,
-    entry_line,
     family_line,
     format_age,
     holiday_since,
-    life_in_numbers,
     lineage_text,
     status_line,
     summarize,
-    tally_lines,
+    visit_ended_text,
+    visit_refusal_text,
 )
+from tama.services.describe_journal import describe_entry, entry_line, life_in_numbers, tally_lines
 from tests.factories import FIXED_NOW, make_pet
 
 AGE = timedelta(hours=1)
@@ -148,6 +150,19 @@ def test_format_age(age: timedelta, text: str) -> None:
         (ResumedFromHoliday(AGE, timedelta(days=3, hours=2)), "Was on holiday for 3d 2h"),
         (PauseRefused(AGE, ("hungry", "lights")), "Can't go on holiday: hungry, lights on"),
         (PauseRefused(AGE, ("on_holiday",)), "Can't go on holiday: already on holiday"),
+        (Visited(AGE, "Pip", cheered=True), "Spent time with Pip"),
+        (
+            PlayedWith(AGE, "Pip", GameKind.FOUR_IN_A_ROW, GameResult.WIN),
+            "Beat Pip at Four in a Row",
+        ),
+        (
+            PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.DRAW),
+            "Drew with Pip at Tic-Tac-Toe",
+        ),
+        (
+            PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.LOSS),
+            "Lost to Pip at Tic-Tac-Toe",
+        ),
     ],
 )
 def test_describe_event(event: Event, text: str) -> None:
@@ -254,6 +269,10 @@ L, F, M = EntryKind.LIFE, EntryKind.FIRST, EntryKind.MOMENT
         (journal_entry(M, Topic.TANTRUM_IGNORED), "Got away with a tantrum"),
         (journal_entry(M, Topic.MILESTONE, "meals:10"), "Ate its 10th meal"),
         (journal_entry(M, Topic.MILESTONE, "games_won:50"), "Won its 50th game"),
+        (journal_entry(F, Topic.VISIT, "Pip"), "First visit, with Pip"),
+        (journal_entry(M, Topic.VISIT, "Pip"), "Spent time with Pip"),
+        (journal_entry(M, Topic.PLAYED_WITH, "four_in_a_row/win/Pip"), "Beat Pip at Four in a Row"),
+        (journal_entry(M, Topic.PLAYED_WITH, "tic_tac_toe/loss/A/B"), "Lost to A/B at Tic-Tac-Toe"),
     ],
 )
 def test_journal_entries(entry: Entry, text: str) -> None:
@@ -279,6 +298,7 @@ def test_tallies_summarise_a_life() -> None:
         poops_cleaned=9,
         holidays=1,
         care_mistakes=2,
+        visits=5,
         games=(
             (GameKind.FOUR_IN_A_ROW, GameTally(won=2, drawn=1, lost=3)),
             (GameKind.TIC_TAC_TOE, GameTally(won=1)),
@@ -288,7 +308,7 @@ def test_tallies_summarise_a_life() -> None:
     assert tally_lines(tallies) == [
         "Meals 12 · snacks 3 · poops cleaned 9",
         "Tantrums 4 caught, 1 ignored · sick 2 times, 3 doses",
-        "Care mistakes 2 · holidays 1",
+        "Care mistakes 2 · holidays 1 · visits 5",
         "Four in a Row: won 2, drew 1, lost 3",
         "Tic-Tac-Toe: won 1, drew 0, lost 0",
     ]
@@ -298,7 +318,7 @@ def test_tallies_of_a_new_journal() -> None:
     assert tally_lines(Tallies()) == [
         "Meals 0 · snacks 0 · poops cleaned 0",
         "Tantrums 0 caught, 0 ignored · sick 0 times, 0 doses",
-        "Care mistakes 0 · holidays 0",
+        "Care mistakes 0 · holidays 0 · visits 0",
         "No games played yet",
     ]
 
@@ -353,3 +373,47 @@ def test_the_family_line_ends_with_the_pet(names: tuple[str, ...], line: str) ->
     )
 
     assert family_line(pet) == line
+
+
+@pytest.mark.parametrize(
+    ("reason", "text"),
+    [
+        (VisitRefusal.EGG, "still an egg"),
+        (VisitRefusal.DEAD, "no longer alive"),
+        (VisitRefusal.ON_HOLIDAY, "on holiday"),
+        (VisitRefusal.ASLEEP, "asleep"),
+        (VisitRefusal.SICK, "sick"),
+        (VisitRefusal.MISBEHAVING, "misbehaving"),
+        (VisitRefusal.TOO_TIRED, "too tired"),
+    ],
+)
+def test_visit_refusals_in_words(reason: VisitRefusal, text: str) -> None:
+    assert visit_refusal_text(reason) == text
+
+
+@pytest.mark.parametrize(
+    ("reason", "guest_text", "host_text"),
+    [
+        (VisitRefusal.ASLEEP, "Pip got sleepy and went home", "Mochi got sleepy, so Pip went home"),
+        (VisitRefusal.SICK, "Pip felt poorly and went home", "Mochi felt poorly, so Pip went home"),
+        (
+            VisitRefusal.MISBEHAVING,
+            "Pip threw a tantrum and went home",
+            "Mochi threw a tantrum, so Pip went home",
+        ),
+        (
+            VisitRefusal.TOO_TIRED,
+            "Pip was worn out and went home",
+            "Mochi was worn out, so Pip went home",
+        ),
+        (VisitRefusal.DEAD, "Pip passed away", "Mochi passed away, so Pip went home"),
+        (
+            VisitRefusal.ON_HOLIDAY,
+            "Pip went on holiday",
+            "Mochi went on holiday, so Pip went home",
+        ),
+    ],
+)
+def test_why_a_visit_ended(reason: VisitRefusal, guest_text: str, host_text: str) -> None:
+    assert visit_ended_text(host="Mochi", guest="Pip", leaver="Pip", reason=reason) == guest_text
+    assert visit_ended_text(host="Mochi", guest="Pip", leaver="Mochi", reason=reason) == host_text

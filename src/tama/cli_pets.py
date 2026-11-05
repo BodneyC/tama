@@ -10,13 +10,8 @@ from datetime import tzinfo
 from tama.domain.events import PauseRefused
 from tama.domain.journal import Journal
 from tama.errors import PetLockedError, SaveError
-from tama.services.describe import (
-    describe_event,
-    holiday_since,
-    journal_entries,
-    status_line,
-    tally_lines,
-)
+from tama.services.describe import describe_event, holiday_since, status_line
+from tama.services.describe_journal import journal_entries, tally_lines
 from tama.services.library import PetLibrary
 from tama.services.roster import PetSummary, find_pet
 from tama.services.session import GameSession

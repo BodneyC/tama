@@ -15,7 +15,7 @@ from tama.domain.stage import DeathCause
 from tama.infra.clock import FakeClock
 from tama.infra.paths import SAVE_PATH_ENV
 from tama.persistence.roster import PetRoster
-from tama.services.describe import describe_entry, journal_entries
+from tama.services.describe_journal import describe_entry, journal_entries
 from tama.services.session import GameSession, SessionSettings
 from tests.factories import FIXED_NOW
 from tests.fakes import InMemorySaveRepository

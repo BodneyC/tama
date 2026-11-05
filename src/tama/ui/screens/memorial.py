@@ -13,13 +13,8 @@ from textual.widgets import Footer, Static
 from tama.domain.events import Died
 from tama.domain.journal import EntryKind, Journal, Topic
 from tama.domain.pet import Pet
-from tama.services.describe import (
-    describe_entry,
-    describe_event,
-    family_line,
-    format_age,
-    life_in_numbers,
-)
+from tama.services.describe import describe_event, family_line, format_age
+from tama.services.describe_journal import describe_entry, life_in_numbers
 from tama.ui.screens.journal import JournalScreen
 from tama.ui.widgets.pet_view import PetView, ViewOptions
 
