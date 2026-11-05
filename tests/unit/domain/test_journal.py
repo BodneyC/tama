@@ -24,7 +24,9 @@ from tama.domain.events import (
     MistakeReason,
     PausedForHoliday,
     Played,
+    PlayedWith,
     ResumedFromHoliday,
+    Visited,
 )
 from tama.domain.journal import (
     MAX_MOMENTS,
@@ -198,6 +200,25 @@ def test_round_numbers_of_meals_and_wins_are_moments() -> None:
         entry(MOMENT, Topic.MILESTONE, "meals:10"),
         entry(MOMENT, Topic.MILESTONE, "games_won:10"),
     ]
+
+
+def test_the_first_visit_is_a_first_and_every_visit_a_moment() -> None:
+    journal = write(Visited(PET.age + MIN, "Pip", cheered=True))
+    journal = write(Visited(PET.age + MIN, "Bo", cheered=False), journal=journal)
+
+    assert journal.entries == (
+        entry(FIRST, Topic.VISIT, "Pip"),
+        entry(MOMENT, Topic.VISIT, "Bo"),
+    )
+    assert journal.tallies.visits == 2
+
+
+@pytest.mark.parametrize("result", list(GameResult))
+def test_games_with_a_friend_are_moments_apart_from_the_players_games(result: GameResult) -> None:
+    journal = write(PlayedWith(PET.age + MIN, "Pip/Bo", FOUR, result))
+
+    assert journal.entries == (entry(MOMENT, Topic.PLAYED_WITH, f"four_in_a_row/{result}/Pip/Bo"),)
+    assert journal.tallies == Tallies()
 
 
 def test_moments_are_capped_but_life_and_firsts_are_kept() -> None:

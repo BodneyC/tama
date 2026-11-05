@@ -29,7 +29,9 @@ from tama.domain.events import (
     MisbehaviourIgnored,
     PausedForHoliday,
     Played,
+    PlayedWith,
     ResumedFromHoliday,
+    Visited,
 )
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.pet import Pet
@@ -71,6 +73,8 @@ class Topic(StrEnum):
     TANTRUM_CAUGHT = "tantrum_caught"
     TANTRUM_IGNORED = "tantrum_ignored"
     MILESTONE = "milestone"  # "<tally>:<count>", e.g. "meals:50"
+    VISIT = "visit"  # the friend's name
+    PLAYED_WITH = "played_with"  # "<game>/<result>/<friend>", the friend last (names have "/")
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +120,7 @@ class Tallies:
     poops_cleaned: int = 0
     holidays: int = 0
     care_mistakes: int = 0
+    visits: int = 0
     games: tuple[tuple[GameKind, GameTally], ...] = ()
 
     def game(self, kind: GameKind) -> GameTally:
@@ -220,6 +225,12 @@ class _Writer:
                 if result is GameResult.WIN:
                     self._first(Topic.WIN, event, game.value)
                     self._milestone("games_won", t.games_won + 1, event)
+            case Visited(friend=friend):
+                kind = EntryKind.FIRST if t.visits == 0 else EntryKind.MOMENT
+                self._count(replace(t, visits=t.visits + 1))
+                self._add(kind, Topic.VISIT, event, friend)
+            case PlayedWith(friend=friend, game=game, result=result):
+                self._add(EntryKind.MOMENT, Topic.PLAYED_WITH, event, f"{game}/{result}/{friend}")
             case Misbehaved():
                 self._first(Topic.TANTRUM, event)
             case Disciplined(effective=True):
