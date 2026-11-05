@@ -24,29 +24,38 @@ class GameSelectScreen(ModalScreen[GameKind | None]):
         ),
     ]
 
-    def __init__(self, last: GameKind | None = None) -> None:
-        """Pre-select ``last``, the game chosen last time this session."""
+    def __init__(
+        self,
+        last: GameKind | None = None,
+        *,
+        kinds: tuple[GameKind, ...] = tuple(GameKind),
+        title: str = "Play a game",
+    ) -> None:
+        """Offer ``kinds`` (every game by default), pre-selecting ``last`` if it is one."""
         super().__init__()
-        self._last = last or GameKind.LEFT_RIGHT
+        self._kinds = kinds
+        self._last = last if last in kinds else kinds[0]
+        self._title = title
 
     @override
     def compose(self) -> ComposeResult:
         """Build the dialog."""
         with Vertical(classes="dialog"):
-            yield Static("Play a game", classes="dialog-title")
+            yield Static(self._title, classes="dialog-title")
             yield OptionList(
                 *(
-                    Option(f"{number}  {name:<14}{blurb}", id=kind.value)
-                    for number, (kind, (name, blurb)) in enumerate(GAMES.items(), start=1)
+                    Option(f"{number}  {GAMES[kind][0]:<14}{GAMES[kind][1]}", id=kind.value)
+                    for number, kind in enumerate(self._kinds, start=1)
                 ),
                 id="games",
             )
-            yield Static("↑↓ Enter or 1-3 to play · Esc to cancel", classes="dialog-hint")
+            hint = f"↑↓ Enter or 1-{len(self._kinds)} to play · Esc to cancel"
+            yield Static(hint, classes="dialog-hint")
 
     def on_mount(self) -> None:
         """Highlight the last game played."""
         games = self.query_one(OptionList)
-        games.highlighted = list(GameKind).index(self._last)
+        games.highlighted = self._kinds.index(self._last)
         games.focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
@@ -54,5 +63,6 @@ class GameSelectScreen(ModalScreen[GameKind | None]):
         self.dismiss(GameKind(str(event.option.id)))
 
     def action_choose(self, number: int) -> None:
-        """Play the game with this number."""
-        self.dismiss(list(GameKind)[number - 1])
+        """Play the game with this number (if there is one)."""
+        if number <= len(self._kinds):
+            self.dismiss(self._kinds[number - 1])

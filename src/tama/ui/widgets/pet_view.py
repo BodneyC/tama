@@ -60,10 +60,15 @@ class PetView(Static):
         options: ViewOptions | None = None,
         *,
         rng: Random | None = None,
+        small: bool = False,
         id: str | None = None,  # noqa: A002 - Textual's widget id parameter
     ) -> None:
-        """Create the view. ``rng`` drives blinking and wandering (cosmetic, not game state)."""
+        """Create the view. ``rng`` drives blinking and wandering (cosmetic, not game state).
+
+        ``small`` draws the pet at half size (beside a pet-vs-pet board).
+        """
         super().__init__(id=id, markup=False)
+        self.small = small
         options = options or ViewOptions()
         self._options = options
         self._color = not options.monochrome
@@ -112,7 +117,11 @@ class PetView(Static):
         self._pet = pet
         key = looping_animation(pet)
         self._species = species_of(pet)
-        self.set_loop(load_sprite(self._species, pet.variant, pet.stage, key), key)
+        self.set_loop(self.sprite(pet, key), key)
+
+    def sprite(self, pet: Pet, key: AnimationKey) -> Sprite:
+        """``pet``'s ``key`` animation at this view's size."""
+        return load_sprite(species_of(pet), pet.variant, pet.stage, key, small=self.small)
 
     def react(self, events: Iterable[Event]) -> None:
         """Play a one-shot reaction to the last event that has one (call after ``show``)."""
@@ -137,7 +146,7 @@ class PetView(Static):
         self._draw()
 
     def _start_reaction(self, pet: Pet, key: AnimationKey) -> None:
-        self.reaction = load_sprite(species_of(pet), pet.variant, pet.stage, key)
+        self.reaction = self.sprite(pet, key)
         self.frame = self._steps = 0
         self._draw()
 

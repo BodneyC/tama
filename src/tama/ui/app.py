@@ -4,7 +4,7 @@ import asyncio
 import logging
 import signal
 from functools import partial
-from typing import ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from textual.app import App
 from textual.binding import Binding, BindingType
@@ -25,8 +25,13 @@ from tama.ui.screens.error import ErrorScreen
 from tama.ui.screens.main import MainScreen
 from tama.ui.screens.memorial import MemorialChoice, MemorialScreen
 from tama.ui.screens.new_pet import NewPet, NewPetScreen
+from tama.ui.screens.visit import VisitScreen
 from tama.ui.theme import css_variables, ui_palette
+from tama.ui.visit_flow import end_visit, invite
 from tama.ui.widgets.pet_view import ViewOptions
+
+if TYPE_CHECKING:
+    from tama.services.visit import VisitSession
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +111,13 @@ class TamaApp(App[None]):
         self._installed_signals: list[signal.Signals] = []
         self.session: GameSession | None = None
         self.main: MainScreen | None = None
+        self.visit: VisitSession | None = None
+        """The pet visiting the open one, if any (SPEC §3.2)."""
+
+    @property
+    def tick_interval(self) -> float | None:
+        """Seconds between ticks (``None`` in tests, which tick by hand)."""
+        return self._tick_interval
 
     species: str = DEFAULT_SPECIES
     """Whose UI colours (``base.toml`` ``[ui]``) to use: the new pet's, then the open pet's."""
@@ -132,10 +144,20 @@ class TamaApp(App[None]):
             self.ask_for_new_pet()
 
     def on_unmount(self) -> None:
-        """Remove signal handlers and let go of the open pet."""
+        """Remove signal handlers, give back a visiting pet and let go of the open pet.
+
+        This runs however the app stops, an exception in the UI included, so a guest is never
+        left unsaved or locked (ADR 0011).
+        """
         loop = asyncio.get_running_loop()
         for sig in self._installed_signals:
             loop.remove_signal_handler(sig)
+        visit, self.visit = self.visit, None
+        if visit is not None:
+            try:
+                visit.close()
+            except SaveWriteError:
+                logger.exception("Could not save the visiting pet on the way out")
         if self.library is not None:
             self.library.close()
 
@@ -145,7 +167,11 @@ class TamaApp(App[None]):
             self.main.tick()
 
     def action_quit_game(self) -> None:
-        """Save and quit. If saving fails, warn once; quitting again exits without saving."""
+        """Save and quit. If saving fails, warn once; quitting again exits without saving.
+
+        A visit ends first, so the guest is saved and given back too.
+        """
+        end_visit(self, quiet=True)
         if self.session is not None and not self._quit_failed:
             try:
                 self.session.close()
@@ -162,6 +188,7 @@ class TamaApp(App[None]):
 
     def save_and_exit(self) -> None:
         """Save if possible and exit (on a termination signal there's no one to ask)."""
+        end_visit(self, quiet=True)
         if self.session is not None:
             try:
                 self.session.close()
@@ -202,6 +229,7 @@ class TamaApp(App[None]):
         """Save the open pet and go back to the pet list (``t``)."""
         if self.flow is None or self.library is None or self.session is None:
             return
+        end_visit(self, quiet=True)
         try:
             self.session.save()
         except SaveWriteError as exc:
@@ -212,6 +240,18 @@ class TamaApp(App[None]):
         self.session = None
         self.library.close()
         self.flow.show_pets(selected=previous)
+
+    # --- Visits (SPEC §3.2; see visit_flow.py) -------------------------------------------
+
+    def on_main_screen_visit(self, _message: MainScreen.Visit) -> None:
+        """Offer the other pets to invite over (``v``)."""
+        invite(self)
+
+    def on_visit_screen_end(self, message: VisitScreen.End) -> None:
+        """See the guest home, then go on to the pet list if asked (``t``)."""
+        end_visit(self, message.reason)
+        if message.switch and self.main is not None:
+            self.on_main_screen_switch_pet(MainScreen.SwitchPet())
 
     # --- Hatching, playing and dying ------------------------------------------------------
 
@@ -283,6 +323,7 @@ class TamaApp(App[None]):
         self._show_memorial()
 
     def _close_main(self) -> None:
+        end_visit(self, quiet=True)
         if self.main is not None:
             while self.screen is not self.main:
                 self.pop_screen()

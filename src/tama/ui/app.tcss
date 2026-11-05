@@ -269,3 +269,64 @@ PetSelectScreen {
 #journal-scroll {
   height: 1fr;
 }
+
+/* A visit (SPEC §3.2): the host and the guest each in half the stage, named underneath. */
+#visit-title {
+  dock: top;
+  height: 1;
+  padding: 0 1;
+  background: $tama-header-background;
+  color: $tama-header-text;
+  text-style: bold;
+}
+
+#visit-stage {
+  height: 1fr;
+}
+
+.visit-half {
+  width: 1fr;
+  height: 100%;
+  align: center middle;
+}
+
+.visit-half > PetView {
+  width: auto;
+  height: auto;
+}
+
+.visit-name {
+  width: 100%;
+  content-align: center middle;
+  margin-top: 1;
+}
+
+#visitors, #whose {
+  width: 48;
+  height: auto;
+  max-height: 9;
+  border: none;
+  padding: 0;
+}
+
+#whose {
+  width: 24;
+}
+
+/* Two small pets beside the board: fits Four in a Row at 60 columns. */
+PetVsPetScreen .dialog {
+  padding: 1 1;
+}
+
+#host-pet, #guest-pet {
+  width: auto;
+  height: auto;
+}
+
+#host-pet {
+  margin-right: 1;
+}
+
+#guest-pet {
+  margin-left: 1;
+}

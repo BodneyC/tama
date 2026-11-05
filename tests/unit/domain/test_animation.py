@@ -20,8 +20,10 @@ from tama.domain.events import (
     FellAsleep,
     MedicineGiven,
     Played,
+    PlayedWith,
     RefusalReason,
     Refused,
+    Visited,
 )
 from tama.domain.minigames import GameKind, GameResult
 from tama.domain.stage import DeathCause, LifeStage, Variant
@@ -68,6 +70,10 @@ def test_looping_animation_reflects_state(
         (Disciplined(AGE, effective=True), None),
         (FellAsleep(AGE), None),
         (Died(AGE, DeathCause.OLD_AGE), None),
+        (Visited(AGE, "Pip", cheered=False), AnimationKey.HAPPY),
+        (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.WIN), AnimationKey.HAPPY),
+        (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.DRAW), AnimationKey.PLAY),
+        (PlayedWith(AGE, "Pip", GameKind.TIC_TAC_TOE, GameResult.LOSS), AnimationKey.PLAY),
     ],
 )
 def test_reaction_animation_for_events(event: Event, expected: AnimationKey | None) -> None:

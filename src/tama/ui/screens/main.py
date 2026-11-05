@@ -67,6 +67,9 @@ class MainScreen(Screen[None]):
     class SwitchPet(Message):
         """The player wants to pick another pet (``t``)."""
 
+    class Visit(Message):
+        """The player wants to invite another pet over (``v``)."""
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("f", "feed", "Feed"),
         Binding("p", "play", "Play"),
@@ -77,6 +80,7 @@ class MainScreen(Screen[None]):
         # Rarely needed, and the footer has no room for it at 60 columns: listed in Help.
         Binding("w", "act('wake')", "Wake", show=False),
         Binding("j", "journal", "Journal", show=False),
+        Binding("v", "visit", "Visit", show=False),
         Binding("h", "holiday", "Holiday"),
         Binding("t", "switch", "Pets"),
         Binding("s", "status", "Status"),
@@ -242,6 +246,10 @@ class MainScreen(Screen[None]):
         self.app.push_screen(
             JournalScreen(self.session.pet.name, self.session.journal, self.session.tz)
         )
+
+    def action_visit(self) -> None:
+        """Invite another pet over to play (SPEC §3.2)."""
+        self.post_message(self.Visit())
 
     def action_help(self) -> None:
         """Show key bindings."""

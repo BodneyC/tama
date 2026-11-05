@@ -14,7 +14,9 @@ from tama.domain.events import (
     Evolved,
     MedicineGiven,
     Played,
+    PlayedWith,
     Refused,
+    Visited,
 )
 from tama.domain.minigames import GameResult
 from tama.domain.pet import Pet
@@ -66,9 +68,14 @@ def reaction_animation(event: Event) -> AnimationKey | None:  # noqa: PLR0911 - 
             return AnimationKey.EVOLVE
         case Ate():
             return AnimationKey.EAT
-        case Played(result=GameResult.WIN) | MedicineGiven(cured=True):
-            return AnimationKey.HAPPY
-        case Played():
+        case (
+            Played(result=GameResult.WIN)
+            | PlayedWith(result=GameResult.WIN)
+            | MedicineGiven(cured=True)
+            | Visited()
+        ):
+            return AnimationKey.HAPPY  # greeting a friend, too (SPEC §3.2)
+        case Played() | PlayedWith():
             return AnimationKey.PLAY
         case Cleaned():
             return AnimationKey.CLEAN

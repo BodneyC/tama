@@ -46,11 +46,11 @@ from tama.ui.colours import (
     Mode,
     expand_mode_colour,
 )
+from tama.ui.sprite_scale import TRANSPARENT, halve
 
 logger = logging.getLogger(__name__)
 
 OVERLAYS = "overlays"
-TRANSPARENT = "."
 MONO_INK_THRESHOLD = 0.45
 """In monochrome, pixels on the far side of this luminance from the background are drawn."""
 MAX_WIDTH = 32
@@ -352,11 +352,16 @@ class Sprite:
         return cls(fps, loop, renders, contents)
 
     @classmethod
-    def from_file(cls, parsed: SpriteFile, palette: Mapping[str, PaletteEntry]) -> Self:
-        """Render every frame of a parsed sprite file with ``palette``, for every look."""
+    def from_file(
+        cls, parsed: SpriteFile, palette: Mapping[str, PaletteEntry], *, small: bool = False
+    ) -> Self:
+        """Render every frame of a parsed sprite file with ``palette``, for every look.
+
+        ``small`` renders it at half size (``sprite_scale.halve``).
+        """
+        frames = [halve(f.rows) if small else f.rows for f in parsed.frames]
         renders = {
-            look: tuple(render_cells(f.rows, palette, look) for f in parsed.frames)
-            for look in LOOKS
+            look: tuple(render_cells(rows, palette, look) for rows in frames) for look in LOOKS
         }
         return cls.from_renders(parsed.fps, renders, loop=parsed.loop)
 
@@ -387,7 +392,7 @@ def load_base(collection: str) -> BaseFile | None:
         return None
 
 
-def _parse_resource(resource: Traversable, collection: str) -> Sprite:
+def _parse_resource(resource: Traversable, collection: str, *, small: bool = False) -> Sprite:
     base = load_base(collection)
     try:
         parsed = SpriteFile.parse(resource.read_text(encoding="utf-8"))
@@ -399,7 +404,7 @@ def _parse_resource(resource: Traversable, collection: str) -> Sprite:
     if missing:
         logger.error("Sprite %s uses colours %s that no palette defines", resource, sorted(missing))
         return PLACEHOLDER
-    return Sprite.from_file(parsed, palette)
+    return Sprite.from_file(parsed, palette, small=small)
 
 
 def _resource(
@@ -408,28 +413,43 @@ def _resource(
     return sprite_root() / species / variant / stage / f"{animation}.toml"
 
 
-@cache
 def load_sprite(
-    species: str, variant: Variant, stage: LifeStage, animation: AnimationKey
+    species: str,
+    variant: Variant,
+    stage: LifeStage,
+    animation: AnimationKey,
+    *,
+    small: bool = False,
 ) -> Sprite:
-    """Load (and cache) a sprite.
+    """Load (and cache) a sprite, at half size if ``small``.
 
     Fallback order: this variant's animation, the default variant's animation, this variant's
     idle, the default variant's idle, then a placeholder. Broken files are logged and treated
     as a placeholder.
     """
+    return _load_sprite(species, variant, stage, animation, small)
+
+
+@cache
+def _load_sprite(
+    species: str,
+    variant: Variant,
+    stage: LifeStage,
+    animation: AnimationKey,
+    small: bool,  # noqa: FBT001 - positional, so every call shares one cache entry
+) -> Sprite:
     resource = _resource(species, variant, stage, animation)
     if resource.is_file():
-        return _parse_resource(resource, species)
+        return _parse_resource(resource, species, small=small)
     if (
         variant is not Variant.DEFAULT
         and _resource(species, Variant.DEFAULT, stage, animation).is_file()
     ):
-        return load_sprite(species, Variant.DEFAULT, stage, animation)
+        return _load_sprite(species, Variant.DEFAULT, stage, animation, small)
     if animation is not AnimationKey.IDLE:
-        return load_sprite(species, variant, stage, AnimationKey.IDLE)
+        return _load_sprite(species, variant, stage, AnimationKey.IDLE, small)
     if variant is not Variant.DEFAULT:
-        return load_sprite(species, Variant.DEFAULT, stage, AnimationKey.IDLE)
+        return _load_sprite(species, Variant.DEFAULT, stage, AnimationKey.IDLE, small)
     return PLACEHOLDER
 
 
@@ -469,5 +489,5 @@ def available_species() -> tuple[str, ...]:
 def clear_caches() -> None:
     """Forget loaded sprites and palettes (tests, or after regenerating art)."""
     load_base.cache_clear()
-    load_sprite.cache_clear()
+    _load_sprite.cache_clear()
     load_overlay.cache_clear()
