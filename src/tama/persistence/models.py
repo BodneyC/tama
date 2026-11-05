@@ -21,7 +21,7 @@ from tama.domain.stage import DeathCause, LifeStage, Variant
 from tama.domain.stats import Stats
 from tama.errors import CorruptSaveError, InvalidArgumentError
 
-CURRENT_SCHEMA_VERSION = 7
+CURRENT_SCHEMA_VERSION = 8
 
 # typeshed types Random.getstate() as tuple[Any, ...]; in CPython it is
 # (version: int, internal: tuple[int, ...] of length 625, gauss_next: float | None).
@@ -122,6 +122,7 @@ class PetModel(_Model):
     generation: PositiveInt
     ancestors: tuple[AncestorModel, ...]
     heir_hatched: bool
+    last_visit: timedelta | None
 
 
 class EntryModel(_Model):
@@ -154,6 +155,7 @@ class TalliesModel(_Model):
     poops_cleaned: NonNegativeInt
     holidays: NonNegativeInt
     care_mistakes: NonNegativeInt
+    visits: NonNegativeInt
     games: dict[GameKind, GameTallyModel]
 
 
@@ -199,15 +201,15 @@ class RngStateModel(_Model):
     gauss_next: float | None
 
 
-class SaveFileV7(_Model):
-    """Version 7 of the save file.
+class SaveFileV8(_Model):
+    """Version 8 of the save file.
 
     v1 + the pet's species in v2 + holiday in v3 + being woken by the player in v4 + weight
     burn and the time out of the healthy weight band in v5 + the journal in v6 + the family
-    line and the egg a pet left in v7.
+    line and the egg a pet left in v7 + the last visit (and the journal's count of visits) in v8.
     """
 
-    schema_version: Literal[7] = 7
+    schema_version: Literal[8] = 8
     app_version: str = __version__
     pet: PetModel
     rng: RngStateModel
@@ -249,6 +251,7 @@ class SaveFileV7(_Model):
                 generation=pet.generation,
                 ancestors=tuple(AncestorModel(**_fields(a)) for a in pet.ancestors),
                 heir_hatched=pet.heir_hatched,
+                last_visit=pet.last_visit,
             ),
             rng=RngStateModel(version=version, internal=internal, gauss_next=gauss_next),
             journal=JournalModel.from_domain(game.journal),
@@ -293,6 +296,7 @@ class SaveFileV7(_Model):
                 generation=p.generation,
                 ancestors=tuple(AncestorRecord(**_model_fields(a)) for a in p.ancestors),
                 heir_hatched=p.heir_hatched,
+                last_visit=p.last_visit,
             )
         except InvalidArgumentError as exc:
             raise CorruptSaveError(f"invalid pet data: {exc}") from exc

@@ -99,6 +99,7 @@ def pets(draw: st.DrawFn, *, alive: bool | None = None) -> Pet:
         generation=len(ancestors) + 1,
         ancestors=ancestors,
         heir_hatched=dead and draw(st.booleans()),
+        last_visit=draw(st.none() | minutes(age // timedelta(minutes=1))),
     )
 
 

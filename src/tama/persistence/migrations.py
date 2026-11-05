@@ -95,6 +95,17 @@ def _v6_to_v7(raw: dict[str, Any]) -> dict[str, Any]:
     return {**raw, "pet": {**lineage, **pet}}
 
 
+def _v7_to_v8(raw: dict[str, Any]) -> dict[str, Any]:
+    """v8 remembers each pet's last visit (ADR 0011); no pet before then had one."""
+    pet, journal = raw.get("pet"), raw.get("journal")
+    if isinstance(pet, dict):
+        raw = {**raw, "pet": {"last_visit": None, **pet}}
+    if isinstance(journal, dict) and isinstance(journal.get("tallies"), dict):
+        tallies = {"visits": 0, **journal["tallies"]}
+        raw = {**raw, "journal": {**journal, "tallies": tallies}}
+    return raw  # anything malformed is left for validation to report
+
+
 MIGRATIONS: dict[int, Migration] = {
     1: _v1_to_v2,
     2: _v2_to_v3,
@@ -102,6 +113,7 @@ MIGRATIONS: dict[int, Migration] = {
     4: _v4_to_v5,
     5: _v5_to_v6,
     6: _v6_to_v7,
+    7: _v7_to_v8,
 }
 """Key ``N`` upgrades a version-N save to version N+1."""
 

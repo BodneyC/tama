@@ -22,7 +22,7 @@ FIXTURES = Path(__file__).parents[2] / "fixtures" / "saves"
 def test_encode_is_indented_json_with_trailing_newline() -> None:
     text = encode(SaveGame(make_pet(), Random(0).getstate()))
 
-    assert text.startswith('{\n  "schema_version": 7,')
+    assert text.startswith('{\n  "schema_version": 8,')
     assert text.endswith("}\n")
 
 
@@ -60,6 +60,12 @@ def assert_v7_lineage_added(upgraded: dict[str, Any]) -> None:
     assert upgraded["pet"].pop("generation") == 1
     assert upgraded["pet"].pop("ancestors") == []
     assert upgraded["pet"].pop("heir_hatched") is False
+
+
+def assert_v8_fields_added(upgraded: dict[str, Any]) -> None:
+    """Pop v8's fields from an upgraded save: no older pet had visited another."""
+    assert upgraded["pet"].pop("last_visit") is None
+    assert upgraded["journal"]["tallies"].pop("visits") == 0
 
 
 def assert_v6_journal_added(upgraded: dict[str, Any]) -> None:
@@ -111,6 +117,7 @@ def test_v1_fixture_migrates_losslessly() -> None:
     assert upgraded["pet"].pop("paused_since") is None
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v8_fields_added(upgraded)
     assert_v5_fields_added(upgraded)
     assert_v6_journal_added(upgraded)
     assert_v7_lineage_added(upgraded)
@@ -136,6 +143,7 @@ def test_v2_fixture_migrates_losslessly() -> None:
     assert upgraded["pet"].pop("paused_since") is None
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v8_fields_added(upgraded)
     assert_v5_fields_added(upgraded)
     assert_v6_journal_added(upgraded)
     assert_v7_lineage_added(upgraded)
@@ -160,6 +168,7 @@ def test_v3_fixture_migrates_losslessly() -> None:
     assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
     assert upgraded["pet"].pop("stay_awake") == "PT0S"
     assert upgraded["pet"].pop("woken_tantrum") is False
+    assert_v8_fields_added(upgraded)
     assert_v5_fields_added(upgraded)
     assert_v6_journal_added(upgraded)
     assert_v7_lineage_added(upgraded)
@@ -184,6 +193,7 @@ def test_v4_fixture_migrates_losslessly() -> None:
     for raw in (original, upgraded):
         raw.pop("app_version")
     assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
+    assert_v8_fields_added(upgraded)
     assert_v5_fields_added(upgraded)
     assert_v6_journal_added(upgraded)
     assert_v7_lineage_added(upgraded)
@@ -206,6 +216,7 @@ def test_v5_fixture_migrates_losslessly() -> None:
     for raw in (original, upgraded):
         raw.pop("app_version")
     assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
+    assert_v8_fields_added(upgraded)
     assert_v6_journal_added(upgraded)
     assert_v7_lineage_added(upgraded)
     assert {**upgraded, "schema_version": 5} == original
@@ -229,6 +240,7 @@ def test_v6_fixture_migrates_losslessly() -> None:
     for raw in (original, upgraded):
         raw.pop("app_version")
     assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
+    assert_v8_fields_added(upgraded)
     assert_v7_lineage_added(upgraded)
     assert {**upgraded, "schema_version": 6} == original
 
@@ -242,9 +254,30 @@ def test_v7_fixture_loads_a_family_line() -> None:
     assert not pet.heir_hatched
 
 
-def test_v7_fixture_reencodes_identically() -> None:
-    """Guards the v7 format against accidental changes (which would need a migration)."""
-    text = (FIXTURES / "v7.json").read_text()
+def test_v7_fixture_migrates_losslessly() -> None:
+    """Only the version and the never-visited fields change when a v7 save is upgraded."""
+    original: dict[str, Any] = json.loads((FIXTURES / "v7.json").read_text())
+
+    upgraded: dict[str, Any] = json.loads(encode(decode((FIXTURES / "v7.json").read_text())))
+
+    for raw in (original, upgraded):
+        raw.pop("app_version")
+    assert upgraded["schema_version"] == CURRENT_SCHEMA_VERSION
+    assert_v8_fields_added(upgraded)
+    assert {**upgraded, "schema_version": 7} == original
+
+
+def test_v8_fixture_loads_a_visit() -> None:
+    game = decode((FIXTURES / "v8.json").read_text())
+
+    assert game.pet.last_visit == timedelta(days=1, hours=2, minutes=7)
+    assert game.journal.tallies.visits == 1
+    assert [e.topic for e in game.journal.entries[-2:]] == [Topic.VISIT, Topic.PLAYED_WITH]
+
+
+def test_v8_fixture_reencodes_identically() -> None:
+    """Guards the v8 format against accidental changes (which would need a migration)."""
+    text = (FIXTURES / "v8.json").read_text()
     original: dict[str, Any] = json.loads(text)
 
     reencoded: dict[str, Any] = json.loads(encode(decode(text)))

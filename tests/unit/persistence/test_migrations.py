@@ -154,6 +154,31 @@ def test_v6_saves_without_a_pet_are_left_for_validation() -> None:
     assert migrate({"schema_version": 6, "pet": 3}, current=7) == {"schema_version": 7, "pet": 3}
 
 
+def test_v7_pets_have_never_visited_and_count_no_visits() -> None:
+    raw = {"schema_version": 7, "pet": {"name": "Mochi"}, "journal": {"tallies": {"meals": 3}}}
+
+    out = migrate(raw, current=8)
+
+    assert out == {
+        "schema_version": 8,
+        "pet": {"last_visit": None, "name": "Mochi"},
+        "journal": {"tallies": {"visits": 0, "meals": 3}},
+    }
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"schema_version": 7, "pet": 3, "journal": 4},
+        {"schema_version": 7, "pet": 3, "journal": {"tallies": 5}},
+        {"schema_version": 7},
+    ],
+    ids=["neither", "no-tallies", "missing"],
+)
+def test_malformed_v7_saves_are_left_for_validation(raw: dict[str, object]) -> None:
+    assert migrate(raw, current=8) == {**raw, "schema_version": 8}
+
+
 def test_newer_saves_are_unsupported() -> None:
     with pytest.raises(UnsupportedSaveVersionError, match="v99"):
         migrate({"schema_version": 99})
