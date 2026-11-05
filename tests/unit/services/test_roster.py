@@ -176,13 +176,15 @@ def test_find_pet_explains_what_went_wrong(
 
 def test_summarising_nine_pets_after_a_night_away_is_quick(tmp_path: Path) -> None:
     # SPEC §6.1: startup loads and simulates every pet; measured at ~0.4 s, so 4 s means trouble.
+    # CPU time, not wall time: with tests running in parallel on a slow CI machine, the wall
+    # clock also counts time spent waiting for the other workers.
     roster = PetRoster(tmp_path)
     for i in range(MAX_PETS):
         add(roster, f"Pet{i}", stage=LifeStage.ADULT)
     clock = FakeClock(FIXED_NOW + timedelta(hours=8))
 
-    started = time.perf_counter()
+    started = time.process_time()
     rows = summaries(roster, clock)
 
-    assert time.perf_counter() - started < 4
+    assert time.process_time() - started < 4
     assert all(row.alive for row in rows)

@@ -237,6 +237,12 @@ async def test_four_in_a_row_thinks_and_drops_with_motion(monkeypatch: pytest.Mo
         screen = app.screen
         assert isinstance(screen, FourInARowScreen)
         assert screen.busy
+        # The status only turns to "thinking" once the player's piece has landed (a timer per
+        # row), which a slow machine may not have reached yet.
+        for _ in range(100):
+            if "is thinking" in text(app, "#game-status"):
+                break
+            await pilot.pause(0.02)
         assert "is thinking" in text(app, "#game-status")
         look_left = load_sprite("tama", Variant.DEFAULT, LifeStage.CHILD, AnimationKey.LOOK_LEFT)
         assert screen.query_one(PetView).current == look_left

@@ -1,6 +1,7 @@
 """Several pets from the shell: --status, --pet, --new, --pause/--resume (SPEC §6.1, §8)."""
 
 import os
+import re
 from dataclasses import replace
 from pathlib import Path
 from random import Random
@@ -196,6 +197,15 @@ def test_pet_opens_that_pet() -> None:
     assert instance.kwargs["library"] is not None
 
 
+def words(output: str) -> str:
+    """``output`` as plain words: no colour, no box drawing, lines rejoined.
+
+    Typer draws usage errors in a Rich box, coloured on CI and wrapped to the console's width
+    (79 columns on Windows), so a phrase can be split anywhere.
+    """
+    return " ".join(re.sub(r"\x1b\[[0-9;]*m|[│─╭╮╰╯]", " ", output).split())
+
+
 def test_an_unknown_pet_is_a_usage_error_listing_the_pets() -> None:
     add("Bao")
     add("Mochi")
@@ -203,7 +213,7 @@ def test_an_unknown_pet_is_a_usage_error_listing_the_pets() -> None:
     result = runner.invoke(app, ["--pet", "Zed"])
 
     assert result.exit_code == 2
-    assert "Bao, Mochi" in result.output
+    assert "Your pets: Bao, Mochi." in words(result.output)
     assert not FakeApp.instances
 
 
