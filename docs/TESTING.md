@@ -77,3 +77,16 @@ Domain package additionally checked at 100% in CI
 (`uv run coverage report --include='src/tama/domain/*' --fail-under=100`).
 `ui` code is exercised by Pilot tests; `pragma: no cover` only for truly untestable lines
 (e.g. `if __name__ == "__main__"`) with justification.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request, on Linux, macOS
+and Windows × Python 3.12 and 3.13:
+
+- **check**: the definition of done (format, lint, mypy, import contracts, tests) and the 100%
+  domain coverage gate; the snapshot report is uploaded when it fails.
+- **package**: `uv build`, then the wheel is run as installed, away from `src/`: `tama
+  --version`, `--list-species`, `tools/smoke.py` (hatches a pet through the TUI, headless, so the
+  wheel must carry its sprites and stylesheet), then `--status` and `journal` find that pet.
+  Locally: `uv build`, then the same commands with `uvx --from dist/tama-*.whl tama ...` and
+  `uv run --no-project --with dist/tama-*.whl python -I tools/smoke.py DATA_DIR`.

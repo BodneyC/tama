@@ -459,8 +459,8 @@ night window, and is readable in both themes.
 
 - [x] README with screenshot/GIF (showing a visit and the journal too) (e.g. via `vhs` or `asciinema`), install instructions
       (`uv tool install`, `pipx install`)
-- [ ] CHANGELOG.md (Keep a Changelog), version 1.0.0
-- [ ] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out
+- [x] CHANGELOG.md (Keep a Changelog), version 1.0.0
+- [x] CI matrix: Linux/macOS/Windows × Python 3.12/3.13 on every push/PR (re-enable the commented-out
       macOS matrix entry in `.github/workflows/ci.yml`)
-- [ ] Build wheel (`uv build`) and smoke-test the installed `tama` entry point in CI
+- [x] Build wheel (`uv build`) and smoke-test the installed `tama` entry point in CI
 - [ ] Final review against SPEC; open issues for anything deferred

@@ -5,18 +5,13 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-  # macOS is disabled for now: its runners can queue for a long time and bill at 10x on
-  # private repos. To restore it, uncomment the schedule below and macos-latest in the
-  # matrix (ideally running macOS on every push/PR again by M7, see docs/ROADMAP.md).
-  # schedule:
-  #   - cron: "0 3 * * *"
 
 jobs:
   check:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest] # , macos-latest
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     env:
@@ -40,3 +35,42 @@ jobs:
           name: snapshot-report-${{ matrix.os }}-${{ matrix.python }}
           path: snapshot_report.html
           if-no-files-found: ignore
+
+  # Build the wheel and play it as installed, away from src/: proves the package carries its
+  # sprites, palettes and stylesheet and that the `tama` entry point works.
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv build
+      - name: Smoke-test the installed tama
+        env:
+          TAMA_DATA_DIR: ${{ runner.temp }}/tama-data
+          TAMA_CONFIG_PATH: ${{ runner.temp }}/no-config.toml
+        run: |
+          wheel=$(ls dist/tama-*.whl)
+          tama() { uvx --python ${{ matrix.python }} --from "$wheel" tama "$@"; }
+          tama --version
+          tama --list-species | grep -q owl
+          uv run --no-project --python ${{ matrix.python }} --with "$wheel" \
+            python -I tools/smoke.py "$TAMA_DATA_DIR"
+          tama --status | tee status.txt
+          grep -q "Mochi" status.txt
+          tama journal --pet Mochi
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        with:
+          name: dist
+          path: dist/
