@@ -12,6 +12,18 @@ later to find it has been living while you were away.
 Colour pixel art in any terminal of 60×20 or more. Several pets live side by side, visit each
 other, keep a journal, learn tricks and grow old; a good elder leaves an egg for an heir.
 
+## Disclaimer
+
+I wrote none of this, not a single line (other than this disclaimer).
+
+People at work keep talking about AI so I figured I'd try it beyond simple chat to build a project I've had in mind for a while - there's a few terminal Tamagotchi clones out there but none had all the features I was after.
+
+It's odd, I feel nothing for this project. I feel for the process, my first all-AI project, but nothing for the end product itself. Feels more like I downloaded a Tamagotchi clone than it does that I made one... because I didn't make this, Claude did. Maybe I need to find a more even split of work in the future.
+
+This also makes me question if I'll ever actually use it... it has no practical purpose like a lot of my projects but I don't feel the need to get some use of it as I do them.
+
+Very impressive, faster to develop and better codebase than I could have made by hand - certainly for something with a complex UI - but a little impersonal, a little soulless.
+
 ## Install
 
 Requires Python 3.12 or newer. Install the `tama` command with [uv](https://docs.astral.sh/uv/)
