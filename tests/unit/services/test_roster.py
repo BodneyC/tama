@@ -175,7 +175,9 @@ def test_find_pet_explains_what_went_wrong(
 
 
 def test_summarising_nine_pets_after_a_night_away_is_quick(tmp_path: Path) -> None:
-    # SPEC §6.1: startup loads and simulates every pet; measured at ~0.4 s, so 4 s means trouble.
+    # SPEC §6.1: startup loads and simulates every pet. Measured at ~0.5 s bare and ~1.5 s
+    # under coverage tracing locally, and 4.4 s under coverage on a slow Windows CI runner, so
+    # the budget only catches a gross (order-of-magnitude) regression, not small drift.
     # CPU time, not wall time: with tests running in parallel on a slow CI machine, the wall
     # clock also counts time spent waiting for the other workers.
     roster = PetRoster(tmp_path)
@@ -186,5 +188,5 @@ def test_summarising_nine_pets_after_a_night_away_is_quick(tmp_path: Path) -> No
     started = time.process_time()
     rows = summaries(roster, clock)
 
-    assert time.process_time() - started < 4
+    assert time.process_time() - started < 10
     assert all(row.alive for row in rows)

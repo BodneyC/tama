@@ -320,11 +320,12 @@ async def test_a_long_journal_scrolls_with_the_page_keys() -> None:
         scroll = app.screen.query_one("#journal-scroll", VerticalScroll)
         assert scroll.max_scroll_y > 0
 
+        # The page keys scroll smoothly; a bare pause() can land mid-animation on a slow machine.
         await pilot.press("pagedown")
-        await pilot.pause()
+        await pilot.wait_for_scheduled_animations()
         assert scroll.scroll_y > 0
         await pilot.press("home")
-        await pilot.pause()
+        await pilot.wait_for_scheduled_animations()
         assert scroll.scroll_y == 0
 
 
